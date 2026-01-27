@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<metadata>
+  <!-- Remove problematic internal classes that aren't needed for public API -->
+  <remove-node path="/api/package[@name='com.datadog.android.internal.collections']/class[@name='EvictingQueue']" />
+
+  <!-- Remove other internal classes that may cause binding issues -->
+  <remove-node path="/api/package[@name='com.datadog.android.internal']" />
+  <remove-node path="/api/package[@name='com.datadog.android.internal.telemetry']" />
+</metadata>

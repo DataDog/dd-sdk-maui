@@ -1,0 +1,35 @@
+# Build artifacts
+bin/
+obj/
+*.nupkg
+local-packages/
+
+# Swift Package Manager
+.build/
+.swiftpm/
+
+# Gradle
+.gradle/
+native-wrappers/android/**/build/
+*.jar
+!native-wrappers/android/gradle/wrapper/gradle-wrapper.jar
+
+# IDE
+.vs/
+.vscode/
+*.swp
+*.swo
+*~
+
+# macOS
+.DS_Store
+
+# User-specific files
+*.user
+*.suo
+
+# Test results
+TestResults/
+
+# LLMs
+.planning

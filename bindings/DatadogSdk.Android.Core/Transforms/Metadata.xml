@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<metadata>
+  <!-- Remove FlushableExecutorService - it extends ExecutorService which has generic type issues -->
+  <remove-node path="/api/package[@name='com.datadog.android.core.thread']/interface[@name='FlushableExecutorService']" />
+</metadata>
