@@ -14,22 +14,70 @@ public static partial class DatadogSdk
 /// </summary>
 internal sealed class DatadogSdkAndroid : IDatadogSdk
 {
-    private bool _isInitialized;
-
     /// <inheritdoc/>
-    public bool IsInitialized => _isInitialized;
+    public bool IsInitialized => Com.Datadog.Maui.DatadogMauiWrapper.IsInitialized;
 
     /// <inheritdoc/>
     public void Initialize(DatadogConfiguration configuration)
     {
-        if (_isInitialized)
+        if (IsInitialized)
         {
             throw new InvalidOperationException("Datadog SDK is already initialized.");
         }
 
-        // Native wrapper call will be implemented in Task 2
-        // For now, just mark as initialized for build verification
-        _isInitialized = true;
+        var context = Android.App.Application.Context;
+
+        var success = Com.Datadog.Maui.DatadogMauiWrapper.Initialize(
+            context,
+            configuration.ClientToken,
+            configuration.Env,
+            MapSite(configuration.Site),
+            configuration.Service,
+            MapTrackingConsent(configuration.TrackingConsent),
+            MapBatchSize(configuration.BatchSize),
+            MapUploadFrequency(configuration.UploadFrequency)
+        );
+
+        if (!success)
+        {
+            throw new InvalidOperationException("Failed to initialize Datadog SDK.");
+        }
     }
+
+    private static string MapSite(DatadogSite site) => site switch
+    {
+        DatadogSite.US1 => "US1",
+        DatadogSite.US3 => "US3",
+        DatadogSite.US5 => "US5",
+        DatadogSite.EU1 => "EU1",
+        DatadogSite.AP1 => "AP1",
+        DatadogSite.AP2 => "AP2",
+        DatadogSite.US1_FED => "US1_FED",
+        _ => "US1"
+    };
+
+    private static string MapTrackingConsent(TrackingConsent consent) => consent switch
+    {
+        TrackingConsent.Granted => "GRANTED",
+        TrackingConsent.NotGranted => "NOT_GRANTED",
+        TrackingConsent.Pending => "PENDING",
+        _ => "PENDING"
+    };
+
+    private static string MapBatchSize(BatchSize size) => size switch
+    {
+        BatchSize.Small => "SMALL",
+        BatchSize.Medium => "MEDIUM",
+        BatchSize.Large => "LARGE",
+        _ => "MEDIUM"
+    };
+
+    private static string MapUploadFrequency(UploadFrequency frequency) => frequency switch
+    {
+        UploadFrequency.Frequent => "FREQUENT",
+        UploadFrequency.Average => "AVERAGE",
+        UploadFrequency.Rare => "RARE",
+        _ => "AVERAGE"
+    };
 }
 #endif

@@ -37,4 +37,13 @@
     <PackageReference Include="Xamarin.AndroidX.Work.Runtime" Version="2.8.1" />
   </ItemGroup>
 
+  <!-- Android native Gradle project binding -->
+  <ItemGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">
+    <AndroidGradleProject Include="..\..\native\android\build.gradle.kts">
+      <ModuleName>datadogwrapper</ModuleName>
+      <Configuration>Release</Configuration>
+      <Bind>true</Bind>
+    </AndroidGradleProject>
+  </ItemGroup>
+
 </Project>
