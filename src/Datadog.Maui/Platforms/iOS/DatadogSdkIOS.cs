@@ -58,18 +58,19 @@ internal sealed class DatadogSdkiOS : IDatadogSdk
         catch (DllNotFoundException)
         {
             // Native library not linked - use stub for development
-            System.Diagnostics.Debug.WriteLine(
-                "[Datadog.Maui] Native iOS wrapper not available. " +
-                "Build the Swift package with Xcode and link as NativeReference.");
+            System.Diagnostics.Debug.WriteLine("[Datadog.Maui] Native wrapper not available. Build with Xcode and link NativeReference.");
             success = true; // Stub success for build verification
         }
         catch (EntryPointNotFoundException)
         {
             // Native method not found - use stub
-            System.Diagnostics.Debug.WriteLine(
-                "[Datadog.Maui] Native method not found. " +
-                "Ensure DatadogMauiWrapper is properly exported.");
+            System.Diagnostics.Debug.WriteLine("[Datadog.Maui] Native method not found. Ensure DatadogMauiWrapper is properly exported.");
             success = true; // Stub success for build verification
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[Datadog.Maui] Error calling native wrapper: {ex.Message}");
+            success = false;
         }
 
         _isInitialized = success;
@@ -89,6 +90,7 @@ internal sealed class DatadogSdkiOS : IDatadogSdk
         DatadogSite.AP1 => "ap1",
         DatadogSite.AP2 => "ap2",
         DatadogSite.US1_FED => "us1_fed",
+        DatadogSite.STAGING => "staging",
         _ => "us1"
     };
 

@@ -1,0 +1,10 @@
+<metadata>
+  <!--
+    Exclude all packages except our wrapper from binding generation.
+    The fat AAR contains all dependencies for runtime, but we only need C# bindings
+    for com.datadog.maui (our wrapper).
+  -->
+
+  <!-- Remove everything except com.datadog.maui -->
+  <remove-node path="/api/package[not(@name='com.datadog.maui')]" />
+</metadata>

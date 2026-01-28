@@ -1,0 +1,696 @@
+{
+  "ABIRoot": {
+    "kind": "Root",
+    "name": "DatadogWrapper",
+    "printedName": "DatadogWrapper",
+    "children": [
+      {
+        "kind": "Import",
+        "name": "Foundation",
+        "printedName": "Foundation",
+        "declKind": "Import",
+        "moduleName": "DatadogWrapper"
+      },
+      {
+        "kind": "Import",
+        "name": "DatadogCore",
+        "printedName": "DatadogCore",
+        "declKind": "Import",
+        "moduleName": "DatadogWrapper"
+      },
+      {
+        "kind": "Import",
+        "name": "DatadogRUM",
+        "printedName": "DatadogRUM",
+        "declKind": "Import",
+        "moduleName": "DatadogWrapper"
+      },
+      {
+        "kind": "Import",
+        "name": "DatadogInternal",
+        "printedName": "DatadogInternal",
+        "declKind": "Import",
+        "moduleName": "DatadogWrapper"
+      },
+      {
+        "kind": "TypeDecl",
+        "name": "DatadogMauiWrapper",
+        "printedName": "DatadogMauiWrapper",
+        "children": [
+          {
+            "kind": "Function",
+            "name": "initialize",
+            "printedName": "initialize(clientToken:env:site:service:trackingConsent:)",
+            "children": [
+              {
+                "kind": "TypeNominal",
+                "name": "Bool",
+                "printedName": "Swift.Bool",
+                "usr": "s:Sb"
+              },
+              {
+                "kind": "TypeNominal",
+                "name": "String",
+                "printedName": "Swift.String",
+                "usr": "s:SS"
+              },
+              {
+                "kind": "TypeNominal",
+                "name": "String",
+                "printedName": "Swift.String",
+                "usr": "s:SS"
+              },
+              {
+                "kind": "TypeNominal",
+                "name": "String",
+                "printedName": "Swift.String",
+                "usr": "s:SS"
+              },
+              {
+                "kind": "TypeNominal",
+                "name": "Optional",
+                "printedName": "Swift.String?",
+                "children": [
+                  {
+                    "kind": "TypeNominal",
+                    "name": "String",
+                    "printedName": "Swift.String",
+                    "usr": "s:SS"
+                  }
+                ],
+                "usr": "s:Sq"
+              },
+              {
+                "kind": "TypeNominal",
+                "name": "String",
+                "printedName": "Swift.String",
+                "usr": "s:SS"
+              }
+            ],
+            "declKind": "Func",
+            "usr": "c:@M@DatadogWrapper@objc(cs)DDMauiWrapper(cm)initializeWithClientToken:env:site:service:trackingConsent:",
+            "mangledName": "$s14DatadogWrapper0a4MauiB0C10initialize11clientToken3env4site7service15trackingConsentSbSS_S3SSgSStFZ",
+            "moduleName": "DatadogWrapper",
+            "static": true,
+            "objc_name": "initializeWithClientToken:env:site:service:trackingConsent:",
+            "declAttributes": [
+              "Final",
+              "AccessControl",
+              "ObjC",
+              "RawDocComment"
+            ],
+            "funcSelfKind": "NonMutating"
+          },
+          {
+            "kind": "Function",
+            "name": "isInitialized",
+            "printedName": "isInitialized()",
+            "children": [
+              {
+                "kind": "TypeNominal",
+                "name": "Bool",
+                "printedName": "Swift.Bool",
+                "usr": "s:Sb"
+              }
+            ],
+            "declKind": "Func",
+            "usr": "c:@M@DatadogWrapper@objc(cs)DDMauiWrapper(cm)isInitialized",
+            "mangledName": "$s14DatadogWrapper0a4MauiB0C13isInitializedSbyFZ",
+            "moduleName": "DatadogWrapper",
+            "static": true,
+            "declAttributes": [
+              "Final",
+              "AccessControl",
+              "ObjC",
+              "RawDocComment"
+            ],
+            "funcSelfKind": "NonMutating"
+          },
+          {
+            "kind": "Function",
+            "name": "enableRum",
+            "printedName": "enableRum(applicationId:sampleRate:)",
+            "children": [
+              {
+                "kind": "TypeNominal",
+                "name": "Bool",
+                "printedName": "Swift.Bool",
+                "usr": "s:Sb"
+              },
+              {
+                "kind": "TypeNominal",
+                "name": "String",
+                "printedName": "Swift.String",
+                "usr": "s:SS"
+              },
+              {
+                "kind": "TypeNominal",
+                "name": "Float",
+                "printedName": "Swift.Float",
+                "usr": "s:Sf"
+              }
+            ],
+            "declKind": "Func",
+            "usr": "c:@M@DatadogWrapper@objc(cs)DDMauiWrapper(cm)enableRumWithApplicationId:sampleRate:",
+            "mangledName": "$s14DatadogWrapper0a4MauiB0C9enableRum13applicationId10sampleRateSbSS_SftFZ",
+            "moduleName": "DatadogWrapper",
+            "static": true,
+            "objc_name": "enableRumWithApplicationId:sampleRate:",
+            "declAttributes": [
+              "Final",
+              "AccessControl",
+              "ObjC",
+              "RawDocComment"
+            ],
+            "funcSelfKind": "NonMutating"
+          },
+          {
+            "kind": "Function",
+            "name": "isRumEnabled",
+            "printedName": "isRumEnabled()",
+            "children": [
+              {
+                "kind": "TypeNominal",
+                "name": "Bool",
+                "printedName": "Swift.Bool",
+                "usr": "s:Sb"
+              }
+            ],
+            "declKind": "Func",
+            "usr": "c:@M@DatadogWrapper@objc(cs)DDMauiWrapper(cm)isRumEnabled",
+            "mangledName": "$s14DatadogWrapper0a4MauiB0C12isRumEnabledSbyFZ",
+            "moduleName": "DatadogWrapper",
+            "static": true,
+            "declAttributes": [
+              "Final",
+              "AccessControl",
+              "ObjC",
+              "RawDocComment"
+            ],
+            "funcSelfKind": "NonMutating"
+          },
+          {
+            "kind": "Function",
+            "name": "startView",
+            "printedName": "startView(key:name:attributes:)",
+            "children": [
+              {
+                "kind": "TypeNominal",
+                "name": "Void",
+                "printedName": "()"
+              },
+              {
+                "kind": "TypeNominal",
+                "name": "String",
+                "printedName": "Swift.String",
+                "usr": "s:SS"
+              },
+              {
+                "kind": "TypeNominal",
+                "name": "String",
+                "printedName": "Swift.String",
+                "usr": "s:SS"
+              },
+              {
+                "kind": "TypeNominal",
+                "name": "Optional",
+                "printedName": "Foundation.NSDictionary?",
+                "children": [
+                  {
+                    "kind": "TypeNominal",
+                    "name": "NSDictionary",
+                    "printedName": "Foundation.NSDictionary",
+                    "usr": "c:objc(cs)NSDictionary"
+                  }
+                ],
+                "usr": "s:Sq"
+              }
+            ],
+            "declKind": "Func",
+            "usr": "c:@M@DatadogWrapper@objc(cs)DDMauiWrapper(cm)startViewWithKey:name:attributes:",
+            "mangledName": "$s14DatadogWrapper0a4MauiB0C9startView3key4name10attributesySS_SSSo12NSDictionaryCSgtFZ",
+            "moduleName": "DatadogWrapper",
+            "static": true,
+            "objc_name": "startViewWithKey:name:attributes:",
+            "declAttributes": [
+              "Final",
+              "AccessControl",
+              "ObjC",
+              "RawDocComment"
+            ],
+            "funcSelfKind": "NonMutating"
+          },
+          {
+            "kind": "Function",
+            "name": "stopView",
+            "printedName": "stopView(key:attributes:)",
+            "children": [
+              {
+                "kind": "TypeNominal",
+                "name": "Void",
+                "printedName": "()"
+              },
+              {
+                "kind": "TypeNominal",
+                "name": "String",
+                "printedName": "Swift.String",
+                "usr": "s:SS"
+              },
+              {
+                "kind": "TypeNominal",
+                "name": "Optional",
+                "printedName": "Foundation.NSDictionary?",
+                "children": [
+                  {
+                    "kind": "TypeNominal",
+                    "name": "NSDictionary",
+                    "printedName": "Foundation.NSDictionary",
+                    "usr": "c:objc(cs)NSDictionary"
+                  }
+                ],
+                "usr": "s:Sq"
+              }
+            ],
+            "declKind": "Func",
+            "usr": "c:@M@DatadogWrapper@objc(cs)DDMauiWrapper(cm)stopViewWithKey:attributes:",
+            "mangledName": "$s14DatadogWrapper0a4MauiB0C8stopView3key10attributesySS_So12NSDictionaryCSgtFZ",
+            "moduleName": "DatadogWrapper",
+            "static": true,
+            "objc_name": "stopViewWithKey:attributes:",
+            "declAttributes": [
+              "Final",
+              "AccessControl",
+              "ObjC",
+              "RawDocComment"
+            ],
+            "funcSelfKind": "NonMutating"
+          },
+          {
+            "kind": "Function",
+            "name": "addAction",
+            "printedName": "addAction(type:name:attributes:)",
+            "children": [
+              {
+                "kind": "TypeNominal",
+                "name": "Void",
+                "printedName": "()"
+              },
+              {
+                "kind": "TypeNominal",
+                "name": "String",
+                "printedName": "Swift.String",
+                "usr": "s:SS"
+              },
+              {
+                "kind": "TypeNominal",
+                "name": "String",
+                "printedName": "Swift.String",
+                "usr": "s:SS"
+              },
+              {
+                "kind": "TypeNominal",
+                "name": "Optional",
+                "printedName": "Foundation.NSDictionary?",
+                "children": [
+                  {
+                    "kind": "TypeNominal",
+                    "name": "NSDictionary",
+                    "printedName": "Foundation.NSDictionary",
+                    "usr": "c:objc(cs)NSDictionary"
+                  }
+                ],
+                "usr": "s:Sq"
+              }
+            ],
+            "declKind": "Func",
+            "usr": "c:@M@DatadogWrapper@objc(cs)DDMauiWrapper(cm)addActionWithType:name:attributes:",
+            "mangledName": "$s14DatadogWrapper0a4MauiB0C9addAction4type4name10attributesySS_SSSo12NSDictionaryCSgtFZ",
+            "moduleName": "DatadogWrapper",
+            "static": true,
+            "objc_name": "addActionWithType:name:attributes:",
+            "declAttributes": [
+              "Final",
+              "AccessControl",
+              "ObjC",
+              "RawDocComment"
+            ],
+            "funcSelfKind": "NonMutating"
+          },
+          {
+            "kind": "Function",
+            "name": "addError",
+            "printedName": "addError(message:source:stackTrace:attributes:)",
+            "children": [
+              {
+                "kind": "TypeNominal",
+                "name": "Void",
+                "printedName": "()"
+              },
+              {
+                "kind": "TypeNominal",
+                "name": "String",
+                "printedName": "Swift.String",
+                "usr": "s:SS"
+              },
+              {
+                "kind": "TypeNominal",
+                "name": "String",
+                "printedName": "Swift.String",
+                "usr": "s:SS"
+              },
+              {
+                "kind": "TypeNominal",
+                "name": "Optional",
+                "printedName": "Swift.String?",
+                "children": [
+                  {
+                    "kind": "TypeNominal",
+                    "name": "String",
+                    "printedName": "Swift.String",
+                    "usr": "s:SS"
+                  }
+                ],
+                "usr": "s:Sq"
+              },
+              {
+                "kind": "TypeNominal",
+                "name": "Optional",
+                "printedName": "Foundation.NSDictionary?",
+                "children": [
+                  {
+                    "kind": "TypeNominal",
+                    "name": "NSDictionary",
+                    "printedName": "Foundation.NSDictionary",
+                    "usr": "c:objc(cs)NSDictionary"
+                  }
+                ],
+                "usr": "s:Sq"
+              }
+            ],
+            "declKind": "Func",
+            "usr": "c:@M@DatadogWrapper@objc(cs)DDMauiWrapper(cm)addErrorWithMessage:source:stackTrace:attributes:",
+            "mangledName": "$s14DatadogWrapper0a4MauiB0C8addError7message6source10stackTrace10attributesySS_S2SSgSo12NSDictionaryCSgtFZ",
+            "moduleName": "DatadogWrapper",
+            "static": true,
+            "objc_name": "addErrorWithMessage:source:stackTrace:attributes:",
+            "declAttributes": [
+              "Final",
+              "AccessControl",
+              "ObjC",
+              "RawDocComment"
+            ],
+            "funcSelfKind": "NonMutating"
+          },
+          {
+            "kind": "Function",
+            "name": "startResource",
+            "printedName": "startResource(key:httpMethod:url:attributes:)",
+            "children": [
+              {
+                "kind": "TypeNominal",
+                "name": "Void",
+                "printedName": "()"
+              },
+              {
+                "kind": "TypeNominal",
+                "name": "String",
+                "printedName": "Swift.String",
+                "usr": "s:SS"
+              },
+              {
+                "kind": "TypeNominal",
+                "name": "String",
+                "printedName": "Swift.String",
+                "usr": "s:SS"
+              },
+              {
+                "kind": "TypeNominal",
+                "name": "String",
+                "printedName": "Swift.String",
+                "usr": "s:SS"
+              },
+              {
+                "kind": "TypeNominal",
+                "name": "Optional",
+                "printedName": "Foundation.NSDictionary?",
+                "children": [
+                  {
+                    "kind": "TypeNominal",
+                    "name": "NSDictionary",
+                    "printedName": "Foundation.NSDictionary",
+                    "usr": "c:objc(cs)NSDictionary"
+                  }
+                ],
+                "usr": "s:Sq"
+              }
+            ],
+            "declKind": "Func",
+            "usr": "c:@M@DatadogWrapper@objc(cs)DDMauiWrapper(cm)startResourceWithKey:httpMethod:url:attributes:",
+            "mangledName": "$s14DatadogWrapper0a4MauiB0C13startResource3key10httpMethod3url10attributesySS_S2SSo12NSDictionaryCSgtFZ",
+            "moduleName": "DatadogWrapper",
+            "static": true,
+            "objc_name": "startResourceWithKey:httpMethod:url:attributes:",
+            "declAttributes": [
+              "Final",
+              "AccessControl",
+              "ObjC",
+              "RawDocComment"
+            ],
+            "funcSelfKind": "NonMutating"
+          },
+          {
+            "kind": "Function",
+            "name": "stopResource",
+            "printedName": "stopResource(key:statusCode:size:attributes:)",
+            "children": [
+              {
+                "kind": "TypeNominal",
+                "name": "Void",
+                "printedName": "()"
+              },
+              {
+                "kind": "TypeNominal",
+                "name": "String",
+                "printedName": "Swift.String",
+                "usr": "s:SS"
+              },
+              {
+                "kind": "TypeNominal",
+                "name": "Int32",
+                "printedName": "Swift.Int32",
+                "usr": "s:s5Int32V"
+              },
+              {
+                "kind": "TypeNominal",
+                "name": "Int64",
+                "printedName": "Swift.Int64",
+                "usr": "s:s5Int64V"
+              },
+              {
+                "kind": "TypeNominal",
+                "name": "Optional",
+                "printedName": "Foundation.NSDictionary?",
+                "children": [
+                  {
+                    "kind": "TypeNominal",
+                    "name": "NSDictionary",
+                    "printedName": "Foundation.NSDictionary",
+                    "usr": "c:objc(cs)NSDictionary"
+                  }
+                ],
+                "usr": "s:Sq"
+              }
+            ],
+            "declKind": "Func",
+            "usr": "c:@M@DatadogWrapper@objc(cs)DDMauiWrapper(cm)stopResourceWithKey:statusCode:size:attributes:",
+            "mangledName": "$s14DatadogWrapper0a4MauiB0C12stopResource3key10statusCode4size10attributesySS_s5Int32Vs5Int64VSo12NSDictionaryCSgtFZ",
+            "moduleName": "DatadogWrapper",
+            "static": true,
+            "objc_name": "stopResourceWithKey:statusCode:size:attributes:",
+            "declAttributes": [
+              "Final",
+              "AccessControl",
+              "ObjC",
+              "RawDocComment"
+            ],
+            "funcSelfKind": "NonMutating"
+          },
+          {
+            "kind": "Function",
+            "name": "stopResourceWithError",
+            "printedName": "stopResourceWithError(key:message:attributes:)",
+            "children": [
+              {
+                "kind": "TypeNominal",
+                "name": "Void",
+                "printedName": "()"
+              },
+              {
+                "kind": "TypeNominal",
+                "name": "String",
+                "printedName": "Swift.String",
+                "usr": "s:SS"
+              },
+              {
+                "kind": "TypeNominal",
+                "name": "String",
+                "printedName": "Swift.String",
+                "usr": "s:SS"
+              },
+              {
+                "kind": "TypeNominal",
+                "name": "Optional",
+                "printedName": "Foundation.NSDictionary?",
+                "children": [
+                  {
+                    "kind": "TypeNominal",
+                    "name": "NSDictionary",
+                    "printedName": "Foundation.NSDictionary",
+                    "usr": "c:objc(cs)NSDictionary"
+                  }
+                ],
+                "usr": "s:Sq"
+              }
+            ],
+            "declKind": "Func",
+            "usr": "c:@M@DatadogWrapper@objc(cs)DDMauiWrapper(cm)stopResourceWithErrorWithKey:message:attributes:",
+            "mangledName": "$s14DatadogWrapper0a4MauiB0C21stopResourceWithError3key7message10attributesySS_SSSo12NSDictionaryCSgtFZ",
+            "moduleName": "DatadogWrapper",
+            "static": true,
+            "objc_name": "stopResourceWithErrorWithKey:message:attributes:",
+            "declAttributes": [
+              "Final",
+              "AccessControl",
+              "ObjC",
+              "RawDocComment"
+            ],
+            "funcSelfKind": "NonMutating"
+          },
+          {
+            "kind": "Constructor",
+            "name": "init",
+            "printedName": "init()",
+            "children": [
+              {
+                "kind": "TypeNominal",
+                "name": "DatadogMauiWrapper",
+                "printedName": "DatadogWrapper.DatadogMauiWrapper",
+                "usr": "c:@M@DatadogWrapper@objc(cs)DDMauiWrapper"
+              }
+            ],
+            "declKind": "Constructor",
+            "usr": "c:@M@DatadogWrapper@objc(cs)DDMauiWrapper(im)init",
+            "mangledName": "$s14DatadogWrapper0a4MauiB0CACycfc",
+            "moduleName": "DatadogWrapper",
+            "overriding": true,
+            "implicit": true,
+            "objc_name": "init",
+            "declAttributes": [
+              "Dynamic",
+              "ObjC",
+              "Override"
+            ],
+            "init_kind": "Designated"
+          }
+        ],
+        "declKind": "Class",
+        "usr": "c:@M@DatadogWrapper@objc(cs)DDMauiWrapper",
+        "mangledName": "$s14DatadogWrapper0a4MauiB0C",
+        "moduleName": "DatadogWrapper",
+        "objc_name": "DDMauiWrapper",
+        "declAttributes": [
+          "AccessControl",
+          "ObjC",
+          "RawDocComment"
+        ],
+        "superclassUsr": "c:objc(cs)NSObject",
+        "inheritsConvenienceInitializers": true,
+        "superclassNames": [
+          "ObjectiveC.NSObject"
+        ],
+        "conformances": [
+          {
+            "kind": "Conformance",
+            "name": "Copyable",
+            "printedName": "Copyable",
+            "usr": "s:s8CopyableP",
+            "mangledName": "$ss8CopyableP"
+          },
+          {
+            "kind": "Conformance",
+            "name": "Escapable",
+            "printedName": "Escapable",
+            "usr": "s:s9EscapableP",
+            "mangledName": "$ss9EscapableP"
+          },
+          {
+            "kind": "Conformance",
+            "name": "Equatable",
+            "printedName": "Equatable",
+            "usr": "s:SQ",
+            "mangledName": "$sSQ"
+          },
+          {
+            "kind": "Conformance",
+            "name": "Hashable",
+            "printedName": "Hashable",
+            "usr": "s:SH",
+            "mangledName": "$sSH"
+          },
+          {
+            "kind": "Conformance",
+            "name": "CVarArg",
+            "printedName": "CVarArg",
+            "usr": "s:s7CVarArgP",
+            "mangledName": "$ss7CVarArgP"
+          },
+          {
+            "kind": "Conformance",
+            "name": "_KeyValueCodingAndObservingPublishing",
+            "printedName": "_KeyValueCodingAndObservingPublishing",
+            "usr": "s:10Foundation37_KeyValueCodingAndObservingPublishingP",
+            "mangledName": "$s10Foundation37_KeyValueCodingAndObservingPublishingP"
+          },
+          {
+            "kind": "Conformance",
+            "name": "_KeyValueCodingAndObserving",
+            "printedName": "_KeyValueCodingAndObserving",
+            "usr": "s:10Foundation27_KeyValueCodingAndObservingP",
+            "mangledName": "$s10Foundation27_KeyValueCodingAndObservingP"
+          },
+          {
+            "kind": "Conformance",
+            "name": "CustomStringConvertible",
+            "printedName": "CustomStringConvertible",
+            "usr": "s:s23CustomStringConvertibleP",
+            "mangledName": "$ss23CustomStringConvertibleP"
+          },
+          {
+            "kind": "Conformance",
+            "name": "CustomDebugStringConvertible",
+            "printedName": "CustomDebugStringConvertible",
+            "usr": "s:s28CustomDebugStringConvertibleP",
+            "mangledName": "$ss28CustomDebugStringConvertibleP"
+          }
+        ]
+      }
+    ],
+    "json_format_version": 8
+  },
+  "ConstValues": [
+    {
+      "filePath": "\/Users\/roman.gaignault\/dev\/maui\/native\/ios\/DatadogWrapper\/Sources\/DatadogWrapper\/DatadogMauiWrapper.swift",
+      "kind": "StringLiteral",
+      "offset": 351,
+      "length": 5,
+      "value": "\"us1\""
+    },
+    {
+      "filePath": "\/Users\/roman.gaignault\/dev\/maui\/native\/ios\/DatadogWrapper\/Sources\/DatadogWrapper\/DatadogMauiWrapper.swift",
+      "kind": "BooleanLiteral",
+      "offset": 3760,
+      "length": 5,
+      "value": "false"
+    }
+  ]
+}

@@ -29,23 +29,35 @@
   <!-- MAUI Controls dependency -->
   <ItemGroup>
     <PackageReference Include="Microsoft.Maui.Controls" Version="$(MauiVersion)" />
+    <PackageReference Include="Microsoft.Extensions.Http" Version="9.0.0" />
   </ItemGroup>
 
-  <!-- Android-specific dependencies -->
+  <!-- Android-specific dependencies - runtime requirements of Datadog SDK -->
   <ItemGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">
     <!-- Kotlin required by Datadog SDK -->
     <PackageReference Include="Xamarin.Kotlin.StdLib.Jdk8" Version="2.0.21" />
     <!-- AndroidX Work Manager required by Datadog SDK -->
     <PackageReference Include="Xamarin.AndroidX.Work.Runtime" Version="2.8.1" />
+    <!-- OkHttp required by Datadog SDK for HTTP communication -->
+    <PackageReference Include="Square.OkHttp3" Version="4.12.0.3" />
+    <!-- Gson required by Datadog SDK for JSON serialization -->
+    <PackageReference Include="GoogleGson" Version="2.13.1.1" />
   </ItemGroup>
 
-  <!-- Android native Gradle project binding -->
+  <!-- AndroidX Metrics Performance AAR (no NuGet binding available) - required by Datadog RUM SDK for JankStats -->
   <ItemGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">
-    <AndroidGradleProject Include="..\..\native\android\build.gradle.kts">
-      <ModuleName>datadogwrapper</ModuleName>
-      <Configuration>Release</Configuration>
+    <AndroidLibrary Include="..\..\native\android\lib\deps\metrics-performance-1.0.0-beta01.aar">
+      <Bind>false</Bind>
+    </AndroidLibrary>
+  </ItemGroup>
+
+  <!-- Android native library (pre-built fat AAR with bundled dependencies) -->
+  <ItemGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">
+    <AndroidLibrary Include="..\..\native\android\lib\datadogwrapper-release.aar">
       <Bind>true</Bind>
-    </AndroidGradleProject>
+    </AndroidLibrary>
+    <!-- Transform metadata to exclude transitive deps from binding (they're bundled in fat AAR for runtime) -->
+    <TransformFile Include="Transforms\Metadata.xml" />
   </ItemGroup>
 
   <!-- iOS-specific configuration -->

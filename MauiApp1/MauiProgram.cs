@@ -8,13 +8,18 @@ public static class MauiProgram
 	public static MauiApp CreateMauiApp()
 	{
 		var builder = MauiApp.CreateBuilder();
+		// Replace with your Datadog credentials from https://app.datadoghq.com/rum/application/create
+		var clientToken = "";
+		var rumAppId = "";
+
 		builder
 			.UseMauiApp<App>()
 			.UseDatadog(new DatadogConfiguration
 			{
-				ClientToken = "pub_test_token_for_verification",
+				ClientToken = clientToken,
 				Env = "development",
-				Site = DatadogSite.US1,
+				Site = DatadogSite.US1,  // Change to your Datadog site (US1, EU1, US3, US5, AP1)
+				RumApplicationId = rumAppId,
 				TrackingConsent = TrackingConsent.Granted
 			})
 			.ConfigureFonts(fonts =>

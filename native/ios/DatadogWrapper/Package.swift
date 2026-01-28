@@ -14,7 +14,9 @@ let package = Package(
         .target(
             name: "DatadogWrapper",
             dependencies: [
-                .product(name: "DatadogCore", package: "dd-sdk-ios")
+                .product(name: "DatadogCore", package: "dd-sdk-ios"),
+                .product(name: "DatadogRUM", package: "dd-sdk-ios"),
+                .product(name: "DatadogCrashReporting", package: "dd-sdk-ios")
             ]
         )
     ]

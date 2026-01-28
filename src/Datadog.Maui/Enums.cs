@@ -18,7 +18,9 @@ public enum DatadogSite
     /// <summary>AP2 data center (ap2.datadoghq.com)</summary>
     AP2,
     /// <summary>US1-FED data center (ddog-gov.com)</summary>
-    US1_FED
+    US1_FED,
+    /// <summary>Staging data center (datad0g.com)</summary>
+    STAGING
 }
 
 /// <summary>
@@ -58,4 +60,38 @@ public enum UploadFrequency
     Average,
     /// <summary>Less frequent uploads (less battery usage).</summary>
     Rare
+}
+
+/// <summary>
+/// Type of user action tracked by RUM.
+/// </summary>
+public enum RumActionType
+{
+    /// <summary>A tap action on a UI element.</summary>
+    Tap,
+    /// <summary>A click action on a UI element.</summary>
+    Click,
+    /// <summary>A scroll action.</summary>
+    Scroll,
+    /// <summary>A swipe gesture.</summary>
+    Swipe,
+    /// <summary>A custom user action.</summary>
+    Custom
+}
+
+/// <summary>
+/// Source of an error tracked by RUM.
+/// </summary>
+public enum RumErrorSource
+{
+    /// <summary>Error originating from source code.</summary>
+    Source,
+    /// <summary>Error originating from network operations.</summary>
+    Network,
+    /// <summary>Error originating from a WebView.</summary>
+    WebView,
+    /// <summary>Error originating from console logs.</summary>
+    Console,
+    /// <summary>A custom error source.</summary>
+    Custom
 }

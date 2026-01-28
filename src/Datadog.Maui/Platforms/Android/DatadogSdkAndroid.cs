@@ -26,12 +26,14 @@ internal sealed class DatadogSdkAndroid : IDatadogSdk
         }
 
         var context = Android.App.Application.Context;
+        var siteString = MapSite(configuration.Site);
+        Android.Util.Log.Info("Datadog.Maui", $"Site enum value: {(int)configuration.Site}, name: {configuration.Site}, mapped to: {siteString}");
 
         var success = Com.Datadog.Maui.DatadogMauiWrapper.Initialize(
             context,
             configuration.ClientToken,
             configuration.Env,
-            MapSite(configuration.Site),
+            siteString,
             configuration.Service,
             MapTrackingConsent(configuration.TrackingConsent),
             MapBatchSize(configuration.BatchSize),
@@ -53,6 +55,7 @@ internal sealed class DatadogSdkAndroid : IDatadogSdk
         DatadogSite.AP1 => "AP1",
         DatadogSite.AP2 => "AP2",
         DatadogSite.US1_FED => "US1_FED",
+        DatadogSite.STAGING => "STAGING",
         _ => "US1"
     };
 

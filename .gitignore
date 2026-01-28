@@ -1,0 +1,27 @@
+# GSD planning files
+.planning/
+
+# Claude files
+.claude/
+
+# .NET build artifacts
+bin/
+obj/
+
+# Swift Package Manager
+.build/
+
+# Android build artifacts
+.gradle/
+build/
+local.properties
+
+# Native library build caches
+native/ios/DatadogWrapper/.build/
+native/android/.gradle/
+native/android/datadogwrapper/build/
+
+# IDE
+.vs/
+.idea/
+*.user

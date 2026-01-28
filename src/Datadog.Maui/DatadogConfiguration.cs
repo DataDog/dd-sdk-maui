@@ -62,4 +62,32 @@ public record DatadogConfiguration
     /// The upload frequency for data batches. Defaults to <see cref="UploadFrequency.Average"/>.
     /// </summary>
     public UploadFrequency UploadFrequency { get; init; } = UploadFrequency.Average;
+
+    /// <summary>
+    /// Enables native crash reporting. Defaults to true.
+    /// </summary>
+    /// <remarks>
+    /// When enabled, the SDK will capture native crashes (iOS/Android)
+    /// and report them to Datadog Error Tracking.
+    /// </remarks>
+    public bool EnableCrashReporting { get; init; } = true;
+
+    /// <summary>
+    /// Enables tracking of application hangs/ANRs. Defaults to true.
+    /// </summary>
+    /// <remarks>
+    /// On iOS, this tracks app hangs when the main thread is blocked.
+    /// On Android, this tracks ANR (Application Not Responding) events.
+    /// </remarks>
+    public bool TrackAppHangs { get; init; } = true;
+
+    /// <summary>
+    /// Enables catching unhandled .NET exceptions and reporting them to RUM. Defaults to true.
+    /// </summary>
+    /// <remarks>
+    /// When enabled, unhandled exceptions from AppDomain.CurrentDomain.UnhandledException
+    /// and TaskScheduler.UnobservedTaskException will be captured and reported
+    /// as RUM errors.
+    /// </remarks>
+    public bool CatchUnhandledExceptions { get; init; } = true;
 }
