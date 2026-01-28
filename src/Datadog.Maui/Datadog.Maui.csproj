@@ -48,4 +48,26 @@
     </AndroidGradleProject>
   </ItemGroup>
 
+  <!-- iOS-specific configuration -->
+  <PropertyGroup Condition="$(TargetFramework.Contains('ios'))">
+    <!-- ObjC linker flag required for native binding interop -->
+    <MtouchExtraArgs>-gcc_flags "-ObjC"</MtouchExtraArgs>
+  </PropertyGroup>
+
+  <!-- iOS native framework reference (when available) -->
+  <!-- Note: Requires building the Swift package with Xcode first:
+       cd native/ios/DatadogWrapper
+       xcodebuild -scheme DatadogWrapper -destination 'generic/platform=iOS Simulator' \
+         -configuration Release BUILD_LIBRARY_FOR_DISTRIBUTION=YES
+  -->
+  <!--
+  <ItemGroup Condition="$(TargetFramework.Contains('ios'))">
+    <NativeReference Include="..\..\native\ios\DatadogWrapper\.build\Release-iphonesimulator\DatadogWrapper.framework">
+      <Kind>Framework</Kind>
+      <SmartLink>False</SmartLink>
+      <ForceLoad>True</ForceLoad>
+    </NativeReference>
+  </ItemGroup>
+  -->
+
 </Project>
