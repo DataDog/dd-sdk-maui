@@ -1,0 +1,18 @@
+// swift-interface-format-version: 1.0
+// swift-compiler-version: Apple Swift version 6.2.3 effective-5.10 (swiftlang-6.2.3.3.21 clang-1700.6.3.2)
+// swift-module-flags: -target arm64-apple-ios17.0-simulator -enable-objc-interop -enable-library-evolution -swift-version 5 -enforce-exclusivity=checked -O -enable-experimental-feature DebugDescriptionMacro -module-name DatadogWrapper -package-name datadogwrapper
+// swift-module-flags-ignorable:  -formal-cxx-interoperability-mode=off -interface-compiler-version 6.2.3
+import DatadogCore
+import Foundation
+import Swift
+import _Concurrency
+import _StringProcessing
+import _SwiftConcurrencyShims
+@_inheritsConvenienceInitializers @objc(DDMauiWrapper) public class DatadogMauiWrapper : ObjectiveC.NSObject {
+  #if compiler(>=5.3) && $NonescapableTypes
+  @objc public static func initialize(clientToken: Swift.String, env: Swift.String, site: Swift.String, service: Swift.String?, trackingConsent: Swift.String) -> Swift.Bool
+  #endif
+  @objc public static func isInitialized() -> Swift.Bool
+  @objc override dynamic public init()
+  @objc deinit
+}

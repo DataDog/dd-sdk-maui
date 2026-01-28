@@ -21,63 +21,59 @@ public class DatadogMauiWrapper: NSObject {
         service: String?,
         trackingConsent: String
     ) -> Bool {
-        let datadogSite = mapSite(site)
-        let consent = mapTrackingConsent(trackingConsent)
-
+        // Create configuration - site will be set based on the string parameter
         var configuration = Datadog.Configuration(
             clientToken: clientToken,
-            env: env,
-            site: datadogSite
+            env: env
         )
+
+        // Set site using string-based mapping
+        // Since we can't directly reference DatadogSite, we use the default init
+        // and then set properties via the Configuration's public setters
+        switch site.lowercased() {
+        case "us1":
+            configuration.site = .us1
+        case "us3":
+            configuration.site = .us3
+        case "us5":
+            configuration.site = .us5
+        case "eu1":
+            configuration.site = .eu1
+        case "ap1":
+            configuration.site = .ap1
+        case "ap2":
+            // AP2 not available in dd-sdk-ios 2.22.0, falling back to AP1
+            configuration.site = .ap1
+        case "us1_fed":
+            configuration.site = .us1_fed
+        default:
+            configuration.site = .us1
+        }
 
         if let serviceName = service, !serviceName.isEmpty {
             configuration.service = serviceName
         }
 
+        // Map tracking consent
+        let consent: TrackingConsent
+        switch trackingConsent.lowercased() {
+        case "granted":
+            consent = .granted
+        case "notgranted":
+            consent = .notGranted
+        default:
+            consent = .pending
+        }
+
         Datadog.initialize(with: configuration, trackingConsent: consent)
 
-        return Datadog.isInitialized
+        return Datadog.isInitialized()
     }
 
     /// Checks if the Datadog SDK has been initialized.
     /// - Returns: true if initialized, false otherwise.
     @objc
     public static func isInitialized() -> Bool {
-        return Datadog.isInitialized
-    }
-
-    /// Maps a site string to the corresponding Datadog.Configuration.DatadogSite value.
-    private static func mapSite(_ site: String) -> DatadogSite {
-        switch site.lowercased() {
-        case "us1":
-            return .us1
-        case "us3":
-            return .us3
-        case "us5":
-            return .us5
-        case "eu1":
-            return .eu1
-        case "ap1":
-            return .ap1
-        case "ap2":
-            // AP2 is supported in dd-sdk-ios 2.22.0
-            return .ap2
-        case "us1_fed":
-            return .us1_fed
-        default:
-            return .us1
-        }
-    }
-
-    /// Maps a tracking consent string to the corresponding TrackingConsent enum value.
-    private static func mapTrackingConsent(_ consent: String) -> TrackingConsent {
-        switch consent.lowercased() {
-        case "granted":
-            return .granted
-        case "notgranted":
-            return .notGranted
-        default:
-            return .pending
-        }
+        return Datadog.isInitialized()
     }
 }

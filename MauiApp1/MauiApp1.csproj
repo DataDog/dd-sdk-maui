@@ -70,4 +70,9 @@
 		<JavaSdkDirectory>/Applications/Android Studio.app/Contents/jbr/Contents/Home</JavaSdkDirectory>
 	</PropertyGroup>
 
+	<!-- iOS ObjC linker flag and native library -->
+	<PropertyGroup Condition="$(TargetFramework.Contains('ios'))">
+		<MtouchExtraArgs>-gcc_flags "-ObjC -force_load $(MSBuildThisFileDirectory)../native/ios/lib/iphonesimulator/libDatadogWrapper.a"</MtouchExtraArgs>
+	</PropertyGroup>
+
 </Project>
