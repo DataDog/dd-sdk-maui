@@ -33,7 +33,9 @@
 
   <!-- Android-specific dependencies -->
   <ItemGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">
+    <!-- Kotlin required by Datadog SDK -->
     <PackageReference Include="Xamarin.Kotlin.StdLib.Jdk8" Version="2.0.21" />
+    <!-- AndroidX Work Manager required by Datadog SDK -->
     <PackageReference Include="Xamarin.AndroidX.Work.Runtime" Version="2.8.1" />
   </ItemGroup>
 
