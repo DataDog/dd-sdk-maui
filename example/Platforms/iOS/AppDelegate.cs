@@ -13,9 +13,9 @@ public class AppDelegate : MauiUIApplicationDelegate
 	{
 		// Initialize Datadog SDK (use dummy token for validation - won't send real data)
 		var initialized = DatadogWrapper.Initialize(
-			clientToken: "CLIENT_TOKEN",
-			environment: "ENV",
-			service: "datadog-maui-test"
+			"CLIENT_TOKEN",
+			"ENV",
+			"datadog-maui-test"
 		);
 
 		Console.WriteLine($"[Datadog] iOS SDK initialized: {initialized}");

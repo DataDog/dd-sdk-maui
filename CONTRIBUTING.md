@@ -100,19 +100,6 @@ This will:
 3. Build all C# bindings (→ NuGet packages)
 4. Output everything to `./local-packages/`
 
-**Expected output**:
-```
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
- GSD ► BUILDING IOS NATIVE WRAPPER
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-✓ Cleaning previous iOS build...
-✓ Building XCFramework...
-✓ iOS native wrapper built successfully
-...
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
- BUILD COMPLETE!
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-```
 
 ### 4. Run Example App
 
@@ -500,16 +487,6 @@ Rebuild:
 ```bash
 cd native-wrappers/android
 ./gradlew :datadogwrapper:assembleRelease
-```
-
-### Cleaning Everything
-
-```bash
-# Clean all build artifacts
-git clean -fdx -e local-packages -e .planning
-
-# Rebuild from scratch
-./build.sh
 ```
 
 ## Troubleshooting

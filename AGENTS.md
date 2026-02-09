@@ -111,15 +111,10 @@ dd-sdk-maui/
 │       ├── iOS/AppDelegate.cs    # iOS initialization
 │       └── Android/MainActivity.cs   # Android initialization
 │
-├── local-packages/                # Local NuGet package output
-│   ├── DatadogSdk.iOS.Binding.1.0.0.nupkg
-│   ├── DatadogSdk.Android.*.nupkg
-│   └── DatadogSdk.Maui.1.0.0.nupkg
-│
-└── .planning/                     # GSD workflow planning
-    ├── ROADMAP.md                # Phase breakdown
-    ├── STATE.md                  # Current progress
-    └── phases/                   # Detailed execution plans
+└── local-packages/                # Local NuGet package output
+    ├── DatadogSdk.iOS.Binding.1.0.0.nupkg
+    ├── DatadogSdk.Android.*.nupkg
+    └── DatadogSdk.Maui.1.0.0.nupkg
 ```
 
 ## Common Workflows
@@ -399,32 +394,6 @@ Before committing changes:
    # Verify timestamps are recent
    ```
 
-## Phase 2 Readiness
-
-Phase 2 plans are complete but not yet executed. When ready:
-
-```bash
-/gsd:execute-phase 2
-```
-
-Phase 2 will add:
-- Unified initialization API (`DatadogSdk.Initialize(config)`)
-- Configuration builder with fluent API
-- Session management infrastructure
-- Privacy controls (TrackingConsent)
-- Comprehensive documentation
-
-## GSD Workflow Commands
-
-This project uses the Get Shit Done (GSD) workflow for structured development:
-
-- `/gsd:progress` - Check current status
-- `/gsd:plan-phase N` - Plan a phase before execution
-- `/gsd:execute-phase N` - Execute a planned phase
-- `/gsd:verify-work N` - Manual acceptance testing
-
-Phases are tracked in `.planning/` directory.
-
 ## Useful Commands Reference
 
 ```bash
@@ -460,6 +429,5 @@ git clean -fdx -e local-packages -e .planning
 
 ## Getting Help
 
-- Check existing Phase 1 plans in `.planning/phases/01-foundation-bindings/`
 - Look at git history for examples: `git log --oneline`
 - Review test logs in example app platform initialization code

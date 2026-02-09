@@ -8,6 +8,9 @@ local-packages/
 .build/
 .swiftpm/
 
+# iOS/Swift builds
+native-wrappers/ios/**/build/
+
 # Gradle
 .gradle/
 native-wrappers/android/**/build/
@@ -32,4 +35,5 @@ native-wrappers/android/**/build/
 TestResults/
 
 # LLMs
+.claude
 .planning
