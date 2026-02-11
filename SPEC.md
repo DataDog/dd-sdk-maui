@@ -64,7 +64,7 @@ This document provides a comprehensive technical specification for the Datadog S
 │  (Swift + ObjC)      │  │  (Kotlin + JVM)      │
 │                      │  │                      │
 │  - DatadogWrapper    │  │  - DatadogWrapper    │
-│  - LogsWrapper       │  │  - LogsWrapper       │
+│  - DdLogs       │  │  - DdLogs       │
 └──────────┬───────────┘  └──────────┬───────────┘
            │                         │
            │ Imports                 │ Imports
@@ -113,7 +113,7 @@ DatadogWrapper/
 ├── Package.swift                    # SPM manifest
 └── Sources/DatadogWrapper/
     ├── DatadogWrapper.swift         # SDK initialization
-    └── LogsWrapper.swift            # Logging API
+    └── DdLogs.swift            # Logging API
 ```
 
 **Package.swift**:
@@ -277,7 +277,7 @@ namespace DatadogSdk.iOS.Binding
     }
 
     [BaseType(typeof(NSObject))]
-    interface LogsWrapper
+    interface DdLogs
     {
         [Static]
         [Export("enableLogs")]
@@ -337,7 +337,7 @@ datadogwrapper/
 ├── build.gradle.kts                 # Module configuration
 └── src/main/kotlin/com/datadog/wrapper/
     ├── DatadogWrapper.kt            # SDK initialization
-    └── LogsWrapper.kt               # Logging API
+    └── DdLogs.kt               # Logging API
 ```
 
 **build.gradle.kts**:
@@ -682,22 +682,22 @@ protected override void OnCreate(Bundle? savedInstanceState)
 ```csharp
 using DatadogSdk.iOS.Binding;
 
-LogsWrapper.EnableLogs();
-LogsWrapper.LogDebug("Debug message");
-LogsWrapper.LogInfo("Info message");
-LogsWrapper.LogWarn("Warning message");
-LogsWrapper.LogError("Error message");
+DdLogs.EnableLogs();
+DdLogs.LogDebug("Debug message");
+DdLogs.LogInfo("Info message");
+DdLogs.LogWarn("Warning message");
+DdLogs.LogError("Error message");
 ```
 
 **Android**:
 ```csharp
 using DatadogSdk.Android.Binding;
 
-LogsWrapper.EnableLogs();
-LogsWrapper.LogDebug("Debug message");
-LogsWrapper.LogInfo("Info message");
-LogsWrapper.LogWarn("Warning message");
-LogsWrapper.LogError("Error message");
+DdLogs.EnableLogs();
+DdLogs.LogDebug("Debug message");
+DdLogs.LogInfo("Info message");
+DdLogs.LogWarn("Warning message");
+DdLogs.LogError("Error message");
 ```
 
 ## Known Limitations

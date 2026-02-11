@@ -21,10 +21,10 @@
 		<Nullable>enable</Nullable>
 
 		<!-- Display name -->
-		<ApplicationTitle>example</ApplicationTitle>
+		<ApplicationTitle>DatadogMauiExample</ApplicationTitle>
 
 		<!-- App Identifier -->
-		<ApplicationId>com.companyname.example</ApplicationId>
+		<ApplicationId>com.datadog.maui.test</ApplicationId>
 
 		<!-- Versions -->
 		<ApplicationDisplayVersion>1.0</ApplicationDisplayVersion>

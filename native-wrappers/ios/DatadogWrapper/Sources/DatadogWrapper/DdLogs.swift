@@ -2,8 +2,8 @@ import Foundation
 import DatadogCore
 import DatadogLogs
 
-@objc(LogsWrapper)
-public class LogsWrapper: NSObject {
+@objc(DdLogs)
+public class DdLogs: NSObject {
 
     private static var logger: LoggerProtocol?
 

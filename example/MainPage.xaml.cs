@@ -1,4 +1,10 @@
-﻿namespace example;
+﻿#if ANDROID
+using DatadogSdk.Android.Binding;
+#elif IOS
+using DatadogSdk.iOS.Binding;
+#endif
+
+namespace example;
 
 public partial class MainPage : ContentPage
 {
@@ -7,17 +13,17 @@ public partial class MainPage : ContentPage
 	public MainPage()
 	{
 		InitializeComponent();
+		DdLogs.EnableLogs();
 	}
 
-	private void OnCounterClicked(object? sender, EventArgs e)
+	private void OnSendLogsClicked(object? sender, EventArgs e)
 	{
-		count++;
+		var platform = DeviceInfo.Platform.ToString();
+		DdLogs.LogInfo($"DDLogs - {platform} - LogInfo");
+		DdLogs.LogDebug($"DDLogs - {platform} - LogDebug");
+		DdLogs.LogWarn($"DDLogs - {platform} - LogWarn");
+		DdLogs.LogError($"DDLogs - {platform} - LogError");
 
-		if (count == 1)
-			CounterBtn.Text = $"Clicked {count} time";
-		else
-			CounterBtn.Text = $"Clicked {count} times";
-
-		SemanticScreenReader.Announce(CounterBtn.Text);
+		Console.WriteLine("[Datadog] Logging test complete");
 	}
 }

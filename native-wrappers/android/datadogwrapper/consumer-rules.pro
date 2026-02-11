@@ -15,4 +15,4 @@
 
 # Prevent obfuscation of wrapper APIs
 -keepnames class com.datadog.wrapper.DatadogWrapper
--keepnames class com.datadog.wrapper.LogsWrapper
+-keepnames class com.datadog.wrapper.DdLogs

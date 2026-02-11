@@ -406,10 +406,10 @@ unzip -l bindings/DatadogSdk.Android.Binding/Jars/datadogwrapper-release.aar
 
 #### 1. Add to Native Wrapper
 
-**iOS** (`native-wrappers/ios/DatadogWrapper/Sources/DatadogWrapper/LogsWrapper.swift`):
+**iOS** (`native-wrappers/ios/DatadogWrapper/Sources/DatadogWrapper/DdLogs.swift`):
 ```swift
-@objc(LogsWrapper)
-public class LogsWrapper: NSObject {
+@objc(DdLogs)
+public class DdLogs: NSObject {
 
     @objc public static func logCritical(_ message: String) {
         logger?.critical(message)
@@ -417,9 +417,9 @@ public class LogsWrapper: NSObject {
 }
 ```
 
-**Android** (`native-wrappers/android/datadogwrapper/src/main/kotlin/com/datadog/wrapper/LogsWrapper.kt`):
+**Android** (`native-wrappers/android/datadogwrapper/src/main/kotlin/com/datadog/wrapper/DdLogs.kt`):
 ```kotlin
-class LogsWrapper {
+class DdLogs {
     companion object {
         @JvmStatic
         fun logCritical(message: String) {
@@ -434,7 +434,7 @@ class LogsWrapper {
 **iOS** (`bindings/DatadogSdk.iOS.Binding/ApiDefinition.cs`):
 ```csharp
 [BaseType(typeof(NSObject))]
-interface LogsWrapper
+interface DdLogs
 {
     [Static]
     [Export("logCritical:")]

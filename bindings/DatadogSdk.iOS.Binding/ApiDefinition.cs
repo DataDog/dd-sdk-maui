@@ -18,9 +18,9 @@ namespace DatadogSdk.iOS.Binding
         bool Initialize(string clientToken, string environment, string service);
     }
 
-    // LogsWrapper - Logging functionality
+    // DdLogs - Logging functionality
     [BaseType(typeof(NSObject))]
-    interface LogsWrapper
+    interface DdLogs
     {
         [Static]
         [Export("enableLogs")]

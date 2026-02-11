@@ -90,21 +90,14 @@ if [ -z "$TARGET" ]; then
 fi
 
 # ============================================================================
-# Clean (if requested)
+# Clean
 # ============================================================================
-if [ "$CLEAN" = true ]; then
-    log_section "Cleaning Example App"
-    log_info "Removing bin and obj directories..."
-    rm -rf bin obj
-    log_info "Clean complete"
-fi
-
-# ============================================================================
-# Restore NuGet packages
-# ============================================================================
-log_section "Restoring NuGet Packages"
-dotnet restore --force --no-cache
-log_info "NuGet packages restored"
+log_section "Cleaning Example App"
+log_info "Removing bin directory..."
+rm -rf bin
+log_info "Clearing NuGet global cache for DatadogSdk packages..."
+rm -rf ~/.nuget/packages/datadogsdk.*
+log_info "Clean complete"
 
 # ============================================================================
 # Build and Run
@@ -112,12 +105,12 @@ log_info "NuGet packages restored"
 if [ "$TARGET" = "ios" ]; then
     log_section "Building iOS App"
 
+    log_info "Building iOS app..."
+    dotnet build -f net10.0-ios
+
     if [ "$RUN_APP" = true ]; then
-        log_info "Building and running iOS app on simulator..."
+        log_info "Launching iOS app on simulator..."
         dotnet build -t:Run -f net10.0-ios
-    else
-        log_info "Building iOS app..."
-        dotnet build -f net10.0-ios
     fi
 
     log_info "iOS app built successfully"

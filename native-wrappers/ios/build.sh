@@ -3,8 +3,11 @@ set -e
 
 echo "🔨 Building DatadogWrapper XCFramework..."
 
+# Resolve script directory as absolute path
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+
 # Navigate to the package directory
-cd "$(dirname "$0")/DatadogWrapper"
+cd "$SCRIPT_DIR/DatadogWrapper"
 
 # Clean previous builds
 echo "🧹 Cleaning previous builds..."
@@ -55,6 +58,14 @@ if [ -f "./build/DatadogWrapper.xcframework/Info.plist" ]; then
   echo "🧹 Cleaning up intermediate archives..."
   rm -rf ./build/ios-arm64.xcarchive
   rm -rf ./build/ios-simulator.xcarchive
+
+  # Copy XCFramework to bindings directory
+  echo ""
+  echo "📋 Copying XCFramework to bindings..."
+  BINDINGS_DIR="$SCRIPT_DIR/../../bindings/DatadogSdk.iOS.Binding/NativeReference"
+  rm -rf "$BINDINGS_DIR/DatadogWrapper.xcframework"
+  cp -R ./build/DatadogWrapper.xcframework "$BINDINGS_DIR/"
+  echo "📋 Copied to $BINDINGS_DIR/DatadogWrapper.xcframework"
 
   echo "✨ Build complete!"
 else

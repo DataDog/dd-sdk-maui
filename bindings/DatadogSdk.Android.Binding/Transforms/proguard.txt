@@ -14,7 +14,7 @@
 
 # Keep Kotlin companion objects (critical for @JvmStatic)
 -keep class com.datadog.wrapper.DatadogWrapper$Companion { *; }
--keep class com.datadog.wrapper.LogsWrapper$Companion { *; }
+-keep class com.datadog.wrapper.DdLogs$Companion { *; }
 
 # Keep Kotlin metadata (required for reflection)
 -keep class kotlin.Metadata { *; }

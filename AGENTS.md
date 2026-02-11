@@ -73,7 +73,7 @@ dd-sdk-maui/
 │   │       ├── Package.swift     # SPM manifest (dd-sdk-ios dependency)
 │   │       └── Sources/DatadogWrapper/
 │   │           ├── DatadogWrapper.swift   # SDK initialization
-│   │           └── LogsWrapper.swift      # Logging API
+│   │           └── DdLogs.swift      # Logging API
 │   │
 │   └── android/
 │       ├── build.gradle.kts      # Root Gradle project
@@ -82,7 +82,7 @@ dd-sdk-maui/
 │           ├── build.gradle.kts  # Module config (dd-sdk-android deps)
 │           └── src/main/kotlin/com/datadog/wrapper/
 │               ├── DatadogWrapper.kt   # SDK initialization
-│               └── LogsWrapper.kt      # Logging API
+│               └── DdLogs.kt      # Logging API
 │
 ├── bindings/                      # C# binding projects
 │   ├── DatadogSdk.iOS.Binding/

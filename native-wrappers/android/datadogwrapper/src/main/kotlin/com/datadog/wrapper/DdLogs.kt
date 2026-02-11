@@ -4,7 +4,7 @@ import com.datadog.android.log.Logger
 import com.datadog.android.log.Logs
 import com.datadog.android.log.LogsConfiguration
 
-class LogsWrapper {
+class DdLogs {
     companion object {
         private var logger: Logger? = null
 
