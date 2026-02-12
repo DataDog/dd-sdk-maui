@@ -113,6 +113,9 @@ log_info "Restore complete"
 if [ "$TARGET" = "ios" ]; then
     log_section "Building iOS App"
 
+    # Ensure actool intermediate directory exists (workaround for .NET 10 preview ACTool bug)
+    mkdir -p obj/Debug/net10.0-ios/iossimulator-arm64/actool
+
     log_info "Building iOS app..."
     dotnet build -f net10.0-ios --no-restore
 
