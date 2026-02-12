@@ -1,6 +1,7 @@
 package com.datadog.wrapper
 
 import android.content.Context
+import android.util.Log
 import com.datadog.android.Datadog
 import com.datadog.android.DatadogSite
 import com.datadog.android.core.configuration.Configuration
@@ -14,7 +15,8 @@ class DatadogWrapper {
             clientToken: String,
             environment: String,
             service: String,
-            site: String = "us1"
+            site: String = "us1",
+            verbosity: String = "error"
         ): Boolean {
             return try {
                 val datadogSite = when (site.lowercase()) {
@@ -36,6 +38,16 @@ class DatadogWrapper {
                     .build()
 
                 Datadog.initialize(context, configuration, TrackingConsent.GRANTED)
+
+                // Set SDK verbosity level
+                Datadog.setVerbosity(when (verbosity.lowercase()) {
+                    "debug" -> Log.DEBUG
+                    "info" -> Log.INFO
+                    "warn" -> Log.WARN
+                    "error" -> Log.ERROR
+                    else -> Log.ERROR
+                })
+
                 true
             } catch (e: Exception) {
                 e.printStackTrace()

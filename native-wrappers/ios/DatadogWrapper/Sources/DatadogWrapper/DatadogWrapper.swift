@@ -12,27 +12,44 @@ public class DatadogWrapper: NSObject {
     ///   - clientToken: Datadog client token for your application
     ///   - environment: Environment name (e.g., "prod", "staging")
     ///   - service: Service name for your application
+    ///   - site: Datadog site (e.g., "us1", "eu1", "us3", "us5", "ap1", "us1_fed")
     /// - Returns: Boolean indicating successful initialization
     @objc public static func initialize(
         clientToken: String,
         environment: String,
-        service: String
+        service: String,
+        site: String,
+        verbosity: String
     ) -> Bool {
         // Store service name for feature modules
         currentServiceName = service
 
-        // Build configuration with site (dd-sdk-ios v3.x API)
-        var configuration = Datadog.Configuration(
+        let configuration = DatadogCore.Datadog.Configuration(
             clientToken: clientToken,
             env: environment,
-            site: .us1  // US1 site (app.datadoghq.com)
+            site: { () in
+                switch site.lowercased() {
+                case "us3": return .us3
+                case "us5": return .us5
+                case "eu1": return .eu1
+                case "ap1": return .ap1
+                case "us1_fed": return .us1_fed
+                default: return .us1
+                }
+            }()
         )
 
-        // Enable verbose logging to see SDK internals
-        Datadog.verbosityLevel = .debug
+        // Set SDK verbosity level
+        switch verbosity.lowercased() {
+        case "debug": DatadogCore.Datadog.verbosityLevel = .debug
+        case "info": DatadogCore.Datadog.verbosityLevel = .debug  // iOS has no info level, use debug
+        case "warn": DatadogCore.Datadog.verbosityLevel = .warn
+        case "error": DatadogCore.Datadog.verbosityLevel = .error
+        default: DatadogCore.Datadog.verbosityLevel = .error
+        }
 
         // Initialize Datadog SDK
-        Datadog.initialize(
+        DatadogCore.Datadog.initialize(
             with: configuration,
             trackingConsent: .granted
         )

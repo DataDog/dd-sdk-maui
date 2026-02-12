@@ -136,7 +136,10 @@ dd-sdk-maui/
 ├── bindings/                   # C# binding projects
 │   ├── DatadogSdk.iOS.Binding/
 │   ├── DatadogSdk.Android.*/  # 4 Android binding projects
-│   └── DatadogSdk.Maui/       # Meta-package
+│   └── DatadogSdk.Maui/       # C# intermediary layer + meta-package
+│       ├── DdSdkConfiguration.cs  # Configuration object
+│       ├── DdSdk.cs               # SDK init (unified API)
+│       └── DdLogs.cs              # Logging (unified API)
 │
 ├── example/                    # Test/demo application
 │   ├── build.sh               # Example app build script
@@ -254,40 +257,36 @@ Options:
 
 **What it does**:
 
-1. **Clean** (if `--clean` flag provided):
+1. **Clean** (always):
    ```bash
-   rm -rf bin obj
+   rm -rf bin obj                          # Remove build artifacts + stale NuGet restore data
+   rm -rf ~/.nuget/packages/datadogsdk.*   # Clear NuGet global cache for our packages
    ```
 
 2. **Restore packages**:
    ```bash
-   dotnet restore --force --no-cache
+   dotnet restore
    ```
-   - `--force`: Redownload all packages
-   - `--no-cache`: Ignore HTTP cache (picks up new local packages)
 
-3. **Build**:
+3. **Build** (with `--no-restore` to avoid redundant restores):
    ```bash
    # iOS
-   dotnet build -f net10.0-ios
+   dotnet build -f net10.0-ios --no-restore
 
    # Android
-   dotnet build -f net10.0-android
+   dotnet build -f net10.0-android --no-restore
    ```
 
 4. **Run** (if `--run` flag provided):
    ```bash
    # iOS
-   dotnet build -t:Run -f net10.0-ios
+   dotnet build -t:Run -f net10.0-ios --no-restore
 
    # Android
-   dotnet build -t:Run -f net10.0-android -p:AndroidAttachDebugger=false
+   dotnet build -t:Run -f net10.0-android -p:AndroidAttachDebugger=false --no-restore
    ```
 
-**When to use `--clean`**:
-- After rebuilding bindings (forces NuGet to pick up new versions)
-- When you see binding-related errors
-- When app behavior doesn't match code changes
+The build script always cleans `obj/` and the NuGet cache to prevent stale restore data from causing build failures after SDK rebuilds.
 
 ## Development Workflow
 
@@ -404,56 +403,54 @@ unzip -l bindings/DatadogSdk.Android.Binding/Jars/datadogwrapper-release.aar
 
 ### Adding a New API Method
 
-#### 1. Add to Native Wrapper
+#### 1. Add to Native Wrappers
 
 **iOS** (`native-wrappers/ios/DatadogWrapper/Sources/DatadogWrapper/DdLogs.swift`):
 ```swift
-@objc(DdLogs)
-public class DdLogs: NSObject {
-
-    @objc public static func logCritical(_ message: String) {
-        logger?.critical(message)
-    }
+@objc public static func logCritical(_ message: String) {
+    logger?.critical(message)
 }
 ```
 
 **Android** (`native-wrappers/android/datadogwrapper/src/main/kotlin/com/datadog/wrapper/DdLogs.kt`):
 ```kotlin
-class DdLogs {
-    companion object {
-        @JvmStatic
-        fun logCritical(message: String) {
-            logger?.critical(message)
-        }
-    }
+@JvmStatic
+fun logCritical(message: String) {
+    logger?.critical(message)
 }
 ```
 
-#### 2. Update C# Binding
+#### 2. Update iOS C# Binding
 
 **iOS** (`bindings/DatadogSdk.iOS.Binding/ApiDefinition.cs`):
 ```csharp
-[BaseType(typeof(NSObject))]
-interface DdLogs
-{
-    [Static]
-    [Export("logCritical:")]
-    void LogCritical(string message);
-}
+[Static]
+[Export("logCritical:")]
+void LogCritical(string message);
 ```
 
 **Android**: Auto-generated from AAR (no manual changes needed)
 
-#### 3. Rebuild Everything
-```bash
-./build.sh
+#### 3. Add to C# Intermediary Layer
+
+**`bindings/DatadogSdk.Maui/DdLogs.cs`**:
+```csharp
+public static void Critical(string message)
+{
+    DdSdk.LogDebug($"DdLogs.Critical called: {message}");
+
+    NativeDdLogs.LogCritical(message);
+}
 ```
 
-#### 4. Test in Example App
+This is the method consumers will call. The `#if ANDROID / #elif IOS` directives are only needed when the native APIs differ between platforms (e.g. different parameter types).
+
+#### 4. Rebuild and Test
 ```bash
+./build.sh
 cd example
-./build.sh --clean --ios --run
-./build.sh --clean --android --run
+./build.sh --ios --run
+./build.sh --android --run
 ```
 
 ### Updating Native SDK Versions

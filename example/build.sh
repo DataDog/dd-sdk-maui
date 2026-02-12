@@ -93,11 +93,19 @@ fi
 # Clean
 # ============================================================================
 log_section "Cleaning Example App"
-log_info "Removing bin directory..."
-rm -rf bin
+log_info "Removing bin and obj directories..."
+rm -rf bin obj
 log_info "Clearing NuGet global cache for DatadogSdk packages..."
 rm -rf ~/.nuget/packages/datadogsdk.*
 log_info "Clean complete"
+
+# ============================================================================
+# Restore
+# ============================================================================
+log_section "Restoring NuGet Packages"
+log_info "Running dotnet restore..."
+dotnet restore
+log_info "Restore complete"
 
 # ============================================================================
 # Build and Run
@@ -106,11 +114,11 @@ if [ "$TARGET" = "ios" ]; then
     log_section "Building iOS App"
 
     log_info "Building iOS app..."
-    dotnet build -f net10.0-ios
+    dotnet build -f net10.0-ios --no-restore
 
     if [ "$RUN_APP" = true ]; then
         log_info "Launching iOS app on simulator..."
-        dotnet build -t:Run -f net10.0-ios
+        dotnet build -t:Run -f net10.0-ios --no-restore
     fi
 
     log_info "iOS app built successfully"
@@ -120,10 +128,10 @@ elif [ "$TARGET" = "android" ]; then
 
     if [ "$RUN_APP" = true ]; then
         log_info "Building and running Android app on emulator..."
-        dotnet build -t:Run -f net10.0-android -p:AndroidAttachDebugger=false
+        dotnet build -t:Run -f net10.0-android -p:AndroidAttachDebugger=false --no-restore
     else
         log_info "Building Android app..."
-        dotnet build -f net10.0-android
+        dotnet build -f net10.0-android --no-restore
     fi
 
     log_info "Android app built successfully"

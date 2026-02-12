@@ -141,6 +141,8 @@ cd "$SCRIPT_DIR/bindings/DatadogSdk.Maui"
 # Clean
 log_info "Cleaning meta-package..."
 rm -rf bin obj
+log_info "Clearing NuGet global cache for DatadogSdk packages..."
+rm -rf ~/.nuget/packages/datadogsdk.*
 
 # Build
 log_info "Building meta-package..."

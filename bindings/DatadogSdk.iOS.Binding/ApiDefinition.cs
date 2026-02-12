@@ -9,13 +9,8 @@ namespace DatadogSdk.iOS.Binding
     interface DatadogWrapper
     {
         [Static]
-        [Export("initializeWithClientToken:environment:service:site:")]
-        bool Initialize(string clientToken, string environment, string service, string site);
-
-        // Overload without site parameter (uses default)
-        [Static]
-        [Export("initializeWithClientToken:environment:service:")]
-        bool Initialize(string clientToken, string environment, string service);
+        [Export("initializeWithClientToken:environment:service:site:verbosity:")]
+        bool Initialize(string clientToken, string environment, string service, string site, string verbosity);
     }
 
     // DdLogs - Logging functionality

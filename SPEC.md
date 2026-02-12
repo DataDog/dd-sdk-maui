@@ -28,21 +28,27 @@ This document provides a comprehensive technical specification for the Datadog S
 
 ## Architecture
 
-### Three-Layer Architecture
+### Four-Layer Architecture
 
 ```
 ┌─────────────────────────────────────────────────┐
 │         Consumer Application (.NET MAUI)        │
 │              example/example.csproj             │
+│                                                 │
+│  using DatadogSdk.Maui;                         │
+│  DdSdk.Initialize(config);                      │
+│  DdLogs.Info("message");                        │
 └─────────────────────┬───────────────────────────┘
                       │ PackageReference
                       ↓
 ┌─────────────────────────────────────────────────┐
-│          Meta-package (DatadogSdk.Maui)         │
+│     C# Intermediary Layer (DatadogSdk.Maui)     │
 │     bindings/DatadogSdk.Maui/...csproj          │
 │                                                 │
-│  - Aggregates platform-specific bindings        │
-│  - Single entry point for consumers             │
+│  - Unified cross-platform API (DdSdk, DdLogs)   │
+│  - Internal debug logging (Console.WriteLine)   │
+│  - Platform branching via #if ANDROID / IOS     │
+│  - Type marshaling (e.g. Dict → NSDictionary)   │
 └──────────────┬──────────────────┬───────────────┘
                │                  │
        iOS     │                  │     Android
@@ -64,7 +70,7 @@ This document provides a comprehensive technical specification for the Datadog S
 │  (Swift + ObjC)      │  │  (Kotlin + JVM)      │
 │                      │  │                      │
 │  - DatadogWrapper    │  │  - DatadogWrapper    │
-│  - DdLogs       │  │  - DdLogs       │
+│  - DdLogs            │  │  - DdLogs            │
 └──────────┬───────────┘  └──────────┬───────────┘
            │                         │
            │ Imports                 │ Imports
@@ -91,9 +97,16 @@ This document provides a comprehensive technical specification for the Datadog S
    - Android: Android Java Bindings (auto-generated from AAR)
    - Handles marshaling between .NET and native types
 
-3. **Meta-package**: Platform unification
-   - Single NuGet package references both platform bindings
-   - Conditional compilation based on target framework
+3. **C# Intermediary Layer**: Unified cross-platform API
+   - Provides `DdSdk`, `DdLogs` classes in the `DatadogSdk.Maui` namespace
+   - Consumers use a single API with no `#if` platform directives
+   - Internal debug logging via `Console.WriteLine` when verbosity is `Debug`
+   - Handles platform differences (e.g. `Dictionary` → `NSDictionary` on iOS)
+   - Platform branching (`#if ANDROID` / `#elif IOS`) is contained within this layer
+
+4. **Meta-package**: NuGet distribution
+   - Single NuGet package (`DatadogSdk.Maui`) for consumers
+   - Bundles the C# layer + platform-specific binding references
    - Consumer apps only need one package reference
 
 ## iOS Implementation
@@ -156,26 +169,33 @@ public class DatadogWrapper: NSObject {
         clientToken: String,
         environment: String,
         service: String,
-        site: String
+        site: String,
+        verbosity: String
     ) -> Bool {
-        let datadogSite: DatadogSite
-        switch site.lowercased() {
-        case "us1": datadogSite = .us1
-        case "us3": datadogSite = .us3
-        case "us5": datadogSite = .us5
-        case "eu1": datadogSite = .eu1
-        case "ap1": datadogSite = .ap1
-        case "us1_fed": datadogSite = .us1_FED
-        default: datadogSite = .us1
-        }
-
-        let configuration = Datadog.Configuration(
+        let configuration = DatadogCore.Datadog.Configuration(
             clientToken: clientToken,
             env: environment,
-            site: datadogSite
+            site: { () in
+                switch site.lowercased() {
+                case "us3": return .us3
+                case "us5": return .us5
+                case "eu1": return .eu1
+                case "ap1": return .ap1
+                case "us1_fed": return .us1_fed
+                default: return .us1
+                }
+            }()
         )
 
-        Datadog.initialize(
+        switch verbosity.lowercased() {
+        case "debug": DatadogCore.Datadog.verbosityLevel = .debug
+        case "info": DatadogCore.Datadog.verbosityLevel = .debug
+        case "warn": DatadogCore.Datadog.verbosityLevel = .warn
+        case "error": DatadogCore.Datadog.verbosityLevel = .error
+        default: DatadogCore.Datadog.verbosityLevel = .error
+        }
+
+        DatadogCore.Datadog.initialize(
             with: configuration,
             trackingConsent: .granted
         )
@@ -268,12 +288,8 @@ namespace DatadogSdk.iOS.Binding
     interface DatadogWrapper
     {
         [Static]
-        [Export("initializeWithClientToken:environment:service:site:")]
-        bool Initialize(string clientToken, string environment, string service, string site);
-
-        [Static]
-        [Export("initializeWithClientToken:environment:service:")]
-        bool Initialize(string clientToken, string environment, string service);
+        [Export("initializeWithClientToken:environment:service:site:verbosity:")]
+        bool Initialize(string clientToken, string environment, string service, string site, string verbosity);
     }
 
     [BaseType(typeof(NSObject))]
@@ -303,9 +319,9 @@ namespace DatadogSdk.iOS.Binding
 ```
 
 **Export Selector Mapping**:
-- Swift: `initialize(clientToken:environment:service:site:)`
-- Objective-C: `initializeWithClientToken:environment:service:site:`
-- C#: `Initialize(string, string, string, string)`
+- Swift: `initialize(clientToken:environment:service:site:verbosity:)`
+- Objective-C: `initializeWithClientToken:environment:service:site:verbosity:`
+- C#: `Initialize(string, string, string, string, string)`
 
 Pattern: First parameter name becomes method name, subsequent become part of selector.
 
@@ -378,6 +394,7 @@ Kotlin companion object methods must use `@JvmStatic` to expose as static method
 package com.datadog.wrapper
 
 import android.content.Context
+import android.util.Log
 import com.datadog.android.Datadog
 import com.datadog.android.DatadogSite
 import com.datadog.android.core.configuration.Configuration
@@ -391,7 +408,8 @@ class DatadogWrapper {
             clientToken: String,
             environment: String,
             service: String,
-            site: String = "us1"
+            site: String = "us1",
+            verbosity: String = "error"
         ): Boolean {
             return try {
                 val datadogSite = when (site.lowercase()) {
@@ -413,6 +431,15 @@ class DatadogWrapper {
                     .build()
 
                 Datadog.initialize(context, configuration, TrackingConsent.GRANTED)
+
+                Datadog.setVerbosity(when (verbosity.lowercase()) {
+                    "debug" -> Log.DEBUG
+                    "info" -> Log.INFO
+                    "warn" -> Log.WARN
+                    "error" -> Log.ERROR
+                    else -> Log.ERROR
+                })
+
                 true
             } catch (e: Exception) {
                 e.printStackTrace()
@@ -507,14 +534,15 @@ namespace DatadogSdk.Android.Binding {
     public sealed partial class DatadogWrapper : Java.Lang.Object {
 
         [Register("initialize",
-                  "(Landroid/content/Context;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)Z",
+                  "(Landroid/content/Context;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)Z",
                   "")]
         public static unsafe bool Initialize(
             Android.Content.Context context,
             string clientToken,
             string environment,
             string service,
-            string site)
+            string site,
+            string verbosity)
         {
             // JNI marshaling implementation
         }
@@ -522,32 +550,85 @@ namespace DatadogSdk.Android.Binding {
 }
 ```
 
-## Meta-package (DatadogSdk.Maui)
+## C# Intermediary Layer (DatadogSdk.Maui)
 
 **Location**: `bindings/DatadogSdk.Maui/`
 
-**Purpose**: Unified NuGet package for .NET MAUI applications
+**Purpose**: Unified cross-platform API + NuGet package for .NET MAUI applications
 
-**Structure**:
+**Key Files**:
+```
+DatadogSdk.Maui/
+├── DatadogSdk.Maui.csproj      # Multi-target project (iOS + Android)
+├── DdSdkConfiguration.cs       # Configuration object
+├── DdSdk.cs                    # SDK initialization (wraps native DatadogWrapper)
+└── DdLogs.cs                   # Logging API (wraps native DdLogs)
+```
+
+### DdSdkConfiguration
+
+Configuration object passed to `DdSdk.Initialize()`:
+
+```csharp
+public enum SdkVerbosity { DEBUG, INFO, WARN, ERROR }
+
+public class DdSdkConfiguration
+{
+    public required string ClientToken { get; set; }
+    public required string Environment { get; set; }
+    public required string Service { get; set; }
+    public string Site { get; set; } = "us1";
+    public SdkVerbosity Verbosity { get; set; } = SdkVerbosity.ERROR;
+}
+```
+
+### DdSdk
+
+Wraps native `DatadogWrapper.Initialize()` with platform branching:
+
+```csharp
+// Android: passes Android Context + clientToken, environment, service, site, verbosity
+// iOS: passes clientToken, environment, service, site, verbosity
+public static bool Initialize(DdSdkConfiguration config);
+```
+
+Stores configuration internally so other modules (e.g. `DdLogs`) can access it. Converts `SdkVerbosity` enum to a lowercase string (e.g. `"debug"`, `"error"`) and passes it to both the native SDK and the C# layer. When `Verbosity` is `DEBUG`, logs all C# layer calls via `Console.WriteLine("[Datadog] ...")`. The native SDKs also use the verbosity to control their internal logging (iOS: `Datadog.verbosityLevel`, Android: `Datadog.setVerbosity()`).
+
+### DdLogs
+
+Wraps native `DdLogs` methods. Each method logs before delegating to native:
+
+```csharp
+public static void Enable();
+public static void Debug(string message);
+public static void Info(string message);
+public static void Warn(string message);
+public static void Error(string message);
+public static void LogWithAttributes(string level, string message, Dictionary<string, string> attributes);
+```
+
+`LogWithAttributes` handles type marshaling: on Android it passes `IDictionary<string, string>` directly; on iOS it converts to `NSDictionary<NSString, NSString>`.
+
+### Project Configuration
+
 ```xml
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFrameworks>net10.0-ios;net10.0-android</TargetFrameworks>
+    <RootNamespace>DatadogSdk.Maui</RootNamespace>
     <PackageId>DatadogSdk.Maui</PackageId>
     <Version>1.0.0</Version>
   </PropertyGroup>
 
   <!-- iOS binding -->
-  <ItemGroup Condition="'$(TargetFramework)' == 'net10.0-ios'">
+  <ItemGroup Condition="$(TargetFramework.Contains('-ios'))">
     <PackageReference Include="DatadogSdk.iOS.Binding" Version="1.0.0" />
   </ItemGroup>
 
-  <!-- Android bindings -->
-  <ItemGroup Condition="'$(TargetFramework)' == 'net10.0-android'">
-    <PackageReference Include="DatadogSdk.Android.Internal" Version="1.0.0" />
-    <PackageReference Include="DatadogSdk.Android.Core" Version="1.0.0" />
-    <PackageReference Include="DatadogSdk.Android.Logs" Version="1.0.0" />
+  <!-- Android binding + runtime dependencies -->
+  <ItemGroup Condition="$(TargetFramework.Contains('-android'))">
     <PackageReference Include="DatadogSdk.Android.Binding" Version="1.0.0" />
+    <!-- Kotlin, OkHttp, Gson, AndroidX dependencies -->
   </ItemGroup>
 </Project>
 ```
@@ -600,10 +681,11 @@ namespace DatadogSdk.Android.Binding {
 - `--clean` - Clean and force NuGet restore
 
 **Internal Steps**:
-1. Clean (if `--clean` flag)
-2. `dotnet restore --force --no-cache`
-3. `dotnet build -f net10.0-{platform}`
-4. If `--run`: `dotnet build -t:Run -f net10.0-{platform}`
+1. Clean `bin/` and `obj/` directories
+2. Clear NuGet global cache for `DatadogSdk.*` packages
+3. `dotnet restore`
+4. `dotnet build -f net10.0-{platform} --no-restore`
+5. If `--run`: `dotnet build -t:Run -f net10.0-{platform} --no-restore`
 
 ## Local Development Workflow
 
@@ -635,85 +717,60 @@ namespace DatadogSdk.Android.Binding {
 
 **Future**: Version management will be automated in CI/CD pipeline
 
-## API Surface (Current - Phase 1)
+## API Surface (Current)
 
 ### Initialization
 
-**iOS**:
 ```csharp
-using DatadogSdk.iOS.Binding;
+using DatadogSdk.Maui;
 
-// In AppDelegate.cs
-public override bool FinishedLaunching(UIApplication application, NSDictionary? launchOptions)
+// In MauiProgram.cs — works on both iOS and Android
+DdSdk.Initialize(new DdSdkConfiguration
 {
-    var initialized = DatadogWrapper.Initialize(
-        clientToken: "pub...",
-        environment: "prod",
-        service: "my-app",
-        site: "us1"
-    );
-
-    return base.FinishedLaunching(application, launchOptions);
-}
-```
-
-**Android**:
-```csharp
-using DatadogSdk.Android.Binding;
-
-// In MainActivity.cs
-protected override void OnCreate(Bundle? savedInstanceState)
-{
-    base.OnCreate(savedInstanceState);
-
-    var initialized = DatadogWrapper.Initialize(
-        context: this,
-        clientToken: "pub...",
-        environment: "prod",
-        service: "my-app",
-        site: "us1"
-    );
-}
+    ClientToken = "pub...",
+    Environment = "prod",
+    Service = "my-app",
+    Site = "us1",               // optional, defaults to "us1"
+    Verbosity = SdkVerbosity.DEBUG  // optional: DEBUG enables Console.WriteLine logging + verbose native SDK
+});
 ```
 
 ### Logging
 
-**iOS**:
 ```csharp
-using DatadogSdk.iOS.Binding;
+using DatadogSdk.Maui;
 
-DdLogs.EnableLogs();
-DdLogs.LogDebug("Debug message");
-DdLogs.LogInfo("Info message");
-DdLogs.LogWarn("Warning message");
-DdLogs.LogError("Error message");
+// Enable logs module
+DdLogs.Enable();
+
+// Log at different levels
+DdLogs.Debug("Debug message");
+DdLogs.Info("Info message");
+DdLogs.Warn("Warning message");
+DdLogs.Error("Error message");
+
+// Log with custom attributes
+DdLogs.LogWithAttributes("info", "Order placed", new Dictionary<string, string>
+{
+    { "order_id", "12345" },
+    { "user_tier", "premium" }
+});
 ```
 
-**Android**:
-```csharp
-using DatadogSdk.Android.Binding;
-
-DdLogs.EnableLogs();
-DdLogs.LogDebug("Debug message");
-DdLogs.LogInfo("Info message");
-DdLogs.LogWarn("Warning message");
-DdLogs.LogError("Error message");
+When `SdkVerbosity.DEBUG` is set, all calls are logged to the console and the native SDK uses verbose logging:
+```
+[Datadog] DdSdk.Initialize called with service=my-app, env=prod, site=us1
+[Datadog] DdSdk.Initialize completed: True
+[Datadog] DdLogs.Enable called
+[Datadog] DdLogs.Enable completed
+[Datadog] DdLogs.Info called: Info message
 ```
 
 ## Known Limitations
 
-### Phase 1 Limitations
+### Current Limitations
 
-1. **Platform-specific initialization required**
-   - iOS: Initialize in AppDelegate
-   - Android: Initialize in MainActivity
-   - No unified cross-platform API yet (coming in Phase 2)
-
-2. **No configuration builder**
-   - Must pass all parameters directly to Initialize
-   - No fluent API for optional settings (Phase 2)
-
-3. **Logs only**
+1. **Logs only**
    - RUM, Traces, Crash Reporting not yet implemented
    - Planned for Phases 3-6
 
