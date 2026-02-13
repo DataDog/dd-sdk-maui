@@ -1,83 +1,71 @@
 # Datadog SDK for .NET MAUI
 
-Datadog Real User Monitoring (RUM) enables you to visualize and analyze the real-time performance and user journeys of your application's individual users.
+> Datadog Real User Monitoring (RUM) enables you to visualize and analyze the real-time performance and user journeys of your application's individual users.
 
-## Installation
+## Current Features
 
-Add the NuGet package to your MAUI project:
+- **Logs**: Send logs from your .NET MAUI application to Datadog with support for debug, info, warn, and error levels, plus custom attributes.
+
+## Setup
+
+To integrate the Datadog SDK into your .NET MAUI application, see the setup instructions below.
+
+### Installation
+
+Add the NuGet package to your MAUI `.csproj`:
 
 ```xml
 <PackageReference Include="DatadogSdk.Maui" Version="1.0.0" />
 ```
 
-## Usage
+### Initialization
 
-### Initialize the SDK
-
-In your `MauiProgram.cs`:
+Initialize the SDK in your `MauiProgram.cs`:
 
 ```csharp
 using DatadogSdk.Maui;
 
-public static MauiApp CreateMauiApp()
+DdSdk.Initialize(new DdSdkConfiguration
 {
-    var builder = MauiApp.CreateBuilder();
-    // ...
-
-    DdSdk.Initialize(new DdSdkConfiguration
-    {
-        ClientToken = "your-client-token",
-        Environment = "prod",
-        Service = "my-maui-app",
-        Verbosity = SdkVerbosity.DEBUG  // optional: DEBUG enables console + native SDK verbose logging
-    });
-
-    return builder.Build();
-}
+    ClientToken = "your-client-token",
+    Environment = "prod",
+    Service = "my-maui-app"
+});
 ```
 
-### Logging
+### Logs
 
 ```csharp
 using DatadogSdk.Maui;
 
-// Enable the logs module
 DdLogs.Enable();
 
-// Send logs at different levels
 DdLogs.Debug("Debug message");
 DdLogs.Info("Info message");
 DdLogs.Warn("Warning message");
 DdLogs.Error("Error message");
+```
 
-// Send logs with custom attributes
-DdLogs.LogWithAttributes("info", "Order placed", new Dictionary<string, string>
+## Troubleshooting
+
+If you encounter issues while using the SDK, check the existing [GitHub Issues](https://github.com/DataDog/dd-sdk-maui/issues) for known problems and solutions.
+
+You can also enable verbose SDK logging to help diagnose issues:
+
+```csharp
+DdSdk.Initialize(new DdSdkConfiguration
 {
-    { "order_id", "12345" }
+    // ...
+    Verbosity = SdkVerbosity.DEBUG
 });
 ```
 
-## Architecture
+## Contributing
 
-The SDK uses a four-layer architecture:
+Pull requests are welcome. First, open an issue to discuss what you would like to change.
 
-1. **Native Wrappers** (Swift/Kotlin) - Thin bridge to the Datadog native SDKs
-2. **C# Bindings** - Platform-specific interop (Xamarin.iOS / Android Java Bindings)
-3. **C# Intermediary Layer** (`DatadogSdk.Maui`) - Unified cross-platform API
-4. **Consumer App** - Your .NET MAUI application
+See [CONTRIBUTING.md](CONTRIBUTING.md) for the development setup guide.
 
-See [SPEC.md](SPEC.md) for full technical details.
+## License
 
-## Development
-
-```bash
-# Build all native wrappers + bindings
-./build.sh
-
-# Run the example app
-cd example
-./build.sh --ios --run       # iOS simulator
-./build.sh --android --run   # Android emulator
-```
-
-See [CONTRIBUTING.md](CONTRIBUTING.md) for the full development guide.
+[Apache License, v2.0](LICENSE)
