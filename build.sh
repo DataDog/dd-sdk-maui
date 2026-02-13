@@ -32,6 +32,63 @@ log_error() {
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 cd "$SCRIPT_DIR"
 
+# Parse command line arguments
+FORMAT_ONLY=false
+CHECK_FORMAT=false
+CLEAN=false
+
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        --format)
+            FORMAT_ONLY=true
+            shift
+            ;;
+        --check-format)
+            CHECK_FORMAT=true
+            shift
+            ;;
+        --clean)
+            CLEAN=true
+            shift
+            ;;
+        -h|--help)
+            echo "Usage: ./build.sh [OPTIONS]"
+            echo ""
+            echo "Options:"
+            echo "  --format         Auto-format all C# code and exit"
+            echo "  --check-format   Check C# formatting without modifying files"
+            echo "  --clean          Clean all build artifacts before building"
+            echo "  -h, --help       Show this help message"
+            exit 0
+            ;;
+        *)
+            log_error "Unknown option: $1"
+            exit 1
+            ;;
+    esac
+done
+
+# Handle format commands
+if [ "$FORMAT_ONLY" = true ]; then
+    log_section "Formatting C# Code"
+    log_info "Running dotnet format..."
+    dotnet format "$SCRIPT_DIR/example.slnx"
+    log_info "Formatting complete"
+    exit 0
+fi
+
+if [ "$CHECK_FORMAT" = true ]; then
+    log_section "Checking C# Code Formatting"
+    log_info "Running dotnet format --verify-no-changes..."
+    if dotnet format "$SCRIPT_DIR/example.slnx" --verify-no-changes; then
+        log_info "All files are formatted correctly"
+    else
+        log_error "Some files need formatting. Run ./build.sh --format to fix."
+        exit 1
+    fi
+    exit 0
+fi
+
 # Ensure local-packages directory exists
 mkdir -p local-packages
 
