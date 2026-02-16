@@ -31,7 +31,7 @@ public static class MauiProgram
             ClientToken = clientToken,
             Environment = environment,
             Service = "datadog-maui-test",
-            Verbosity = SdkVerbosity.DEBUG
+            Verbosity = SdkVerbosity.INFO
         });
 
         return builder.Build();

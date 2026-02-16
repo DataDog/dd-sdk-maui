@@ -11,44 +11,44 @@ namespace DatadogSdk.Maui
     {
         public static void Enable()
         {
-            DdSdk.LogDebug("DdLogs.Enable called");
+            InternalLog.Log("DdLogs.Enable", SdkVerbosity.DEBUG);
 
             NativeDdLogs.EnableLogs();
 
-            DdSdk.LogDebug("DdLogs.Enable completed");
+            InternalLog.Log("DdLogs.Enable completed", SdkVerbosity.DEBUG);
         }
 
         public static void Debug(string message)
         {
-            DdSdk.LogDebug($"DdLogs.Debug called: {message}");
+            InternalLog.Log($"DdLogs.Debug called: {message}", SdkVerbosity.DEBUG);
 
             NativeDdLogs.LogDebug(message);
         }
 
         public static void Info(string message)
         {
-            DdSdk.LogDebug($"DdLogs.Info called: {message}");
+            InternalLog.Log($"DdLogs.Info called: {message}", SdkVerbosity.DEBUG);
 
             NativeDdLogs.LogInfo(message);
         }
 
         public static void Warn(string message)
         {
-            DdSdk.LogDebug($"DdLogs.Warn called: {message}");
+            InternalLog.Log($"DdLogs.Warn called: {message}", SdkVerbosity.DEBUG);
 
             NativeDdLogs.LogWarn(message);
         }
 
         public static void Error(string message)
         {
-            DdSdk.LogDebug($"DdLogs.Error called: {message}");
+            InternalLog.Log($"DdLogs.Error called: {message}", SdkVerbosity.DEBUG);
 
             NativeDdLogs.LogError(message);
         }
 
         public static void LogWithAttributes(string level, string message, Dictionary<string, string> attributes)
         {
-            DdSdk.LogDebug($"DdLogs.LogWithAttributes called: level={level}, message={message}, attributes count={attributes.Count}");
+            InternalLog.Log($"DdLogs.LogWithAttributes called: level={level}, message={message}, attributes count={attributes.Count}", SdkVerbosity.DEBUG);
 
 #if ANDROID
             NativeDdLogs.LogWithAttributes(level, message, attributes);
