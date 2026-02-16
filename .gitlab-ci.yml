@@ -3,7 +3,7 @@ stages:
 
 default:
   tags:
-    - macos:sequoia
+    - macos:sequoia-arm64
     - specific:true
 
 Runner check:
