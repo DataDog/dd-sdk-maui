@@ -1,0 +1,17 @@
+stages:
+  - check
+
+default:
+  tags:
+    - macos:sequoia
+    - specific:true
+
+Runner check:
+  stage: check
+  script:
+    - echo "Runner is alive"
+    - sw_vers
+    - dotnet --version
+    - dotnet workload list
+    - sdkmanager --version
+    - xcodebuild -version
