@@ -7,22 +7,35 @@ public class DatadogWrapper: NSObject {
     // Store service name for use by feature modules
     private static var currentServiceName: String = "dd-sdk-maui"
 
-    /// Initialize the Datadog SDK with basic configuration
+    /// Initialize the Datadog SDK with configuration
     /// - Parameters:
     ///   - clientToken: Datadog client token for your application
     ///   - environment: Environment name (e.g., "prod", "staging")
-    ///   - service: Service name for your application
+    ///   - service: Service name for your application (nullable)
     ///   - site: Datadog site (e.g., "us1", "eu1", "us3", "us5", "ap1", "us1_fed")
+    ///   - verbosity: SDK verbosity level ("debug", "info", "warn", "error")
+    ///   - trackingConsent: Initial tracking consent ("granted", "not_granted", "pending")
+    ///   - batchSize: Batch size (ignored on iOS - Android only)
+    ///   - uploadFrequency: Upload frequency (ignored on iOS - Android only)
+    ///   - batchProcessingLevel: Batch processing level (ignored on iOS - Android only)
+    ///   - additionalConfiguration: Additional configuration dictionary
     /// - Returns: Boolean indicating successful initialization
     @objc public static func initialize(
         clientToken: String,
         environment: String,
-        service: String,
+        service: String?,
         site: String,
-        verbosity: String
+        verbosity: String,
+        trackingConsent: String,
+        batchSize: String?,
+        uploadFrequency: String?,
+        batchProcessingLevel: String?,
+        additionalConfiguration: NSDictionary?
     ) -> Bool {
         // Store service name for feature modules
-        currentServiceName = service
+        if let service = service {
+            currentServiceName = service
+        }
 
         let configuration = DatadogCore.Datadog.Configuration(
             clientToken: clientToken,
@@ -48,11 +61,23 @@ public class DatadogWrapper: NSObject {
         default: DatadogCore.Datadog.verbosityLevel = .error
         }
 
+        // Map tracking consent
+        let consent: TrackingConsent = {
+            switch trackingConsent.lowercased() {
+            case "not_granted": return .notGranted
+            case "pending": return .pending
+            default: return .granted
+            }
+        }()
+
         // Initialize Datadog SDK
         DatadogCore.Datadog.initialize(
             with: configuration,
-            trackingConsent: .granted
+            trackingConsent: consent
         )
+
+        // Note: batchSize, uploadFrequency, batchProcessingLevel are no-ops on iOS
+        // Note: additionalConfiguration accepted for future use
 
         return true
     }

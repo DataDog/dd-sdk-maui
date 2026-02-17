@@ -9,7 +9,18 @@ namespace DatadogSdk.iOS.Binding
     interface DatadogWrapper
     {
         [Static]
-        [Export("initializeWithClientToken:environment:service:site:verbosity:")]
-        bool Initialize(string clientToken, string environment, string service, string site, string verbosity);
+        [Export("initializeWithClientToken:environment:service:site:verbosity:trackingConsent:batchSize:uploadFrequency:batchProcessingLevel:additionalConfiguration:")]
+        bool Initialize(
+            string clientToken,
+            string environment,
+            [NullAllowed] string service,
+            string site,
+            string verbosity,
+            string trackingConsent,
+            [NullAllowed] string batchSize,
+            [NullAllowed] string uploadFrequency,
+            [NullAllowed] string batchProcessingLevel,
+            [NullAllowed] NSDictionary additionalConfiguration
+        );
     }
 }

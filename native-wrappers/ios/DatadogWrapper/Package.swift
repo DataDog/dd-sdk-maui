@@ -4,7 +4,8 @@ import PackageDescription
 let package = Package(
     name: "DatadogWrapper",
     platforms: [
-        .iOS(.v12)
+        .iOS(.v12),
+        .macOS(.v12)
     ],
     products: [
         .library(
@@ -23,6 +24,11 @@ let package = Package(
                 .product(name: "DatadogLogs", package: "dd-sdk-ios")
             ],
             path: "Sources/DatadogWrapper"
+        ),
+        .testTarget(
+            name: "DatadogWrapperTests",
+            dependencies: ["DatadogWrapper"],
+            path: "Tests/DatadogWrapperTests"
         )
     ]
 )

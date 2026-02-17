@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>DatadogSdk.Maui.Tests</RootNamespace>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.*" />
+    <PackageReference Include="xunit" Version="2.*" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.*" />
+  </ItemGroup>
+
+  <!-- Link source files from DatadogSdk.Maui for testing -->
+  <ItemGroup>
+    <Compile Include="../../bindings/DatadogSdk.Maui/DdSdk.cs" Link="Linked/DdSdk.cs" />
+    <Compile Include="../../bindings/DatadogSdk.Maui/InternalLog.cs" Link="Linked/InternalLog.cs" />
+    <Compile Include="../../bindings/DatadogSdk.Maui/Configuration/DdSdkConfiguration.cs" Link="Linked/Configuration/DdSdkConfiguration.cs" />
+    <Compile Include="../../bindings/DatadogSdk.Maui/Configuration/DatadogSite.cs" Link="Linked/Configuration/DatadogSite.cs" />
+    <Compile Include="../../bindings/DatadogSdk.Maui/Configuration/TrackingConsent.cs" Link="Linked/Configuration/TrackingConsent.cs" />
+    <Compile Include="../../bindings/DatadogSdk.Maui/Configuration/BatchSize.cs" Link="Linked/Configuration/BatchSize.cs" />
+    <Compile Include="../../bindings/DatadogSdk.Maui/Configuration/UploadFrequency.cs" Link="Linked/Configuration/UploadFrequency.cs" />
+    <Compile Include="../../bindings/DatadogSdk.Maui/Configuration/BatchProcessingLevel.cs" Link="Linked/Configuration/BatchProcessingLevel.cs" />
+  </ItemGroup>
+</Project>

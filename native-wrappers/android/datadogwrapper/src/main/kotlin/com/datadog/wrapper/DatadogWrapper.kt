@@ -4,7 +4,10 @@ import android.content.Context
 import android.util.Log
 import com.datadog.android.Datadog
 import com.datadog.android.DatadogSite
+import com.datadog.android.core.configuration.BatchProcessingLevel
+import com.datadog.android.core.configuration.BatchSize
 import com.datadog.android.core.configuration.Configuration
+import com.datadog.android.core.configuration.UploadFrequency
 import com.datadog.android.privacy.TrackingConsent
 
 class DatadogWrapper {
@@ -14,9 +17,14 @@ class DatadogWrapper {
             context: Context,
             clientToken: String,
             environment: String,
-            service: String,
+            service: String?,
             site: String = "us1",
-            verbosity: String = "error"
+            verbosity: String = "error",
+            trackingConsent: String = "granted",
+            batchSize: String? = null,
+            uploadFrequency: String? = null,
+            batchProcessingLevel: String? = null,
+            additionalConfiguration: Map<String, Any>? = null
         ): Boolean {
             return try {
                 val datadogSite = when (site.lowercase()) {
@@ -29,15 +37,48 @@ class DatadogWrapper {
                     else -> DatadogSite.US1
                 }
 
-                val configuration = Configuration.Builder(
+                val builder = Configuration.Builder(
                     clientToken = clientToken,
                     env = environment,
                     service = service
                 )
                     .useSite(datadogSite)
-                    .build()
 
-                Datadog.initialize(context, configuration, TrackingConsent.GRANTED)
+                batchSize?.let {
+                    builder.setBatchSize(when (it.lowercase()) {
+                        "small" -> BatchSize.SMALL
+                        "large" -> BatchSize.LARGE
+                        else -> BatchSize.MEDIUM
+                    })
+                }
+
+                uploadFrequency?.let {
+                    builder.setUploadFrequency(when (it.lowercase()) {
+                        "frequent" -> UploadFrequency.FREQUENT
+                        "rare" -> UploadFrequency.RARE
+                        else -> UploadFrequency.AVERAGE
+                    })
+                }
+
+                batchProcessingLevel?.let {
+                    builder.setBatchProcessingLevel(when (it.lowercase()) {
+                        "low" -> BatchProcessingLevel.LOW
+                        "high" -> BatchProcessingLevel.HIGH
+                        else -> BatchProcessingLevel.MEDIUM
+                    })
+                }
+
+                additionalConfiguration?.let {
+                    builder.setAdditionalConfiguration(it)
+                }
+
+                val consent = when (trackingConsent.lowercase()) {
+                    "not_granted" -> TrackingConsent.NOT_GRANTED
+                    "pending" -> TrackingConsent.PENDING
+                    else -> TrackingConsent.GRANTED
+                }
+
+                Datadog.initialize(context, builder.build(), consent)
 
                 // Set SDK verbosity level
                 Datadog.setVerbosity(when (verbosity.lowercase()) {
