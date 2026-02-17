@@ -6,10 +6,13 @@ This document provides context and instructions for AI agents working on the Dat
 
 **Purpose**: Provide .NET MAUI bindings for Datadog's native iOS and Android SDKs, enabling observability features (logs, RUM, traces) in cross-platform mobile applications.
 
-**Current Status**: Phase 1 Complete (Foundation & Bindings + Logs)
+**Current Status**: Phase 2 Complete (Core SDK Configuration)
 - ✅ iOS native wrapper with XCFramework bindings
 - ✅ Android native wrapper with multi-project NuGet bindings
 - ✅ Unified meta-package (DatadogSdk.Maui)
+- ✅ Full `DdSdkConfiguration` object (TrackingConsent, BatchSize, BatchProcessingLevel, UploadFrequency, Site, Service, Version/VersionSuffix, Verbosity, AdditionalConfiguration)
+- ✅ `_dd.needsClearTextHttp` internal key support via `AdditionalConfiguration`
+- ✅ Unit tests at all three layers (`check.sh`)
 - ✅ Example app validated on both platforms
 - ✅ Logs successfully reaching Datadog backend
 
@@ -64,6 +67,7 @@ Consumer App (.NET MAUI)
 ```
 dd-sdk-maui/
 ├── build.sh                       # Root build script (rebuilds everything)
+├── check.sh                       # Runs all unit tests (iOS/Android/C#)
 ├── NuGet.Config                   # Local package source configuration
 │
 ├── native-wrappers/               # Platform-native code
@@ -72,22 +76,27 @@ dd-sdk-maui/
 │   │   └── DatadogWrapper/       # Swift Package Manager project
 │   │       ├── Package.swift     # SPM manifest (dd-sdk-ios dependency)
 │   │       └── Sources/DatadogWrapper/
-│   │           ├── DatadogWrapper.swift   # SDK initialization
-│   │           └── DdLogs.swift      # Logging API
+│   │           ├── DatadogWrapper.swift   # SDK initialization (DdSdkNativeWrapper)
+│   │           ├── DdLogs.swift           # Logging API
+│   │           └── Protocols/             # Dependency injection protocols
 │   │
 │   └── android/
 │       ├── build.gradle.kts      # Root Gradle project
 │       ├── gradlew               # Gradle wrapper
 │       └── datadogwrapper/       # Android library module
 │           ├── build.gradle.kts  # Module config (dd-sdk-android deps)
-│           └── src/main/kotlin/com/datadog/wrapper/
-│               ├── DatadogWrapper.kt   # SDK initialization
-│               └── DdLogs.kt      # Logging API
+│           └── src/
+│               ├── main/kotlin/com/datadog/wrapper/
+│               │   ├── DatadogWrapper.kt   # SDK initialization
+│               │   └── DdLogs.kt           # Logging API
+│               └── test/kotlin/com/datadog/wrapper/
+│                   ├── DatadogWrapperTest.kt
+│                   └── DdLogsTest.kt
 │
 ├── bindings/                      # C# binding projects
 │   ├── DatadogSdk.iOS.Binding/
-│   │   ├── ApiDefinition.cs      # iOS binding interface definitions
-│   │   ├── StructsAndEnums.cs    # Supporting types
+│   │   ├── ApiDefinition.Core.cs  # iOS core binding interface
+│   │   ├── ApiDefinition.Logs.cs  # iOS logs binding interface
 │   │   └── NativeReference/
 │   │       └── DatadogWrapper.xcframework/   # XCFramework binary
 │   │
@@ -102,14 +111,42 @@ dd-sdk-maui/
 │   │       └── proguard.txt      # R8/ProGuard rules
 │   │
 │   └── DatadogSdk.Maui/          # Meta-package (unified)
-│       └── DatadogSdk.Maui.csproj   # References iOS + Android bindings
+│       ├── Configuration/         # Configuration namespace
+│       │   ├── DdSdkConfiguration.cs
+│       │   ├── FileBasedConfiguration.cs  # JSON config parser
+│       │   ├── TrackingConsent.cs
+│       │   ├── BatchSize.cs
+│       │   ├── BatchProcessingLevel.cs
+│       │   ├── UploadFrequency.cs
+│       │   ├── DatadogSite.cs
+│       │   └── SdkVerbosity.cs
+│       ├── DdSdk.cs               # SDK initialization + BuildAdditionalConfiguration
+│       ├── DdLogs.cs              # Logging API
+│       └── InternalLog.cs         # SDK-internal console logging
+│
+├── tests/                         # C# unit tests
+│   └── DatadogSdk.Maui.Tests/
+│       ├── DdSdkConfigurationTests.cs    # SDK init via test bridge (INativeBridge)
+│       ├── DdSdkConversionTests.cs       # ConvertSite, ConvertTrackingConsent,
+│       │                                 # BuildAdditionalConfiguration
+│       ├── FileBasedConfigurationTests.cs # JSON config parsing + validation
+│       ├── MockNativeSdkBridge.cs        # Shared test double for DdSdk.INativeBridge
+│       ├── InternalLogTests.cs
+│       └── Fixtures/                     # JSON test fixtures
+│           ├── full_config.json
+│           ├── minimal_config.json
+│           └── malformed_config.json
 │
 ├── example/                       # Test/demo MAUI application
 │   ├── build.sh                  # Example app build script
-│   ├── example.csproj            # References DatadogSdk.Maui
+│   ├── MauiProgram.cs            # SDK initialization
+│   ├── MainPage.xaml.cs          # Log sending UI
+│   ├── Resources/Raw/appsettings.json  # ClientToken, Environment
 │   └── Platforms/
-│       ├── iOS/AppDelegate.cs    # iOS initialization
-│       └── Android/MainActivity.cs   # Android initialization
+│       └── Android/
+│           ├── AndroidManifest.xml           # networkSecurityConfig reference
+│           └── Resources/xml/
+│               └── network_security_config.xml  # Allows cleartext HTTP
 │
 └── local-packages/                # Local NuGet package output
     ├── DatadogSdk.iOS.Binding.1.0.0.nupkg
@@ -211,35 +248,51 @@ cd example
 **Objective-C Export Requirements:**
 ```swift
 // Swift classes MUST be @objc and inherit from NSObject
-@objc(DatadogWrapper)
-public class DatadogWrapper: NSObject {
+@objc(DatadogWrapper)         // ObjC name stays DatadogWrapper for binding compatibility
+public class DdSdkNativeWrapper: NSObject {
 
-    // Static methods need @objc annotation
+    // Mapping helpers (testable independently)
+    static func mapSite(_ site: String) -> DatadogSite { ... }
+    static func mapTrackingConsent(_ consent: String) -> TrackingConsent { ... }
+    static func mapVerbosity(_ verbosity: String) -> CoreLoggerLevel { ... }
+    static func mapBatchSize(_ batchSize: String) -> Datadog.Configuration.BatchSize { ... }
+    static func mapUploadFrequency(_ freq: String) -> Datadog.Configuration.UploadFrequency { ... }
+    static func mapBatchProcessingLevel(_ level: String) -> Datadog.Configuration.BatchProcessingLevel { ... }
+
     @objc public static func initialize(
         clientToken: String,
         environment: String,
-        service: String
-    ) -> Bool {
-        // Implementation
-    }
+        service: String?,     // nullable
+        site: String,
+        verbosity: String,
+        trackingConsent: String,
+        batchSize: String?,
+        uploadFrequency: String?,
+        batchProcessingLevel: String?,
+        additionalConfiguration: NSDictionary?
+    ) -> Bool { ... }
 }
 ```
 
-**C# Binding Syntax:**
+**C# Binding Syntax** (`ApiDefinition.Core.cs`):
 ```csharp
 [BaseType(typeof(NSObject))]
 interface DatadogWrapper
 {
     [Static]
-    [Export("initializeWithClientToken:environment:service:")]
-    bool Initialize(string clientToken, string environment, string service);
+    [Export("initializeWithClientToken:environment:service:site:verbosity:trackingConsent:batchSize:uploadFrequency:batchProcessingLevel:additionalConfiguration:")]
+    bool Initialize(string clientToken, string environment,
+        [NullAllowed] string service, string site, string verbosity,
+        string trackingConsent, [NullAllowed] string batchSize,
+        [NullAllowed] string uploadFrequency, [NullAllowed] string batchProcessingLevel,
+        [NullAllowed] NSDictionary additionalConfiguration);
 }
 ```
 
 **Export Selector Pattern:**
-- Swift method: `initialize(clientToken:environment:service:)`
-- Objective-C selector: `initializeWithClientToken:environment:service:`
-- Parameter names become part of selector
+- Swift method: `initialize(clientToken:environment:service:site:verbosity:...)`
+- Objective-C selector: `initializeWithClientToken:environment:service:site:verbosity:...`
+- Each parameter label becomes part of the selector after the first
 
 ### Android Binding Specifics
 
@@ -247,19 +300,33 @@ interface DatadogWrapper
 ```kotlin
 class DatadogWrapper {
     companion object {
+        // Mapping helpers (testable independently)
+        @JvmStatic fun mapSite(site: String): DatadogSite = ...
+        @JvmStatic fun mapTrackingConsent(consent: String): TrackingConsent = ...
+        @JvmStatic fun mapVerbosity(verbosity: String): Int = ...  // returns Log.* constant
+        @JvmStatic fun mapBatchSize(batchSize: String): BatchSize = ...
+        @JvmStatic fun mapUploadFrequency(uploadFrequency: String): UploadFrequency = ...
+        @JvmStatic fun mapBatchProcessingLevel(level: String): BatchProcessingLevel = ...
+
         @JvmStatic  // Critical: exposes as static method to C#
         fun initialize(
             context: Context,
             clientToken: String,
             environment: String,
-            service: String,
-            site: String = "us1"
-        ): Boolean {
-            // Implementation
-        }
+            service: String?,           // nullable
+            site: String = "us1",
+            verbosity: String = "error",
+            trackingConsent: String = "pending",
+            batchSize: String? = null,
+            uploadFrequency: String? = null,
+            batchProcessingLevel: String? = null,
+            additionalConfiguration: Map<String, Any>? = null
+        ): Boolean { ... }
     }
 }
 ```
+
+**`_dd.needsClearTextHttp` support**: if `additionalConfiguration["_dd.needsClearTextHttp"] == true`, the wrapper calls `_InternalProxy.allowClearTextHttp(builder)` before building the configuration. Pair with a custom endpoint and `network_security_config.xml` allowing cleartext for local testing.
 
 **Metadata.xml Transformations:**
 ```xml
@@ -365,30 +432,38 @@ export ANDROID_HOME=$HOME/Library/Android/sdk
 
 Before committing changes:
 
-1. **Build native wrappers**
+1. **Run unit tests**
+   ```bash
+   ./check.sh               # All suites
+   ./check.sh --maui        # C# xUnit only
+   ./check.sh --android     # Kotlin JUnit + MockK only
+   ./check.sh --ios         # Swift XCTest only
+   ```
+
+2. **Build native wrappers**
    ```bash
    cd native-wrappers/ios && ./build.sh
    cd ../android && ./gradlew :datadogwrapper:assembleRelease
    ```
 
-2. **Rebuild all bindings**
+3. **Rebuild all bindings**
    ```bash
    cd ../.. && ./build.sh
    ```
 
-3. **Test iOS**
+4. **Test iOS**
    ```bash
    cd example && ./build.sh --clean --ios --run
    # Verify logs in Datadog UI
    ```
 
-4. **Test Android**
+5. **Test Android**
    ```bash
    ./build.sh --clean --android --run
    # Verify logs in Datadog UI
    ```
 
-5. **Check NuGet packages**
+6. **Check NuGet packages**
    ```bash
    ls -lh ../local-packages/
    # Verify timestamps are recent
@@ -399,6 +474,9 @@ Before committing changes:
 ```bash
 # Full rebuild
 ./build.sh
+
+# Run all unit tests
+./check.sh
 
 # iOS build and run
 cd example && ./build.sh --ios --run
@@ -414,6 +492,15 @@ unzip -l bindings/DatadogSdk.Android.Binding/Jars/datadogwrapper-release.aar
 
 # View generated Android binding code
 ls bindings/DatadogSdk.Android.Binding/obj/Release/net10.0-android/generated/src/
+
+# Run C# unit tests directly
+dotnet test tests/DatadogSdk.Maui.Tests/
+
+# Run Android unit tests directly
+cd native-wrappers/android && ./gradlew :datadogwrapper:test
+
+# Run iOS unit tests directly
+cd native-wrappers/ios/DatadogWrapper && swift test
 
 # Clean all build artifacts
 git clean -fdx -e local-packages -e .planning

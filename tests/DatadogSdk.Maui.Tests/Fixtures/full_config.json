@@ -1,0 +1,17 @@
+{
+  "ClientToken": "pub-test-full-config",
+  "Environment": "staging",
+  "Site": "Eu1",
+  "Service": "my-maui-app",
+  "TrackingConsent": "Pending",
+  "Verbosity": "DEBUG",
+  "BatchSize": "Large",
+  "UploadFrequency": "Frequent",
+  "BatchProcessingLevel": "High",
+  "Version": "2.1.0",
+  "VersionSuffix": "-rc1",
+  "AdditionalConfiguration": {
+    "_dd.needsClearTextHttp": true,
+    "_dd.custom_key": "custom_value"
+  }
+}

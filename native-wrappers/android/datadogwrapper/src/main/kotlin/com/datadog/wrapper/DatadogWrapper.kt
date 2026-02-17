@@ -4,49 +4,114 @@ import android.content.Context
 import android.util.Log
 import com.datadog.android.Datadog
 import com.datadog.android.DatadogSite
+import com.datadog.android._InternalProxy
+import com.datadog.android.core.configuration.BatchProcessingLevel
+import com.datadog.android.core.configuration.BatchSize
 import com.datadog.android.core.configuration.Configuration
+import com.datadog.android.core.configuration.UploadFrequency
 import com.datadog.android.privacy.TrackingConsent
 
 class DatadogWrapper {
     companion object {
+
+        // -- Mapping helpers --
+
+        @JvmStatic
+        fun mapSite(site: String): DatadogSite = when (site.lowercase()) {
+            "us1" -> DatadogSite.US1
+            "us3" -> DatadogSite.US3
+            "us5" -> DatadogSite.US5
+            "eu1" -> DatadogSite.EU1
+            "ap1" -> DatadogSite.AP1
+            "ap2" -> DatadogSite.AP2
+            "us1_fed" -> DatadogSite.US1_FED
+            else -> DatadogSite.US1
+        }
+
+        @JvmStatic
+        fun mapTrackingConsent(consent: String): TrackingConsent = when (consent.lowercase()) {
+            "granted" -> TrackingConsent.GRANTED
+            "not_granted" -> TrackingConsent.NOT_GRANTED
+            else -> TrackingConsent.PENDING
+        }
+
+        @JvmStatic
+        fun mapVerbosity(verbosity: String): Int = when (verbosity.lowercase()) {
+            "debug" -> Log.DEBUG
+            "info" -> Log.INFO
+            "warn" -> Log.WARN
+            "error" -> Log.ERROR
+            else -> Log.ERROR
+        }
+
+        @JvmStatic
+        fun mapBatchSize(batchSize: String): BatchSize = when (batchSize.lowercase()) {
+            "small" -> BatchSize.SMALL
+            "large" -> BatchSize.LARGE
+            else -> BatchSize.MEDIUM
+        }
+
+        @JvmStatic
+        fun mapUploadFrequency(uploadFrequency: String): UploadFrequency = when (uploadFrequency.lowercase()) {
+            "frequent" -> UploadFrequency.FREQUENT
+            "rare" -> UploadFrequency.RARE
+            else -> UploadFrequency.AVERAGE
+        }
+
+        @JvmStatic
+        fun mapBatchProcessingLevel(level: String): BatchProcessingLevel = when (level.lowercase()) {
+            "low" -> BatchProcessingLevel.LOW
+            "high" -> BatchProcessingLevel.HIGH
+            else -> BatchProcessingLevel.MEDIUM
+        }
+
+        // -- Initialization --
+
         @JvmStatic
         fun initialize(
             context: Context,
             clientToken: String,
             environment: String,
-            service: String,
+            service: String?,
             site: String = "us1",
-            verbosity: String = "error"
+            verbosity: String = "error",
+            trackingConsent: String = "pending",
+            batchSize: String? = null,
+            uploadFrequency: String? = null,
+            batchProcessingLevel: String? = null,
+            additionalConfiguration: Map<String, Any>? = null
         ): Boolean {
             return try {
-                val datadogSite = when (site.lowercase()) {
-                    "us1" -> DatadogSite.US1
-                    "us3" -> DatadogSite.US3
-                    "us5" -> DatadogSite.US5
-                    "eu1" -> DatadogSite.EU1
-                    "ap1" -> DatadogSite.AP1
-                    "us1_fed" -> DatadogSite.US1_FED
-                    else -> DatadogSite.US1
-                }
-
-                val configuration = Configuration.Builder(
+                val builder = Configuration.Builder(
                     clientToken = clientToken,
                     env = environment,
                     service = service
                 )
-                    .useSite(datadogSite)
-                    .build()
+                    .useSite(mapSite(site))
 
-                Datadog.initialize(context, configuration, TrackingConsent.GRANTED)
+                batchSize?.let {
+                    builder.setBatchSize(mapBatchSize(it))
+                }
 
-                // Set SDK verbosity level
-                Datadog.setVerbosity(when (verbosity.lowercase()) {
-                    "debug" -> Log.DEBUG
-                    "info" -> Log.INFO
-                    "warn" -> Log.WARN
-                    "error" -> Log.ERROR
-                    else -> Log.ERROR
-                })
+                uploadFrequency?.let {
+                    builder.setUploadFrequency(mapUploadFrequency(it))
+                }
+
+                batchProcessingLevel?.let {
+                    builder.setBatchProcessingLevel(mapBatchProcessingLevel(it))
+                }
+
+                additionalConfiguration?.let {
+                    builder.setAdditionalConfiguration(it)
+                }
+
+                if (additionalConfiguration?.get("_dd.needsClearTextHttp") == true) {
+                    _InternalProxy.allowClearTextHttp(builder)
+                }
+
+                Datadog.initialize(context, builder.build(), mapTrackingConsent(trackingConsent))
+
+                Datadog.setVerbosity(mapVerbosity(verbosity))
 
                 true
             } catch (e: Exception) {
