@@ -49,6 +49,8 @@ namespace DatadogSdk.Maui
                 mergedConfig["_dd.version_suffix"] = config.VersionSuffix;
             }
 
+            var sdkInitialized = false;
+
 #if ANDROID
             var context = global::Android.App.Application.Context;
 
@@ -70,7 +72,7 @@ namespace DatadogSdk.Maui
                 }
             }
 
-            var result = NativeDatadogWrapper.Initialize(
+            sdkInitialized = NativeDatadogWrapper.Initialize(
                 context,
                 config.ClientToken,
                 config.Environment,
@@ -93,7 +95,7 @@ namespace DatadogSdk.Maui
                 );
             }
 
-            var result = NativeDatadogWrapper.Initialize(
+            sdkInitialized = NativeDatadogWrapper.Initialize(
                 config.ClientToken,
                 config.Environment,
                 config.Service,
@@ -105,12 +107,10 @@ namespace DatadogSdk.Maui
                 batchProcessingLevel,
                 iosConfig
             );
-#else
-            var result = false;
 #endif
 
-            InternalLog.Log($"DdSdk.Initialize completed: {result}", SdkVerbosity.INFO);
-            return result;
+            InternalLog.Log($"DdSdk.Initialize completed: {sdkInitialized}", SdkVerbosity.INFO);
+            return sdkInitialized;
         }
 
         internal static string ConvertSite(DatadogSite site) => site switch
@@ -120,6 +120,7 @@ namespace DatadogSdk.Maui
             DatadogSite.Us5 => "us5",
             DatadogSite.Eu1 => "eu1",
             DatadogSite.Ap1 => "ap1",
+            DatadogSite.Ap2 => "ap2",
             DatadogSite.Us1Fed => "us1_fed",
             _ => "us1"
         };

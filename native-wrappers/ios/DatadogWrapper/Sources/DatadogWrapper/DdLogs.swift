@@ -14,7 +14,7 @@ public class DdLogs: NSObject {
         Logs.enable()
 
         // Create logger with service name from global config
-        let serviceName = DatadogWrapper.getServiceName()
+        let serviceName = DdSdkNativeWrapper.getServiceName()
         logger = Logger.create(
             with: Logger.Configuration(
                 service: serviceName

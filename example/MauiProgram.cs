@@ -38,6 +38,7 @@ public static class MauiProgram
             // Optional fields (uncomment to test):
             // BatchSize = BatchSize.Medium,
             // UploadFrequency = UploadFrequency.Average,
+            // BatchProcessingLevel = BatchProcessingLevel.Medium,
         });
 
         return builder.Build();

@@ -7,6 +7,7 @@ namespace DatadogSdk.Maui.Configuration
         Us5,
         Eu1,
         Ap1,
+        Ap2,
         Us1Fed
     }
 }

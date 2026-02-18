@@ -12,6 +12,7 @@ public class DdSdkConversionTests
     [InlineData(DatadogSite.Us5, "us5")]
     [InlineData(DatadogSite.Eu1, "eu1")]
     [InlineData(DatadogSite.Ap1, "ap1")]
+    [InlineData(DatadogSite.Ap2, "ap2")]
     [InlineData(DatadogSite.Us1Fed, "us1_fed")]
     public void ConvertSite_ReturnsCorrectString(DatadogSite site, string expected)
     {

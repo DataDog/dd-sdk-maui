@@ -35,7 +35,6 @@ cd "$SCRIPT_DIR"
 # Parse command line arguments
 TARGET=""
 RUN_APP=false
-CLEAN=false
 
 show_help() {
     echo "Usage: ./build.sh [OPTIONS]"
@@ -44,13 +43,12 @@ show_help() {
     echo "  --ios          Build for iOS (default if no target specified)"
     echo "  --android      Build for Android"
     echo "  --run          Run the app after building"
-    echo "  --clean        Clean before building"
     echo "  -h, --help     Show this help message"
     echo ""
     echo "Examples:"
     echo "  ./build.sh --ios --run           # Build and run iOS app"
-    echo "  ./build.sh --android --clean     # Clean and build Android app"
-    echo "  ./build.sh --clean --ios --run   # Clean, build, and run iOS app"
+    echo "  ./build.sh --android             # Build Android app"
+    echo "  ./build.sh --ios --run           # Build and run iOS app"
 }
 
 # Parse arguments
@@ -66,10 +64,6 @@ while [[ $# -gt 0 ]]; do
             ;;
         --run)
             RUN_APP=true
-            shift
-            ;;
-        --clean)
-            CLEAN=true
             shift
             ;;
         -h|--help)

@@ -19,7 +19,7 @@ public class InternalLogTests : IDisposable
     {
         Console.SetOut(_originalOutput);
         _consoleOutput.Dispose();
-        InternalLog.Verbosity = null; // Reset
+        InternalLog.Verbosity = null;
     }
 
     [Fact]

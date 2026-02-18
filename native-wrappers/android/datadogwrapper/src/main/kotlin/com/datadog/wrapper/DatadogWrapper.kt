@@ -20,7 +20,7 @@ class DatadogWrapper {
             service: String?,
             site: String = "us1",
             verbosity: String = "error",
-            trackingConsent: String = "granted",
+            trackingConsent: String = "pending",
             batchSize: String? = null,
             uploadFrequency: String? = null,
             batchProcessingLevel: String? = null,
@@ -33,6 +33,7 @@ class DatadogWrapper {
                     "us5" -> DatadogSite.US5
                     "eu1" -> DatadogSite.EU1
                     "ap1" -> DatadogSite.AP1
+                    "ap2" -> DatadogSite.AP2
                     "us1_fed" -> DatadogSite.US1_FED
                     else -> DatadogSite.US1
                 }
@@ -73,9 +74,9 @@ class DatadogWrapper {
                 }
 
                 val consent = when (trackingConsent.lowercase()) {
+                    "granted" -> TrackingConsent.GRANTED
                     "not_granted" -> TrackingConsent.NOT_GRANTED
-                    "pending" -> TrackingConsent.PENDING
-                    else -> TrackingConsent.GRANTED
+                    else -> TrackingConsent.PENDING
                 }
 
                 Datadog.initialize(context, builder.build(), consent)

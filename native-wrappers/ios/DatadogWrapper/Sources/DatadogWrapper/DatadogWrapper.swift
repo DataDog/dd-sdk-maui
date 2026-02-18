@@ -2,7 +2,7 @@ import Foundation
 import DatadogCore
 
 @objc(DatadogWrapper)
-public class DatadogWrapper: NSObject {
+public class DdSdkNativeWrapper: NSObject {
 
     // Store service name for use by feature modules
     private static var currentServiceName: String = "dd-sdk-maui"
@@ -15,10 +15,10 @@ public class DatadogWrapper: NSObject {
     ///   - site: Datadog site (e.g., "us1", "eu1", "us3", "us5", "ap1", "us1_fed")
     ///   - verbosity: SDK verbosity level ("debug", "info", "warn", "error")
     ///   - trackingConsent: Initial tracking consent ("granted", "not_granted", "pending")
-    ///   - batchSize: Batch size (ignored on iOS - Android only)
-    ///   - uploadFrequency: Upload frequency (ignored on iOS - Android only)
-    ///   - batchProcessingLevel: Batch processing level (ignored on iOS - Android only)
-    ///   - additionalConfiguration: Additional configuration dictionary
+    ///   - batchSize: Batch size for data uploads
+    ///   - uploadFrequency: Upload frequency for data batches
+    ///   - batchProcessingLevel: Batch processing level
+    ///   - additionalConfiguration: Additional configuration dictionary (includes _dd.version, _dd.version_suffix, etc.)
     /// - Returns: Boolean indicating successful initialization
     @objc public static func initialize(
         clientToken: String,
@@ -37,7 +37,7 @@ public class DatadogWrapper: NSObject {
             currentServiceName = service
         }
 
-        let configuration = DatadogCore.Datadog.Configuration(
+        var configuration = DatadogCore.Datadog.Configuration(
             clientToken: clientToken,
             env: environment,
             site: { () in
@@ -46,11 +46,40 @@ public class DatadogWrapper: NSObject {
                 case "us5": return .us5
                 case "eu1": return .eu1
                 case "ap1": return .ap1
+                case "ap2": return .ap2
                 case "us1_fed": return .us1_fed
                 default: return .us1
                 }
-            }()
+            }(),
+            service: service
         )
+
+        // Map batch size
+        if let batchSize = batchSize?.lowercased() {
+            switch batchSize {
+            case "small": configuration.batchSize = .small
+            case "large": configuration.batchSize = .large
+            default: configuration.batchSize = .medium
+            }
+        }
+
+        // Map upload frequency
+        if let uploadFrequency = uploadFrequency?.lowercased() {
+            switch uploadFrequency {
+            case "frequent": configuration.uploadFrequency = .frequent
+            case "rare": configuration.uploadFrequency = .rare
+            default: configuration.uploadFrequency = .average
+            }
+        }
+
+        // Map batch processing level
+        if let batchProcessingLevel = batchProcessingLevel?.lowercased() {
+            switch batchProcessingLevel {
+            case "low": configuration.batchProcessingLevel = .low
+            case "high": configuration.batchProcessingLevel = .high
+            default: configuration.batchProcessingLevel = .medium
+            }
+        }
 
         // Set SDK verbosity level
         switch verbosity.lowercased() {
@@ -64,20 +93,24 @@ public class DatadogWrapper: NSObject {
         // Map tracking consent
         let consent: TrackingConsent = {
             switch trackingConsent.lowercased() {
+            case "granted": return .granted
             case "not_granted": return .notGranted
-            case "pending": return .pending
-            default: return .granted
+            default: return .pending
             }
         }()
+
+        // Apply additional configuration
+        if let additionalConfig = additionalConfiguration as? [String: Any] {
+            configuration._internal_mutation {
+                $0.additionalConfiguration = additionalConfig
+            }
+        }
 
         // Initialize Datadog SDK
         DatadogCore.Datadog.initialize(
             with: configuration,
             trackingConsent: consent
         )
-
-        // Note: batchSize, uploadFrequency, batchProcessingLevel are no-ops on iOS
-        // Note: additionalConfiguration accepted for future use
 
         return true
     }

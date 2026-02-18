@@ -4,14 +4,17 @@ import android.content.Context
 import com.datadog.android.Datadog
 import com.datadog.android.api.SdkCore
 import com.datadog.android.privacy.TrackingConsent
-import io.mockk.*
+import io.mockk.every
+import io.mockk.mockk
+import io.mockk.mockkStatic
+import io.mockk.unmockkAll
+import io.mockk.verify
 import org.junit.After
-import org.junit.Assert.*
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 
 class DatadogWrapperTest {
-
     private val mockContext = mockk<Context>(relaxed = true)
     private val mockSdkCore = mockk<SdkCore>(relaxed = true)
 
@@ -93,7 +96,7 @@ class DatadogWrapperTest {
     }
 
     @Test
-    fun `initialize defaults to granted for unknown consent`() {
+    fun `initialize defaults to pending for unknown consent`() {
         DatadogWrapper.initialize(
             context = mockContext,
             clientToken = "test-token",
@@ -101,6 +104,6 @@ class DatadogWrapperTest {
             service = null,
             trackingConsent = "invalid_value"
         )
-        verify { Datadog.initialize(any(), any(), TrackingConsent.GRANTED) }
+        verify { Datadog.initialize(any(), any(), TrackingConsent.PENDING) }
     }
 }
