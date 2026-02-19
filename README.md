@@ -82,8 +82,16 @@ DdSdk.Initialize(config);
 
 ```csharp
 using DatadogSdk.Maui;
+using DatadogSdk.Maui.Configuration;
 
+// Enable with default Datadog endpoint
 DdLogs.Enable();
+
+// Or with a custom endpoint (proxy, on-premises, or local mock server)
+DdLogs.Enable(new DdLogsConfiguration
+{
+    CustomEndpoint = "https://logs-proxy.example.com/v1/input"
+});
 
 DdLogs.Debug("Debug message");
 DdLogs.Info("Info message");

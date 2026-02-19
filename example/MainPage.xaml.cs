@@ -1,4 +1,5 @@
 using DatadogSdk.Maui;
+using DatadogSdk.Maui.Configuration;
 
 namespace example;
 
@@ -7,7 +8,11 @@ public partial class MainPage : ContentPage
     public MainPage()
     {
         InitializeComponent();
-        DdLogs.Enable();
+        var logsConfiguration = new DdLogsConfiguration
+        {
+            //CustomEndpoint = "http://custom.endpoint"
+        };
+        DdLogs.Enable(logsConfiguration);
     }
 
     private void OnSendLogsClicked(object? sender, EventArgs e)
