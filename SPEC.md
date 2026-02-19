@@ -560,39 +560,86 @@ namespace DatadogSdk.Android.Binding {
 ```
 DatadogSdk.Maui/
 ├── DatadogSdk.Maui.csproj      # Multi-target project (iOS + Android)
-├── DdSdkConfiguration.cs       # Configuration object
+├── Configuration/              # Configuration namespace
+│   ├── DdSdkConfiguration.cs   # Main configuration class
+│   ├── TrackingConsent.cs      # Tracking consent enum
+│   ├── BatchSize.cs            # Batch size enum
+│   ├── BatchProcessingLevel.cs # Processing level enum
+│   ├── UploadFrequency.cs      # Upload frequency enum
+│   └── DatadogSite.cs          # Datadog site enum
 ├── DdSdk.cs                    # SDK initialization (wraps native DatadogWrapper)
 └── DdLogs.cs                   # Logging API (wraps native DdLogs)
 ```
 
 ### DdSdkConfiguration
 
-Configuration object passed to `DdSdk.Initialize()`:
+Configuration object passed to `DdSdk.Initialize()`. Located in `DatadogSdk.Maui.Configuration` namespace:
 
 ```csharp
-public enum SdkVerbosity { DEBUG, INFO, WARN, ERROR }
-
-public class DdSdkConfiguration
+namespace DatadogSdk.Maui.Configuration
 {
-    public required string ClientToken { get; set; }
-    public required string Environment { get; set; }
-    public required string Service { get; set; }
-    public string Site { get; set; } = "us1";
-    public SdkVerbosity Verbosity { get; set; } = SdkVerbosity.ERROR;
+    public class DdSdkConfiguration
+    {
+        // --- Required ---
+        public required string ClientToken { get; set; }
+        public required string Environment { get; set; }
+        public TrackingConsent TrackingConsent { get; set; } = TrackingConsent.Granted;
+
+        // --- Optional ---
+        public Dictionary<string, object>? AdditionalConfiguration { get; set; }
+        public BatchSize? BatchSize { get; set; }
+        public BatchProcessingLevel? BatchProcessingLevel { get; set; }
+        public string? Service { get; set; }
+        public DatadogSite Site { get; set; } = DatadogSite.Us1;
+        public UploadFrequency? UploadFrequency { get; set; }
+        public string? Version { get; set; }
+        public string? VersionSuffix { get; set; }
+        public SdkVerbosity? Verbosity { get; set; }
+    }
+
+    public enum TrackingConsent { Granted, NotGranted, Pending }
+    public enum BatchSize { Small, Medium, Large }
+    public enum BatchProcessingLevel { Low, Medium, High }
+    public enum UploadFrequency { Frequent, Average, Rare }
+    public enum DatadogSite { Us1, Us3, Us5, Eu1, Ap1, Ap2, Us1Fed }
+    public enum SdkVerbosity { DEBUG, INFO, WARN, ERROR }
 }
 ```
+
+**Required fields:**
+- `ClientToken` - Your Datadog client token
+- `Environment` - Environment name (e.g., "prod", "staging", "dev")
+- `TrackingConsent` - User tracking consent (defaults to `Granted`)
+
+**Optional fields:**
+- `Service` - Service name for grouping logs/traces
+- `Site` - Datadog site region (defaults to `Us1`)
+- `BatchSize` - Size of data batches for uploads
+- `BatchProcessingLevel` - CPU/memory trade-off for batch processing
+- `UploadFrequency` - How often to upload data to Datadog
+- `Version` - Application version string
+- `VersionSuffix` - Additional version identifier
+- `Verbosity` - SDK logging level for debugging
+- `AdditionalConfiguration` - Platform-specific configuration dictionary
 
 ### DdSdk
 
 Wraps native `DatadogWrapper.Initialize()` with platform branching:
 
 ```csharp
-// Android: passes Android Context + clientToken, environment, service, site, verbosity
-// iOS: passes clientToken, environment, service, site, verbosity
 public static bool Initialize(DdSdkConfiguration config);
 ```
 
-Stores configuration internally so other modules (e.g. `DdLogs`) can access it. Converts `SdkVerbosity` enum to a lowercase string (e.g. `"debug"`, `"error"`) and passes it to both the native SDK and the C# layer. When `Verbosity` is `DEBUG`, logs all C# layer calls via `Console.WriteLine("[Datadog] ...")`. The native SDKs also use the verbosity to control their internal logging (iOS: `Datadog.verbosityLevel`, Android: `Datadog.setVerbosity()`).
+**Initialization flow:**
+1. Converts all configuration enums to their string representations
+2. Marshals configuration to native platform:
+   - **Android**: Passes Android Context + all configuration parameters
+   - **iOS**: Passes all configuration parameters (Context not needed)
+3. Applies `AdditionalConfiguration` dictionary if provided (marshaled as `NSDictionary` on iOS, `Map<String, Any>` on Android)
+4. Stores configuration internally for other modules (e.g. `DdLogs`)
+5. Enables internal SDK logging based on `Verbosity` level
+
+When `Verbosity` is `DEBUG`, the SDK logs all C# layer calls via `Console.WriteLine("[Datadog] ...")`. The native SDKs also use the verbosity to control their internal logging (iOS: `Datadog.verbosityLevel`, Android: `Datadog.setVerbosity()`).
 
 ### DdLogs
 
@@ -723,15 +770,19 @@ public static void LogWithAttributes(string level, string message, Dictionary<st
 
 ```csharp
 using DatadogSdk.Maui;
+using DatadogSdk.Maui.Configuration;
 
 // In MauiProgram.cs — works on both iOS and Android
 DdSdk.Initialize(new DdSdkConfiguration
 {
     ClientToken = "pub...",
     Environment = "prod",
-    Service = "my-app",
-    Site = "us1",               // optional, defaults to "us1"
-    Verbosity = SdkVerbosity.DEBUG  // optional: DEBUG enables Console.WriteLine logging + verbose native SDK
+    TrackingConsent = TrackingConsent.Granted,  // required
+    Service = "my-app",                         // optional
+    Site = DatadogSite.Us1,                     // optional, defaults to Us1
+    Verbosity = SdkVerbosity.DEBUG,             // optional: DEBUG enables Console.WriteLine logging + verbose native SDK
+    BatchSize = BatchSize.Medium,               // optional
+    UploadFrequency = UploadFrequency.Average   // optional
 });
 ```
 
