@@ -47,3 +47,4 @@ example/Resources/Raw/appsettings.json
 # LLMs
 .claude
 .planning
+.rum-ai-toolkit/

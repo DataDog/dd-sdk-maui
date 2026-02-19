@@ -14,9 +14,11 @@ namespace DatadogSdk.Maui
         {
             Configuration = config;
 
-            var verbosity = config.Verbosity.ToString().ToLowerInvariant();
+            InternalLog.Verbosity = config.Verbosity;
 
-            LogDebug($"DdSdk.Initialize called with service={config.Service}, env={config.Environment}, site={config.Site}, verbosity={verbosity}");
+            var verbosity = (config.Verbosity ?? SdkVerbosity.ERROR).ToString().ToLowerInvariant();
+
+            InternalLog.Log($"DdSdk.Initialize called with service={config.Service}, env={config.Environment}, site={config.Site}", SdkVerbosity.DEBUG);
 
 #if ANDROID
             var context = global::Android.App.Application.Context;
@@ -38,16 +40,8 @@ namespace DatadogSdk.Maui
             );
 #endif
 
-            LogDebug($"DdSdk.Initialize completed: {result}");
+            InternalLog.Log($"DdSdk.Initialize completed: {result}", SdkVerbosity.INFO);
             return result;
-        }
-
-        internal static void LogDebug(string message)
-        {
-            if (Configuration?.Verbosity == SdkVerbosity.DEBUG)
-            {
-                Console.WriteLine($"[Datadog] {message}");
-            }
         }
     }
 }
