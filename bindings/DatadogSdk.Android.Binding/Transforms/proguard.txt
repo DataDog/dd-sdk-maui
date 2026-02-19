@@ -1,0 +1,37 @@
+# ============================================
+# ProGuard/R8 rules for DatadogSdk.Android.Binding
+# Applied to consuming apps during Release build
+# ============================================
+
+# Keep all Datadog SDK classes (transitive dependency)
+-keep class com.datadog.** { *; }
+-keep interface com.datadog.** { *; }
+-keepclassmembers class com.datadog.** { *; }
+
+# Keep wrapper classes and all their members
+-keep class com.datadog.wrapper.** { *; }
+-keepclassmembers class com.datadog.wrapper.** { *; }
+
+# Keep Kotlin companion objects (critical for @JvmStatic)
+-keep class com.datadog.wrapper.DatadogWrapper$Companion { *; }
+-keep class com.datadog.wrapper.DdLogs$Companion { *; }
+
+# Keep Kotlin metadata (required for reflection)
+-keep class kotlin.Metadata { *; }
+-keepclassmembers class * {
+    @kotlin.Metadata *;
+}
+
+# Keep JvmStatic annotated methods
+-keepclassmembers class * {
+    @kotlin.jvm.JvmStatic *;
+}
+
+# Prevent obfuscation of wrapper APIs
+-keepnames class com.datadog.wrapper.**
+
+# Keep enum values (if any)
+-keepclassmembers enum * {
+    public static **[] values();
+    public static ** valueOf(java.lang.String);
+}

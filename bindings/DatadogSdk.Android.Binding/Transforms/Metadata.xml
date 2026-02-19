@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<metadata>
+  <!-- Rename package to .NET convention -->
+  <attr path="/api/package[@name='com.datadog.wrapper']" name="managedName">DatadogSdk.Android.Binding</attr>
+
+  <!-- Note: @JvmStatic annotations in Kotlin wrapper already expose methods as static -->
+  <!-- No Companion visibility changes needed - binding generator handles this automatically -->
+
+  <!-- dd-sdk-android classes now handled by separate binding projects -->
+  <!-- Remove all dd-sdk-android packages from wrapper binding to avoid duplicates -->
+  <remove-node path="/api/package[starts-with(@name, 'com.datadog.android')]" />
+  <remove-node path="/api/package[starts-with(@name, 'com.lyft.kronos')]" />
+</metadata>
