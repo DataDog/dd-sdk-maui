@@ -9,8 +9,8 @@ namespace DatadogSdk.iOS.Binding
     interface DdLogs
     {
         [Static]
-        [Export("enableLogs")]
-        void EnableLogs();
+        [Export("enableLogs:")]
+        void EnableLogs([NullAllowed] string customEndpoint);
 
         [Static]
         [Export("logDebug:")]

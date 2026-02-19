@@ -5,21 +5,50 @@ import DatadogLogs
 @objc(DdLogs)
 public class DdLogs: NSObject {
 
-    private static var logger: LoggerProtocol?
+    // Dependencies - injectable for testing
+    private static var logsModule: LogsModuleProtocol = RealLogsModule()
+    private static var logger: LoggerWrapperProtocol?
 
-    /// Enable the Logs module with default configuration
+    // For testing: inject dependencies
+    static func setLogsModule(_ module: LogsModuleProtocol) {
+        logsModule = module
+    }
+
+    static func setLogger(_ loggerWrapper: LoggerWrapperProtocol?) {
+        logger = loggerWrapper
+    }
+
+    // Reset to production dependencies (for test cleanup)
+    static func resetDependencies() {
+        logsModule = RealLogsModule()
+        logger = nil
+    }
+
+    /// Enable the Logs module with optional configuration
+    /// - Parameter customEndpoint: Optional custom server URL for sending logs
     /// Must be called after DatadogWrapper.initialize()
-    @objc public static func enableLogs() {
-        // Enable Logs feature (dd-sdk-ios v3.x API)
-        Logs.enable()
+    @objc(enableLogs:)
+    public static func enableLogs(customEndpoint: String?) {
+        if let customEndpoint = customEndpoint,
+           !customEndpoint.isEmpty,
+           let url = URL(string: customEndpoint) {
+            // Enable Logs with custom configuration
+            var config = Logs.Configuration()
+            config.customEndpoint = url
+            logsModule.enable(with: config)
+        } else {
+            // Enable Logs with default configuration
+            logsModule.enable()
+        }
 
         // Create logger with service name from global config
         let serviceName = DdSdkNativeWrapper.getServiceName()
-        logger = Logger.create(
+        let realLogger = Logger.create(
             with: Logger.Configuration(
                 service: serviceName
             )
         )
+        logger = RealLoggerWrapper(logger: realLogger)
     }
 
     /// Log a debug message
@@ -91,7 +120,7 @@ public class DdLogs: NSObject {
     /// Ensure logger is initialized (lazy initialization)
     private static func ensureLogger() {
         if logger == nil {
-            enableLogs()
+            enableLogs(customEndpoint: nil)
         }
     }
 }

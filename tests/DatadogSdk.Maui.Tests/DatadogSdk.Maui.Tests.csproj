@@ -18,6 +18,7 @@
     <Compile Include="../../bindings/DatadogSdk.Maui/DdSdk.cs" Link="Linked/DdSdk.cs" />
     <Compile Include="../../bindings/DatadogSdk.Maui/InternalLog.cs" Link="Linked/InternalLog.cs" />
     <Compile Include="../../bindings/DatadogSdk.Maui/Configuration/DdSdkConfiguration.cs" Link="Linked/Configuration/DdSdkConfiguration.cs" />
+    <Compile Include="../../bindings/DatadogSdk.Maui/Configuration/DdLogsConfiguration.cs" Link="Linked/Configuration/DdLogsConfiguration.cs" />
     <Compile Include="../../bindings/DatadogSdk.Maui/Configuration/DatadogSite.cs" Link="Linked/Configuration/DatadogSite.cs" />
     <Compile Include="../../bindings/DatadogSdk.Maui/Configuration/TrackingConsent.cs" Link="Linked/Configuration/TrackingConsent.cs" />
     <Compile Include="../../bindings/DatadogSdk.Maui/Configuration/BatchSize.cs" Link="Linked/Configuration/BatchSize.cs" />

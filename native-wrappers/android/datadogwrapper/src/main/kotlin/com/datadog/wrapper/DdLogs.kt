@@ -9,9 +9,17 @@ class DdLogs {
         private var logger: Logger? = null
 
         @JvmStatic
-        fun enableLogs() {
-            val logsConfig = LogsConfiguration.Builder().build()
+        fun enableLogs(customEndpoint: String?) {
+            val builder = LogsConfiguration.Builder()
+
+            // Set custom endpoint if provided and not blank
+            if (!customEndpoint.isNullOrBlank()) {
+                builder.useCustomEndpoint(customEndpoint)
+            }
+
+            val logsConfig = builder.build()
             Logs.enable(logsConfig)
+
             logger = Logger.Builder()
                 .setNetworkInfoEnabled(true)
                 .setLogcatLogsEnabled(true)
