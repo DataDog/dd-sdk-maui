@@ -839,9 +839,8 @@ Type marshaling: on Android, `context` passes as `Map<String, String>` directly;
 - `--ios` - Build for iOS (default)
 - `--android` - Build for Android
 - `--run` - Launch on simulator/emulator
-- `--clean` - Clean and force NuGet restore
 
-**Internal Steps**:
+**Internal Steps** (always runs):
 1. Clean `bin/` and `obj/` directories
 2. Clear NuGet global cache for `DatadogSdk.*` packages
 3. `dotnet restore`

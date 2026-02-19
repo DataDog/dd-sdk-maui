@@ -5,6 +5,7 @@ Thank you for your interest in contributing to the Datadog SDK for .NET MAUI! Th
 ## Table of Contents
 
 - [Prerequisites](#prerequisites)
+- [Quick Setup (Recommended)](#quick-setup-recommended)
 - [Getting Started](#getting-started)
 - [Project Structure](#project-structure)
 - [Build Scripts Explained](#build-scripts-explained)
@@ -15,6 +16,8 @@ Thank you for your interest in contributing to the Datadog SDK for .NET MAUI! Th
 - [Pull Request Guidelines](#pull-request-guidelines)
 
 ## Prerequisites
+
+> **Note**: The automated setup script (`./setup.sh`) can install most of these for you. This section is provided for reference and manual setup.
 
 ### Required Software
 
@@ -61,6 +64,39 @@ Thank you for your interest in contributing to the Datadog SDK for .NET MAUI! Th
 - **Android Studio** (for Android emulator management)
 - **Xcode Simulator** (comes with Xcode)
 
+## Quick Setup (Recommended)
+
+Use the automated setup script to configure your development environment:
+
+```bash
+./setup.sh
+```
+
+The script will:
+- Check for required dependencies
+- Offer to install missing components
+- Configure environment variables
+- Optionally verify the setup is functional
+
+### Script Options
+
+- `./setup.sh` - Full interactive setup with prompts
+- `./setup.sh --help` - Show usage information
+- `./setup.sh --verify` - Run verification tests after setup
+- `./setup.sh --verify-only` - Only run verification tests
+
+### Verification
+
+To verify your environment is working after setup:
+
+```bash
+./setup.sh --verify
+```
+
+This creates a temporary MAUI project and tests both iOS and Android builds.
+
+For manual setup or troubleshooting, continue with the sections below.
+
 ## Getting Started
 
 ### 1. Clone the Repository
@@ -70,21 +106,17 @@ git clone https://github.com/DataDog/dd-sdk-maui.git
 cd dd-sdk-maui
 ```
 
-### 2. Verify Environment
+### 2. Set Up Your Environment
+
+Run the automated setup script:
 
 ```bash
-# Check .NET
-dotnet --version
-
-# Check Xcode
-xcodebuild -version
-
-# Check Android SDK
-which adb  # Should return path to adb
-
-# Check Java
-java -version
+./setup.sh
 ```
+
+The script will check all required dependencies and offer to install missing components. Follow the prompts to complete your environment setup.
+
+**Tip**: If you prefer manual setup, see the [Prerequisites](#prerequisites) section above for detailed instructions.
 
 ### 3. Initial Build
 
@@ -250,7 +282,6 @@ Options:
   --ios          Build for iOS (default)
   --android      Build for Android
   --run          Run the app after building
-  --clean        Clean before building (forces NuGet refresh)
   -h, --help     Show help message
 ```
 
@@ -264,9 +295,6 @@ Options:
 
 # Build and run on Android emulator
 ./build.sh --android --run
-
-# Clean build (useful after updating bindings)
-./build.sh --clean --ios --run
 ```
 
 **What it does**:
@@ -309,7 +337,7 @@ The build script always cleans `obj/` and the NuGet cache to prevent stale resto
 1. **Make changes to native code** (Swift or Kotlin)
 2. **Rebuild native wrapper** (produces XCFramework or AAR)
 3. **Rebuild C# bindings** (produces NuGet packages)
-4. **Test in example app** with `--clean` flag
+4. **Test in example app**
 
 ### Full Rebuild Flow
 
@@ -319,8 +347,8 @@ The build script always cleans `obj/` and the NuGet cache to prevent stale resto
 
 # Test changes
 cd example
-./build.sh --clean --ios --run
-./build.sh --clean --android --run
+./build.sh --ios --run
+./build.sh --android --run
 ```
 
 ### Quick Rebuild Flows
@@ -335,7 +363,7 @@ cd ../../bindings/DatadogSdk.Maui
 dotnet pack -c Release
 cp bin/Release/*.nupkg ../../local-packages/
 cd ../../example
-./build.sh --clean --ios --run
+./build.sh --ios --run
 ```
 
 **Android only**:
@@ -351,7 +379,7 @@ cd ../DatadogSdk.Maui
 dotnet pack -c Release
 cp bin/Release/*.nupkg ../../local-packages/
 cd ../../example
-./build.sh --clean --android --run
+./build.sh --android --run
 ```
 
 **Tip**: Use `./build.sh` from root for simplicity. It's fast (~2-3 minutes).
@@ -368,8 +396,8 @@ cd ../../example
 2. **Run example app**:
    ```bash
    cd example
-   ./build.sh --clean --ios --run    # iOS
-   ./build.sh --clean --android --run # Android
+   ./build.sh --ios --run    # iOS
+   ./build.sh --android --run # Android
    ```
 
 3. **Verify in Datadog UI**:
@@ -540,6 +568,34 @@ After bumping:
 
 ## Troubleshooting
 
+### Setup Script Issues
+
+**"Permission denied" when running setup.sh:**
+```bash
+chmod +x setup.sh
+./setup.sh
+```
+
+**Environment variables not persisting after setup:**
+- Restart your terminal after running setup.sh
+- Or manually source your shell profile: `source ~/.zshrc` (or `~/.bash_profile`)
+
+**Verification tests fail but dependencies show as installed:**
+- Try building the SDK directly: `./build.sh`
+- Check MAUI workload: `dotnet workload list | grep maui`
+- Verify simulator/emulator availability:
+  - iOS: `xcrun simctl list devices | grep iPhone`
+  - Android: `$ANDROID_HOME/emulator/emulator -list-avds`
+
+**Android SDK licenses not accepted:**
+```bash
+$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses
+```
+
+**Xcode Command Line Tools installation hangs:**
+- Cancel and install manually: `xcode-select --install`
+- Or download from Apple Developer: https://developer.apple.com/download/
+
 ### iOS Build Fails with "selector not found"
 
 **Cause**: Swift method not properly exposed to Objective-C.
@@ -567,10 +623,10 @@ nm -gU bindings/DatadogSdk.iOS.Binding/NativeReference/DatadogWrapper.xcframewor
 
 **Cause**: NuGet package cache holding old version.
 
-**Solution**: Use `--clean` flag:
+**Solution**: Run the example build script — it always cleans and refreshes the NuGet cache:
 ```bash
 cd example
-./build.sh --clean --ios --run
+./build.sh --ios --run
 ```
 
 ### Gradle Fails with "SDK location not found"
@@ -620,8 +676,8 @@ emulator -avd Pixel_7_API_36 &
    ```bash
    ./build.sh
    cd example
-   ./build.sh --clean --ios --run
-   ./build.sh --clean --android --run
+   ./build.sh --ios --run
+   ./build.sh --android --run
    ```
 
 2. **Verify logs in Datadog**: Ensure your changes work end-to-end
