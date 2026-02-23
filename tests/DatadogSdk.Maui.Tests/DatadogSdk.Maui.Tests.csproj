@@ -11,6 +11,7 @@
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.*" />
     <PackageReference Include="xunit" Version="2.*" />
     <PackageReference Include="xunit.runner.visualstudio" Version="2.*" />
+    <PackageReference Include="JUnitTestLogger" Version="1.*" />
   </ItemGroup>
 
   <!-- Link source files from DatadogSdk.Maui for testing -->

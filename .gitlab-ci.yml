@@ -1,0 +1,28 @@
+stages:
+  - test
+
+default:
+  tags:
+    - macos:sequoia-arm64
+    - specific:true
+
+test:lint:
+  stage: test
+  script:
+    - dotnet format example.slnx --verify-no-changes --no-restore
+
+test:build:
+  stage: test
+  script:
+    - ./build.sh
+    - dotnet build
+
+test:unit:
+  stage: test
+  script:
+    - mkdir -p local-packages
+    - dotnet test tests/DatadogSdk.Maui.Tests/ --logger "junit;LogFilePath=results.xml"
+  artifacts:
+    when: always
+    reports:
+      junit: tests/DatadogSdk.Maui.Tests/results.xml
