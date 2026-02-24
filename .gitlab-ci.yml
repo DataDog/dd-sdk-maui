@@ -6,15 +6,11 @@ default:
     - macos:sequoia-arm64
     - specific:true
 
-test:lint:
-  stage: test
-  script:
-    - dotnet format example.slnx --verify-no-changes --no-restore --severity error
-
-test:build:
+test:build-and-lint:
   stage: test
   script:
     - ./build.sh
+    - dotnet format example.slnx --verify-no-changes --no-restore --severity error
 
 test:unit:
   stage: test
