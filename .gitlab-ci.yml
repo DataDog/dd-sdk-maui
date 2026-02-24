@@ -9,7 +9,7 @@ default:
 test:lint:
   stage: test
   script:
-    - dotnet format example.slnx --verify-no-changes --no-restore
+    - dotnet format example.slnx --verify-no-changes --no-restore --severity error
 
 test:build:
   stage: test
