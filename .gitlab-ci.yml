@@ -15,7 +15,6 @@ test:build:
   stage: test
   script:
     - ./build.sh
-    - dotnet build
 
 test:unit:
   stage: test
