@@ -151,37 +151,80 @@ cp bin/Release/*.nupkg "$SCRIPT_DIR/local-packages/"
 log_info "iOS binding built successfully"
 
 # ============================================================================
-# Android Bindings (in dependency order)
+# Android Bindings — dependency chain (Internal → Core → Logs)
+# DatadogSdk.Android.Binding is built separately after ProGuard extraction
 # ============================================================================
 log_section "Building Android Bindings"
 
-# Array of Android binding projects in dependency order
-ANDROID_BINDINGS=(
+ANDROID_DEPS=(
     "DatadogSdk.Android.Internal"
     "DatadogSdk.Android.Core"
     "DatadogSdk.Android.Logs"
-    "DatadogSdk.Android.Binding"
 )
 
-for BINDING in "${ANDROID_BINDINGS[@]}"; do
+for BINDING in "${ANDROID_DEPS[@]}"; do
     log_info "Building $BINDING..."
 
     cd "$SCRIPT_DIR/bindings/$BINDING"
 
-    # Clean
     rm -rf bin obj
-
-    # Build
     dotnet build -c Release
-
-    # Pack
     dotnet pack -c Release
-
-    # Copy to local packages
     cp bin/Release/*.nupkg "$SCRIPT_DIR/local-packages/"
 
     log_info "$BINDING built successfully"
 done
+
+# ============================================================================
+# ProGuard rules extraction
+# Merge rules from the Datadog AARs (now available in bin/) with the wrapper's
+# own consumer-rules.pro into a single file that travels in the NuGet package.
+# ============================================================================
+log_section "Extracting and merging ProGuard rules"
+
+PROGUARD_OUT="$SCRIPT_DIR/bindings/DatadogSdk.Android.Binding/proguard/datadog-merged.pro"
+CORE_BIN="$SCRIPT_DIR/bindings/DatadogSdk.Android.Core/bin/Release/net10.0-android"
+LOGS_BIN="$SCRIPT_DIR/bindings/DatadogSdk.Android.Logs/bin/Release/net10.0-android"
+
+log_info "Starting from wrapper consumer-rules.pro..."
+cp "$SCRIPT_DIR/native-wrappers/android/datadogwrapper/consumer-rules.pro" "$PROGUARD_OUT"
+
+# Append rules extracted from each Datadog AAR
+# proguard.txt is the standard consumer-rules location inside an AAR
+for aar in \
+    "$CORE_BIN/dd-sdk-android-core-3.5.0.aar" \
+    "$CORE_BIN/dd-sdk-android-internal-3.5.0.aar" \
+    "$LOGS_BIN/dd-sdk-android-logs-3.5.0.aar"; do
+
+    if [ -f "$aar" ]; then
+        aar_name=$(basename "$aar")
+        extracted=$(unzip -p "$aar" proguard.txt 2>/dev/null || true)
+        if [ -n "$extracted" ]; then
+            { echo ""; echo "# --- Rules from $aar_name ---"; echo "$extracted"; } >> "$PROGUARD_OUT"
+            log_info "Appended rules from $aar_name"
+        else
+            log_warning "No proguard.txt in $aar_name (skipping)"
+        fi
+    else
+        log_warning "AAR not found, skipping: $(basename "$aar")"
+    fi
+done
+
+log_info "ProGuard rules merged → bindings/DatadogSdk.Android.Binding/proguard/datadog-merged.pro"
+
+# ============================================================================
+# Android Binding — wrapper (built last so it packs the merged ProGuard rules)
+# ============================================================================
+log_info "Building DatadogSdk.Android.Binding..."
+
+cd "$SCRIPT_DIR/bindings/DatadogSdk.Android.Binding"
+
+rm -rf bin obj
+dotnet build -c Release
+dotnet pack -c Release
+cp bin/Release/*.nupkg "$SCRIPT_DIR/local-packages/"
+
+log_info "DatadogSdk.Android.Binding built successfully"
 
 # ============================================================================
 # Meta-package

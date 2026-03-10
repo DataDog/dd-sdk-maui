@@ -20,3 +20,8 @@
 # Prevent obfuscation of wrapper APIs
 -keepnames class com.datadog.wrapper.DatadogWrapper
 -keepnames class com.datadog.wrapper.DdLogs
+
+# --- Rules from dd-sdk-android-logs-3.5.0.aar ---
+# This is needed for the Datadog Error Tracking feature to work reliably,
+ # this file is used by Logs and RUM modules
+-keepattributes SourceFile,LineNumberTable
