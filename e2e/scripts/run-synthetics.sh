@@ -1,5 +1,5 @@
 #!/bin/bash
-set -eo pipefail
+set -e -o pipefail
 
 # Run Synthetics tests for a given platform.
 #

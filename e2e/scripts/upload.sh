@@ -1,5 +1,5 @@
 #!/bin/bash
-set -eo pipefail
+set -e -o pipefail
 
 # Upload app binary to Datadog Synthetics.
 #
