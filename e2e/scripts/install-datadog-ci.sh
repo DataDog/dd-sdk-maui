@@ -1,5 +1,5 @@
 #!/bin/bash
-set -eo pipefail
+set -e -o pipefail
 
 # Download the datadog-ci standalone binary to $E2E_DIR/datadog-ci.
 # Skips download if the binary already exists.

@@ -1,5 +1,5 @@
 #!/bin/bash
-set -eo pipefail
+set -e -o pipefail
 
 # Build the Shopist MAUI app for Android with the locally-built SDK.
 #
