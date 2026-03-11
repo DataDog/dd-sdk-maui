@@ -44,6 +44,13 @@ TestResults/
 # App settings (contains secrets)
 example/Resources/Raw/appsettings.json
 
+# E2E (cloned shopist app, build output, secrets)
+e2e/shopist-maui/
+e2e/output/
+e2e/logs/
+e2e/datadog-ci
+e2e/.env
+
 # LLMs
 .claude
 .planning
