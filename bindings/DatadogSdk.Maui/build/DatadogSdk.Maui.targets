@@ -1,0 +1,159 @@
+<!--
+  DatadogSdk.Maui.targets
+  Automatically loaded by MSBuild for any project that references the DatadogSdk.Maui
+  NuGet package (placed under buildTransitive/, so it applies to transitive consumers).
+
+  Provides a post-publish target that uploads debug symbols to Datadog for crash
+  symbolication and error tracking.
+
+  Prerequisites:
+    npm install -g @datadog/datadog-ci
+
+  Usage:
+    Set these properties in your .csproj or via command line:
+
+    <DatadogUploadSymbols>true</DatadogUploadSymbols>
+    <DatadogSite>datadoghq.com</DatadogSite>          (optional, defaults to datadoghq.com)
+    <DatadogServiceName>your-service</DatadogServiceName>  (optional, defaults to assembly name)
+
+    Or pass them on the command line:
+      export DATADOG_API_KEY=xxx
+      dotnet publish -c Release -p:DatadogUploadSymbols=true
+
+  What gets uploaded:
+    iOS:     .dSYM bundle (covers native + AOT-compiled C# crashes)
+    Android: ProGuard/R8 mapping.txt (covers obfuscated Java/Kotlin names)
+
+  Note: Portable PDBs (C# line numbers) are NOT uploaded — they are resolved
+  on-device by the .NET runtime at crash time. No server-side processing needed.
+-->
+<Project>
+
+  <!-- Defaults -->
+  <PropertyGroup>
+    <DatadogUploadSymbols Condition="'$(DatadogUploadSymbols)' == ''">false</DatadogUploadSymbols>
+    <DatadogSite Condition="'$(DatadogSite)' == ''">datadoghq.com</DatadogSite>
+    <DatadogServiceName Condition="'$(DatadogServiceName)' == ''">$(AssemblyName)</DatadogServiceName>
+    <_DdCanUpload>false</_DdCanUpload>
+  </PropertyGroup>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════
+       Pre-check: Verify prerequisites, set _DdCanUpload flag
+       ═══════════════════════════════════════════════════════════════════════ -->
+  <Target Name="DatadogCheckCli"
+          BeforeTargets="DatadogUploadDsym;DatadogUploadMapping;DatadogSymbolReport"
+          Condition="'$(DatadogUploadSymbols)' == 'true'">
+
+    <!-- Check if datadog-ci is available (must be installed globally) -->
+    <Exec Command="which datadog-ci"
+          IgnoreExitCode="true"
+          StandardOutputImportance="low"
+          StandardErrorImportance="low">
+      <Output TaskParameter="ExitCode" PropertyName="_DdCliExitCode" />
+    </Exec>
+
+    <Message Importance="high"
+             Text="Datadog: Skipping symbol upload — datadog-ci is not installed. Run 'npm install -g @datadog/datadog-ci' to enable."
+             Condition="'$(_DdCliExitCode)' != '0'" />
+
+    <Message Importance="high"
+             Text="Datadog: Skipping symbol upload — DATADOG_API_KEY is not set. Export it in your shell or pass -p:DatadogApiKey=xxx."
+             Condition="'$(_DdCliExitCode)' == '0' AND '$(DatadogApiKey)' == '' AND '$(DATADOG_API_KEY)' == ''" />
+
+    <!-- Only enable upload if both checks pass -->
+    <PropertyGroup>
+      <_DdHasApiKey Condition="'$(DatadogApiKey)' != '' OR '$(DATADOG_API_KEY)' != ''">true</_DdHasApiKey>
+      <_DdHasApiKey Condition="'$(_DdHasApiKey)' == ''">false</_DdHasApiKey>
+      <_DdCanUpload Condition="'$(_DdCliExitCode)' == '0' AND '$(_DdHasApiKey)' == 'true'">true</_DdCanUpload>
+    </PropertyGroup>
+  </Target>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════
+       iOS: Upload dSYM after Publish
+       ═══════════════════════════════════════════════════════════════════════ -->
+  <Target Name="DatadogUploadDsym"
+          AfterTargets="Publish"
+          Condition="'$(DatadogUploadSymbols)' == 'true' AND $(TargetFramework.Contains('-ios'))">
+
+    <!-- Find the .dSYM bundle — it sits next to the .app, one level above PublishDir -->
+    <PropertyGroup>
+      <_DdDsymDir>$([System.IO.Path]::GetFullPath('$(PublishDir)../'))</_DdDsymDir>
+      <_DdDsymPath>$(_DdDsymDir)$(AssemblyName).app.dSYM</_DdDsymPath>
+    </PropertyGroup>
+
+    <Message Importance="high"
+             Text="Datadog: Skipping dSYM upload — file not found at $(_DdDsymPath)."
+             Condition="'$(_DdCanUpload)' == 'true' AND !Exists('$(_DdDsymPath)')" />
+
+    <Message Importance="high"
+             Text="Datadog: Uploading iOS dSYM from $(_DdDsymPath)"
+             Condition="'$(_DdCanUpload)' == 'true' AND Exists('$(_DdDsymPath)')" />
+
+    <!-- When DatadogApiKey property is set, pass it as env var. Otherwise let the shell's DATADOG_API_KEY pass through. -->
+    <Exec Command="datadog-ci dsyms upload &quot;$(_DdDsymDir)&quot;"
+          Condition="'$(_DdCanUpload)' == 'true' AND Exists('$(_DdDsymPath)') AND '$(DatadogApiKey)' != ''"
+          EnvironmentVariables="DATADOG_API_KEY=$(DatadogApiKey);DATADOG_SITE=$(DatadogSite)"
+          IgnoreExitCode="true"
+          ContinueOnError="true" />
+    <Exec Command="DATADOG_SITE=$(DatadogSite) datadog-ci dsyms upload &quot;$(_DdDsymDir)&quot;"
+          Condition="'$(_DdCanUpload)' == 'true' AND Exists('$(_DdDsymPath)') AND '$(DatadogApiKey)' == ''"
+          IgnoreExitCode="true"
+          ContinueOnError="true" />
+  </Target>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════
+       Android: Upload ProGuard/R8 mapping after Publish
+       ═══════════════════════════════════════════════════════════════════════ -->
+  <Target Name="DatadogUploadMapping"
+          AfterTargets="Publish"
+          Condition="'$(DatadogUploadSymbols)' == 'true' AND $(TargetFramework.Contains('-android'))">
+
+    <!-- Find the mapping.txt in the build output (generated by R8 when AndroidLinkTool=r8) -->
+    <PropertyGroup>
+      <_DdMappingPath>$(OutputPath)mapping.txt</_DdMappingPath>
+    </PropertyGroup>
+
+    <Message Importance="high"
+             Text="Datadog: Skipping mapping upload — mapping.txt not found at $(_DdMappingPath). R8/ProGuard may be disabled."
+             Condition="'$(_DdCanUpload)' == 'true' AND !Exists('$(_DdMappingPath)')" />
+
+    <Message Importance="high"
+             Text="Datadog: Uploading Android mapping from $(_DdMappingPath)"
+             Condition="'$(_DdCanUpload)' == 'true' AND Exists('$(_DdMappingPath)')" />
+
+    <Exec Command="datadog-ci flutter-symbols upload --android-mapping --android-mapping-location &quot;$(_DdMappingPath)&quot; --service-name &quot;$(DatadogServiceName)&quot; --version &quot;$(ApplicationDisplayVersion)&quot;"
+          Condition="'$(_DdCanUpload)' == 'true' AND Exists('$(_DdMappingPath)') AND '$(DatadogApiKey)' != ''"
+          EnvironmentVariables="DATADOG_API_KEY=$(DatadogApiKey);DATADOG_SITE=$(DatadogSite)"
+          IgnoreExitCode="true"
+          ContinueOnError="true" />
+    <Exec Command="DATADOG_SITE=$(DatadogSite) datadog-ci flutter-symbols upload --android-mapping --android-mapping-location &quot;$(_DdMappingPath)&quot; --service-name &quot;$(DatadogServiceName)&quot; --version &quot;$(ApplicationDisplayVersion)&quot;"
+          Condition="'$(_DdCanUpload)' == 'true' AND Exists('$(_DdMappingPath)') AND '$(DatadogApiKey)' == ''"
+          IgnoreExitCode="true"
+          ContinueOnError="true" />
+  </Target>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════
+       Summary: Report what was uploaded (always runs when enabled)
+       ═══════════════════════════════════════════════════════════════════════ -->
+  <Target Name="DatadogSymbolReport"
+          AfterTargets="DatadogUploadDsym;DatadogUploadMapping"
+          Condition="'$(DatadogUploadSymbols)' == 'true'">
+
+    <Message Importance="high" Text="" />
+    <Message Importance="high" Text="╔══════════════════════════════════════════════════╗" />
+    <Message Importance="high" Text="║  Datadog Symbol Upload Summary                   ║" />
+    <Message Importance="high" Text="╚══════════════════════════════════════════════════╝" />
+    <Message Importance="high" Text="  Service:  $(DatadogServiceName)" />
+    <Message Importance="high" Text="  Version:  $(ApplicationDisplayVersion)" />
+    <Message Importance="high" Text="  Site:     $(DatadogSite)" />
+    <Message Importance="high" Text="  Upload:   $(_DdCanUpload)" />
+    <Message Importance="high"
+             Text="  iOS dSYM: $(_DdDsymPath)"
+             Condition="$(TargetFramework.Contains('-ios'))" />
+    <Message Importance="high"
+             Text="  Android mapping: $(OutputPath)mapping.txt"
+             Condition="$(TargetFramework.Contains('-android'))" />
+    <Message Importance="high" Text="" />
+  </Target>
+
+</Project>
