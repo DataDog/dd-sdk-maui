@@ -68,51 +68,16 @@ cat > "$SHOPIST_DIR/NuGet.Config" <<'EOF'
 </configuration>
 EOF
 
-# Add DatadogSdk.Maui package reference to Shopist.csproj if not already present
-if ! grep -q "DatadogSdk.Maui" "$SHOPIST_DIR/Shopist.csproj"; then
-    echo "Adding DatadogSdk.Maui package reference..."
-    sed -i '' '/<\/Project>/i\
-  <!-- Datadog SDK for .NET MAUI -->\
-  <ItemGroup>\
-    <PackageReference Include="DatadogSdk.Maui" Version="*" />\
-  </ItemGroup>\
-' "$SHOPIST_DIR/Shopist.csproj"
-fi
-
-# Bump Android minSdkVersion to 23 (required by Datadog SDK)
-sed -i '' "s/SupportedOSPlatformVersion.*android.*21.0/SupportedOSPlatformVersion Condition=\"\$([MSBuild]::GetTargetPlatformIdentifier('\$(TargetFramework)')) == 'android'\">23.0/g" "$SHOPIST_DIR/Shopist.csproj"
-
-# Suppress Java dependency warnings (same as example app)
-if ! grep -q "XA4241" "$SHOPIST_DIR/Shopist.csproj"; then
-    echo "Adding Android warning suppression..."
-    sed -i '' '/<\/Project>/i\
-  <PropertyGroup Condition="$(TargetFramework.Contains('"'"'-android'"'"'))">\
-    <NoWarn>$(NoWarn);XA4241;XA4242</NoWarn>\
-  </PropertyGroup>\
-' "$SHOPIST_DIR/Shopist.csproj"
-fi
-
-# Initialize Datadog SDK in MauiProgram.cs if not already done
-if ! grep -q "DdSdk" "$SHOPIST_DIR/MauiProgram.cs"; then
-    echo "Adding Datadog SDK initialization to MauiProgram.cs..."
-    # Add using statement
-    sed -i '' '1i\
-using DatadogSdk.Maui;\
-' "$SHOPIST_DIR/MauiProgram.cs"
-
-    # Add SDK initialization before builder.Build()
-    sed -i '' '/return builder\.Build/i\
-\        // Initialize Datadog SDK\
-\        DdSdk.Initialize(new DdSdkConfiguration\
-\        {\
-\            ClientToken = "'"$DD_CLIENT_TOKEN"'",\
-\            Environment = "e2e",\
-\            Service = "shopist-maui"\
-\        });\
-\        DdLogs.Enable();\
-\        DdLogs.Info("shopist_maui_app_launched");\
-' "$SHOPIST_DIR/MauiProgram.cs"
-fi
+# Write appsettings.json with Datadog credentials (read by the app at startup)
+cat > "$SHOPIST_DIR/Resources/Raw/appsettings.json" <<EOF
+{
+  "Datadog": {
+    "ClientToken": "$DD_CLIENT_TOKEN",
+    "Environment": "e2e",
+    "Service": "shopist-maui"
+  }
+}
+EOF
 
 echo "Building Android APK (Release)..."
 cd "$SHOPIST_DIR"
