@@ -35,7 +35,6 @@ cd "$SCRIPT_DIR"
 # Parse command line arguments
 FORMAT_ONLY=false
 CHECK_FORMAT=false
-CLEAN=false
 
 while [[ $# -gt 0 ]]; do
     case $1 in
@@ -47,17 +46,12 @@ while [[ $# -gt 0 ]]; do
             CHECK_FORMAT=true
             shift
             ;;
-        --clean)
-            CLEAN=true
-            shift
-            ;;
         -h|--help)
             echo "Usage: ./build.sh [OPTIONS]"
             echo ""
             echo "Options:"
             echo "  --format         Auto-format all C# code and exit"
             echo "  --check-format   Check C# formatting without modifying files"
-            echo "  --clean          Clean all build artifacts before building"
             echo "  -h, --help       Show this help message"
             exit 0
             ;;
@@ -101,6 +95,7 @@ cd native-wrappers/ios/DatadogWrapper
 
 # Clean previous build
 log_info "Cleaning previous iOS build..."
+swift package clean 2>/dev/null || true
 rm -rf .build .swiftpm
 
 # Build XCFramework using existing script

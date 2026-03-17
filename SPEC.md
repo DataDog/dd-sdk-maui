@@ -4,9 +4,9 @@
 
 This document provides a comprehensive technical specification for the Datadog SDK .NET MAUI bindings. It describes the architecture, implementation details, build process, and design decisions.
 
-**Version**: 1.0.0 (Phase 1 Complete)
+**Version**: 1.0.0 (Phase 2 Complete)
 **Target Frameworks**: net10.0-ios, net10.0-android
-**Status**: Foundation complete, Logs module functional
+**Status**: Core SDK configuration complete, Logs module functional
 
 ## Project Goals
 
@@ -163,49 +163,44 @@ All Swift classes must:
 Example:
 ```swift
 @objc(DatadogWrapper)
-public class DatadogWrapper: NSObject {
+public class DdSdkNativeWrapper: NSObject {
+
+    // Mapping helpers — extracted as testable pure functions
+    static func mapSite(_ site: String) -> DatadogSite { ... }
+    static func mapTrackingConsent(_ consent: String) -> TrackingConsent { ... }
+    static func mapVerbosity(_ verbosity: String) -> CoreLoggerLevel { ... }
+    static func mapBatchSize(_ batchSize: String) -> Datadog.Configuration.BatchSize { ... }
+    static func mapUploadFrequency(_ freq: String) -> Datadog.Configuration.UploadFrequency { ... }
+    static func mapBatchProcessingLevel(_ level: String) -> Datadog.Configuration.BatchProcessingLevel { ... }
 
     @objc public static func initialize(
         clientToken: String,
         environment: String,
-        service: String,
+        service: String?,           // nullable — optional service name
         site: String,
-        verbosity: String
+        verbosity: String,
+        trackingConsent: String,    // "granted", "not_granted", "pending"
+        batchSize: String?,         // "small", "medium", "large"
+        uploadFrequency: String?,   // "frequent", "average", "rare"
+        batchProcessingLevel: String?, // "low", "medium", "high"
+        additionalConfiguration: NSDictionary?
     ) -> Bool {
-        let configuration = DatadogCore.Datadog.Configuration(
+        var configuration = DatadogCore.Datadog.Configuration(
             clientToken: clientToken,
             env: environment,
-            site: { () in
-                switch site.lowercased() {
-                case "us3": return .us3
-                case "us5": return .us5
-                case "eu1": return .eu1
-                case "ap1": return .ap1
-                case "us1_fed": return .us1_fed
-                default: return .us1
-                }
-            }()
+            site: mapSite(site),
+            service: service
         )
-
-        switch verbosity.lowercased() {
-        case "debug": DatadogCore.Datadog.verbosityLevel = .debug
-        case "info": DatadogCore.Datadog.verbosityLevel = .debug
-        case "warn": DatadogCore.Datadog.verbosityLevel = .warn
-        case "error": DatadogCore.Datadog.verbosityLevel = .error
-        default: DatadogCore.Datadog.verbosityLevel = .error
-        }
-
-        DatadogCore.Datadog.initialize(
-            with: configuration,
-            trackingConsent: .granted
-        )
-
-        Logs.enable()
-
+        // batchSize / uploadFrequency / batchProcessingLevel applied if non-nil via map helpers
+        // additionalConfiguration applied via _internal_mutation
+        DatadogCore.Datadog.verbosityLevel = mapVerbosity(verbosity)
+        DatadogCore.Datadog.initialize(with: configuration, trackingConsent: mapTrackingConsent(trackingConsent))
         return true
     }
 }
 ```
+
+> **Note**: The Swift class is named `DdSdkNativeWrapper` internally but exported to Objective-C as `DatadogWrapper` via `@objc(DatadogWrapper)`.
 
 ### XCFramework Build Process
 
@@ -319,9 +314,9 @@ namespace DatadogSdk.iOS.Binding
 ```
 
 **Export Selector Mapping**:
-- Swift: `initialize(clientToken:environment:service:site:verbosity:)`
-- Objective-C: `initializeWithClientToken:environment:service:site:verbosity:`
-- C#: `Initialize(string, string, string, string, string)`
+- Swift: `initialize(clientToken:environment:service:site:verbosity:trackingConsent:batchSize:uploadFrequency:batchProcessingLevel:additionalConfiguration:)`
+- Objective-C selector: `initializeWithClientToken:environment:service:site:verbosity:trackingConsent:batchSize:uploadFrequency:batchProcessingLevel:additionalConfiguration:`
+- C#: `Initialize(string, string, string, string, string, string, string, string, string, NSDictionary)`
 
 Pattern: First parameter name becomes method name, subsequent become part of selector.
 
@@ -391,55 +386,40 @@ dependencies {
 Kotlin companion object methods must use `@JvmStatic` to expose as static methods:
 
 ```kotlin
-package com.datadog.wrapper
-
-import android.content.Context
-import android.util.Log
-import com.datadog.android.Datadog
-import com.datadog.android.DatadogSite
-import com.datadog.android.core.configuration.Configuration
-import com.datadog.android.privacy.TrackingConsent
-
 class DatadogWrapper {
     companion object {
+        // Mapping helpers — extracted as testable pure functions
+        @JvmStatic fun mapSite(site: String): DatadogSite = ...
+        @JvmStatic fun mapTrackingConsent(consent: String): TrackingConsent = ...
+        @JvmStatic fun mapVerbosity(verbosity: String): Int = ...  // returns Log.* constant
+        @JvmStatic fun mapBatchSize(batchSize: String): BatchSize = ...
+        @JvmStatic fun mapUploadFrequency(uploadFrequency: String): UploadFrequency = ...
+        @JvmStatic fun mapBatchProcessingLevel(level: String): BatchProcessingLevel = ...
+
         @JvmStatic
         fun initialize(
             context: Context,
             clientToken: String,
             environment: String,
-            service: String,
+            service: String?,               // nullable — optional service name
             site: String = "us1",
-            verbosity: String = "error"
+            verbosity: String = "error",
+            trackingConsent: String = "pending",  // "granted", "not_granted", "pending"
+            batchSize: String? = null,      // "small", "medium", "large"
+            uploadFrequency: String? = null,  // "frequent", "average", "rare"
+            batchProcessingLevel: String? = null, // "low", "medium", "high"
+            additionalConfiguration: Map<String, Any>? = null
         ): Boolean {
             return try {
-                val datadogSite = when (site.lowercase()) {
-                    "us1" -> DatadogSite.US1
-                    "us3" -> DatadogSite.US3
-                    "us5" -> DatadogSite.US5
-                    "eu1" -> DatadogSite.EU1
-                    "ap1" -> DatadogSite.AP1
-                    "us1_fed" -> DatadogSite.US1_FED
-                    else -> DatadogSite.US1
-                }
+                val builder = Configuration.Builder(clientToken, environment, service)
+                    .useSite(mapSite(site))
 
-                val configuration = Configuration.Builder(
-                    clientToken = clientToken,
-                    env = environment,
-                    service = service
-                )
-                    .useSite(datadogSite)
-                    .build()
-
-                Datadog.initialize(context, configuration, TrackingConsent.GRANTED)
-
-                Datadog.setVerbosity(when (verbosity.lowercase()) {
-                    "debug" -> Log.DEBUG
-                    "info" -> Log.INFO
-                    "warn" -> Log.WARN
-                    "error" -> Log.ERROR
-                    else -> Log.ERROR
-                })
-
+                // batchSize / uploadFrequency / batchProcessingLevel applied if non-nil via map helpers
+                // additionalConfiguration passed to builder.setAdditionalConfiguration()
+                // If additionalConfiguration["_dd.needsClearTextHttp"] == true,
+                //   _InternalProxy.allowClearTextHttp(builder) is called
+                Datadog.initialize(context, builder.build(), mapTrackingConsent(trackingConsent))
+                Datadog.setVerbosity(mapVerbosity(verbosity))
                 true
             } catch (e: Exception) {
                 e.printStackTrace()
@@ -449,6 +429,10 @@ class DatadogWrapper {
     }
 }
 ```
+
+**Internal proxy support**:
+
+When `additionalConfiguration["_dd.needsClearTextHttp"] == true`, the Android wrapper calls `_InternalProxy.allowClearTextHttp(builder)` to configure OkHttp for plain HTTP transport. This is intended only for integration testing against local mock intake servers — not for production use.
 
 ### AAR Build Process
 
@@ -560,39 +544,145 @@ namespace DatadogSdk.Android.Binding {
 ```
 DatadogSdk.Maui/
 ├── DatadogSdk.Maui.csproj      # Multi-target project (iOS + Android)
-├── DdSdkConfiguration.cs       # Configuration object
+├── Configuration/              # Configuration namespace
+│   ├── DdSdkConfiguration.cs   # Main configuration class
+│   ├── FileBasedConfiguration.cs # JSON config parser (ParseJsonConfig)
+│   ├── TrackingConsent.cs      # Tracking consent enum
+│   ├── BatchSize.cs            # Batch size enum
+│   ├── BatchProcessingLevel.cs # Processing level enum
+│   ├── UploadFrequency.cs      # Upload frequency enum
+│   ├── DatadogSite.cs          # Datadog site enum
+│   └── SdkVerbosity.cs         # SDK verbosity enum
 ├── DdSdk.cs                    # SDK initialization (wraps native DatadogWrapper)
-└── DdLogs.cs                   # Logging API (wraps native DdLogs)
+├── DdLogs.cs                   # Logging API (wraps native DdLogs)
+└── InternalLog.cs              # SDK-internal console logging
 ```
 
 ### DdSdkConfiguration
 
-Configuration object passed to `DdSdk.Initialize()`:
+Configuration object passed to `DdSdk.Initialize()`. Located in `DatadogSdk.Maui.Configuration` namespace:
 
 ```csharp
-public enum SdkVerbosity { DEBUG, INFO, WARN, ERROR }
-
-public class DdSdkConfiguration
+namespace DatadogSdk.Maui.Configuration
 {
-    public required string ClientToken { get; set; }
-    public required string Environment { get; set; }
-    public required string Service { get; set; }
-    public string Site { get; set; } = "us1";
-    public SdkVerbosity Verbosity { get; set; } = SdkVerbosity.ERROR;
+    public class DdSdkConfiguration
+    {
+        // --- Required ---
+        public required string ClientToken { get; set; }
+        public required string Environment { get; set; }
+        public TrackingConsent TrackingConsent { get; set; } = TrackingConsent.Granted;
+
+        // --- Optional ---
+        public Dictionary<string, object>? AdditionalConfiguration { get; set; }
+        public BatchSize? BatchSize { get; set; }
+        public BatchProcessingLevel? BatchProcessingLevel { get; set; }
+        public string? Service { get; set; }
+        public DatadogSite Site { get; set; } = DatadogSite.Us1;
+        public UploadFrequency? UploadFrequency { get; set; }
+        public string? Version { get; set; }
+        public string? VersionSuffix { get; set; }
+        public SdkVerbosity? Verbosity { get; set; }
+    }
+
+    public enum TrackingConsent { Granted, NotGranted, Pending }
+    public enum BatchSize { Small, Medium, Large }
+    public enum BatchProcessingLevel { Low, Medium, High }
+    public enum UploadFrequency { Frequent, Average, Rare }
+    public enum DatadogSite { Us1, Us3, Us5, Eu1, Ap1, Ap2, Us1Fed }
+    public enum SdkVerbosity { DEBUG, INFO, WARN, ERROR }
 }
 ```
+
+**Required fields:**
+- `ClientToken` - Your Datadog client token
+- `Environment` - Environment name (e.g., "prod", "staging", "dev")
+- `TrackingConsent` - User tracking consent (defaults to `Granted`)
+
+**Optional fields:**
+- `Service` - Service name for grouping logs/traces
+- `Site` - Datadog site region (defaults to `Us1`)
+- `BatchSize` - Size of data batches for uploads
+- `BatchProcessingLevel` - CPU/memory trade-off for batch processing
+- `UploadFrequency` - How often to upload data to Datadog
+- `Version` - Application version string (injected as `_dd.version` in `additionalConfiguration`)
+- `VersionSuffix` - Additional version identifier (injected as `_dd.version_suffix`)
+- `Verbosity` - SDK logging level for debugging
+- `AdditionalConfiguration` - Pass-through dictionary for platform-specific or internal keys
+
+**Reserved `AdditionalConfiguration` keys**:
+
+| Key | Type | Purpose |
+|-----|------|---------|
+| `_dd.version` | `string` | Set automatically from `Version` field |
+| `_dd.version_suffix` | `string` | Set automatically from `VersionSuffix` field |
+| `_dd.needsClearTextHttp` | `bool` | Enable plain HTTP (Android only, for integration testing) |
+
+`Version` and `VersionSuffix` are merged into `AdditionalConfiguration` by `BuildAdditionalConfiguration()` before the config is passed to the native layer. Any other keys in `AdditionalConfiguration` flow through unchanged.
+
+### FileBasedConfiguration
+
+Static class for parsing JSON configuration files into `DdSdkConfiguration` objects.
+
+```csharp
+public static class FileBasedConfiguration
+{
+    public static DdSdkConfiguration ParseJsonConfig(string json);
+}
+```
+
+**JSON format**: PascalCase keys, C# enum names for enum values, flat structure:
+```json
+{
+  "ClientToken": "pub-xxx",
+  "Environment": "prod",
+  "Site": "Eu1",
+  "Service": "my-app",
+  "TrackingConsent": "Granted",
+  "Verbosity": "DEBUG",
+  "BatchSize": "Medium",
+  "UploadFrequency": "Average",
+  "BatchProcessingLevel": "Medium",
+  "Version": "1.0.0",
+  "VersionSuffix": "-beta",
+  "AdditionalConfiguration": { "_dd.needsClearTextHttp": true }
+}
+```
+
+**Implementation**: Uses `System.Text.Json` with `JsonDocument` for manual property mapping (avoids issues with `required` properties in direct deserialization). Enum fields use `Enum.TryParse<T>(value, ignoreCase: true)`. Throws `ArgumentException` for missing required fields or invalid enum values.
 
 ### DdSdk
 
 Wraps native `DatadogWrapper.Initialize()` with platform branching:
 
 ```csharp
-// Android: passes Android Context + clientToken, environment, service, site, verbosity
-// iOS: passes clientToken, environment, service, site, verbosity
 public static bool Initialize(DdSdkConfiguration config);
 ```
 
-Stores configuration internally so other modules (e.g. `DdLogs`) can access it. Converts `SdkVerbosity` enum to a lowercase string (e.g. `"debug"`, `"error"`) and passes it to both the native SDK and the C# layer. When `Verbosity` is `DEBUG`, logs all C# layer calls via `Console.WriteLine("[Datadog] ...")`. The native SDKs also use the verbosity to control their internal logging (iOS: `Datadog.verbosityLevel`, Android: `Datadog.setVerbosity()`).
+**Initialization flow:**
+1. Stores configuration and sets `InternalLog.Verbosity`
+2. Converts all configuration enums to lowercase strings for the native bridge
+3. Calls `BuildAdditionalConfiguration(additionalConfig, version, versionSuffix)` to merge `Version` and `VersionSuffix` into the additional config dictionary
+4. Marshals the merged config to native platform:
+   - **Android**: `IDictionary<string, Java.Lang.Object>` (values type-boxed)
+   - **iOS**: `NSDictionary` (values via `NSObject.FromObject`)
+5. Calls `NativeDatadogWrapper.Initialize(...)` with all parameters
+
+**`BuildAdditionalConfiguration` helper** (internal, testable):
+
+```csharp
+internal static Dictionary<string, object>? BuildAdditionalConfiguration(
+    Dictionary<string, object>? additionalConfiguration,
+    string? version,
+    string? versionSuffix)
+```
+
+- Copies `additionalConfiguration` (does not mutate source)
+- Injects `_dd.version` if `version != null`
+- Injects `_dd.version_suffix` if `versionSuffix != null`
+- All other keys in `additionalConfiguration` flow through unchanged
+- Returns `null` when all inputs are null
+
+When `Verbosity` is `DEBUG`, the SDK logs all C# layer calls via `Console.WriteLine("[Datadog] ...")`. The native SDKs also use the verbosity to control their internal logging (iOS: `Datadog.verbosityLevel`, Android: `Datadog.setVerbosity()`).
 
 ### DdLogs
 
@@ -723,15 +813,19 @@ public static void LogWithAttributes(string level, string message, Dictionary<st
 
 ```csharp
 using DatadogSdk.Maui;
+using DatadogSdk.Maui.Configuration;
 
 // In MauiProgram.cs — works on both iOS and Android
 DdSdk.Initialize(new DdSdkConfiguration
 {
     ClientToken = "pub...",
     Environment = "prod",
-    Service = "my-app",
-    Site = "us1",               // optional, defaults to "us1"
-    Verbosity = SdkVerbosity.DEBUG  // optional: DEBUG enables Console.WriteLine logging + verbose native SDK
+    TrackingConsent = TrackingConsent.Granted,  // required
+    Service = "my-app",                         // optional
+    Site = DatadogSite.Us1,                     // optional, defaults to Us1
+    Verbosity = SdkVerbosity.DEBUG,             // optional: DEBUG enables Console.WriteLine logging + verbose native SDK
+    BatchSize = BatchSize.Medium,               // optional
+    UploadFrequency = UploadFrequency.Average   // optional
 });
 ```
 
@@ -778,11 +872,7 @@ When `SdkVerbosity.DEBUG` is set, all calls are logged to the console and the na
    - Session IDs not unified across modules
    - Planned for Phase 2
 
-5. **No privacy controls API**
-   - TrackingConsent always set to GRANTED
-   - User-controllable privacy planned for Phase 2
-
-6. **iOS and Android only**
+5. **iOS and Android only**
    - No macOS, Windows support (platform bindings don't exist)
    - Mac Catalyst possible future addition
 
@@ -807,12 +897,12 @@ When `SdkVerbosity.DEBUG` is set, all calls are logged to the console and the na
 
 ## Roadmap
 
-### Phase 2: Core SDK & Documentation (Planned)
-- Unified initialization API
-- Configuration builder with fluent API
-- Session management infrastructure
-- Privacy controls (TrackingConsent)
-- Comprehensive documentation
+### Phase 2: Core SDK Configuration (Complete)
+- ✅ Full `DdSdkConfiguration` object (TrackingConsent, BatchSize, UploadFrequency, BatchProcessingLevel, Site, Service, Version, VersionSuffix, Verbosity, AdditionalConfiguration)
+- ✅ `_dd.needsClearTextHttp` internal key via `AdditionalConfiguration`
+- ✅ `BuildAdditionalConfiguration` helper with version/suffix injection
+- ✅ Unit tests at all three layers (iOS XCTest, Android JUnit/MockK, C# xUnit)
+- ✅ Example app uses full configuration object
 
 ### Phase 3: RUM Foundation (Planned)
 - RUM module initialization
@@ -842,32 +932,49 @@ When `SdkVerbosity.DEBUG` is set, all calls are logged to the console and the na
 
 ## Testing Strategy
 
-### Current Testing Approach
+### Unit Tests
 
-**Manual Validation**:
-1. Build example app
-2. Run on iOS simulator
-3. Run on Android emulator
-4. Verify logs appear in Datadog UI
+Run with `check.sh`:
 
-**Validation Steps**:
+```bash
+./check.sh               # All test suites
+./check.sh --maui        # C# xUnit tests only
+./check.sh --ios         # Swift XCTest tests only
+./check.sh --android     # Kotlin JUnit + MockK tests only
+```
+
+**Coverage per layer:**
+
+| Layer | Framework | Key test files |
+|-------|-----------|---------------|
+| iOS native | XCTest | `DatadogWrapperTests.swift` (mapping helpers + SDK init) |
+| Android native | JUnit + MockK | `DatadogWrapperTest.kt` (mapping helpers + SDK init via mockkStatic) |
+| C# intermediary | xUnit | `DdSdkConfigurationTests.cs`, `FileBasedConfigurationTests.cs`, `DdSdkConversionTests.cs`, `InternalLogTests.cs` |
+
+**C# test approach**: `DdSdk.INativeBridge` is a nested interface with an `internal static testBridge` field. `MockNativeSdkBridge` implements it and captures all parameters, enabling assertions without platform compilation.
+
+**iOS test approach**: Mapping helpers are tested directly as pure functions. Integration tests call `DdSdkNativeWrapper.initialize()` and verify state via `Datadog.isInitialized()` and `Datadog.verbosityLevel`. Teardown uses `Datadog.stopInstance()`.
+
+**Android test approach**: Mapping helpers are tested directly as pure functions. Integration tests use `mockkStatic(Datadog::class)` to mock `Datadog.initialize` and `Datadog.setVerbosity`, then `verify` that correct enum values and log levels were passed.
+
+### Manual Validation
+
 ```bash
 # Build bindings
 ./build.sh
 
 # Test iOS
 cd example && ./build.sh --ios --run
-# Check Datadog Logs Explorer: service:example env:dev
+# Check Datadog Logs Explorer: service:datadog-maui-test env:dev
 
 # Test Android
 ./build.sh --android --run
-# Check Datadog Logs Explorer: service:example env:dev
+# Check Datadog Logs Explorer: service:datadog-maui-test env:dev
 ```
 
 ### Future Testing (Phase 7)
 
-- Unit tests for binding layer
-- Integration tests with mock Datadog backend
+- Integration tests with mock Datadog backend (using `_dd.needsClearTextHttp` + custom endpoint)
 - E2E tests on real devices
 - Performance benchmarks
 - Memory leak detection

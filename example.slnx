@@ -6,4 +6,5 @@
   <Project Path="bindings/DatadogSdk.Android.Core/DatadogSdk.Android.Core.csproj" />
   <Project Path="bindings/DatadogSdk.Android.Internal/DatadogSdk.Android.Internal.csproj" />
   <Project Path="bindings/DatadogSdk.Android.Logs/DatadogSdk.Android.Logs.csproj" />
+  <Project Path="tests/DatadogSdk.Maui.Tests/DatadogSdk.Maui.Tests.csproj" />
 </Solution>

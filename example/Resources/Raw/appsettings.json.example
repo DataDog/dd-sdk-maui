@@ -1,7 +1,7 @@
 {
   "Datadog": {
-    "ClientToken": "YOUR_CLIENT_TOKEN",
-    "Environment": "dev",
-    "ApplicationId": "YOUR_APPLICATION_ID"
+    "ClientToken": "CLIENT_TOKEN",
+    "Environment": "ENVIRONMENT",
+    "ApplicationId": "APPLICATION_ID"
   }
 }

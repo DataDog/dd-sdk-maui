@@ -13,13 +13,7 @@ public class DdLogs: NSObject {
         // Enable Logs feature (dd-sdk-ios v3.x API)
         Logs.enable()
 
-        // Create logger with service name from global config
-        let serviceName = DatadogWrapper.getServiceName()
-        logger = Logger.create(
-            with: Logger.Configuration(
-                service: serviceName
-            )
-        )
+        logger = Logger.create(with: Logger.Configuration())
     }
 
     /// Log a debug message

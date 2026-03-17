@@ -1,4 +1,5 @@
-using DatadogSdk.Maui;
+﻿using DatadogSdk.Maui;
+using DatadogSdk.Maui.Configuration;
 using Microsoft.Extensions.Logging;
 
 namespace example;
@@ -31,7 +32,14 @@ public static class MauiProgram
             ClientToken = clientToken,
             Environment = environment,
             Service = "datadog-maui-test",
-            Verbosity = SdkVerbosity.INFO
+            Site = DatadogSite.Us1,
+            TrackingConsent = TrackingConsent.Granted,
+            Verbosity = SdkVerbosity.DEBUG,
+            // Uncomment to test against a local mock HTTP server (see README for setup):
+            // AdditionalConfiguration = new Dictionary<string, object>
+            // {
+            //     { "_dd.needsClearTextHttp", true }
+            // },
         });
 
         return builder.Build();

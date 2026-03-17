@@ -373,6 +373,44 @@ You should see logs like:
 [ERROR] iOS binding validation - LogError works!
 ```
 
+### Unit Tests
+
+Run the C# unit tests to verify SDK behavior:
+
+```bash
+# Run all tests
+dotnet test tests/DatadogSdk.Maui.Tests
+
+# Run with verbose output
+dotnet test tests/DatadogSdk.Maui.Tests -v detailed
+
+# Run specific test class
+dotnet test tests/DatadogSdk.Maui.Tests --filter "FullyQualifiedName~DdSdkConfigurationTests"
+```
+
+**Test coverage:**
+- `DdSdkConfigurationTests` - SDK initialization with all config options via test bridge
+- `DdSdkConversionTests` - Enum-to-string conversions (site, consent, additional config)
+- `FileBasedConfigurationTests` - JSON config parsing, validation, and error handling
+- `InternalLogTests` - SDK logging with verbosity filtering
+
+### Native Wrapper Tests
+
+**iOS tests** (XCTest):
+```bash
+cd native-wrappers/ios/DatadogWrapper
+swift test
+```
+
+**Android tests** (JUnit + MockK):
+```bash
+cd native-wrappers/android
+./gradlew test
+
+# View test report
+open datadogwrapper/build/reports/tests/testDebugUnitTest/index.html
+```
+
 ### Debugging Build Issues
 
 **Enable verbose logging**:
