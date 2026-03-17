@@ -6,14 +6,15 @@ This document provides context and instructions for AI agents working on the Dat
 
 **Purpose**: Provide .NET MAUI bindings for Datadog's native iOS and Android SDKs, enabling observability features (logs, RUM, traces) in cross-platform mobile applications.
 
-**Current Status**: Phase 2 Complete (Core SDK Configuration)
+**Current Status**: Phase 2 Complete (Core SDK Configuration + Logs Configuration)
 - ✅ iOS native wrapper with XCFramework bindings
 - ✅ Android native wrapper with multi-project NuGet bindings
 - ✅ Unified meta-package (DatadogSdk.Maui)
 - ✅ Full `DdSdkConfiguration` object (TrackingConsent, BatchSize, BatchProcessingLevel, UploadFrequency, Site, Service, Version/VersionSuffix, Verbosity, AdditionalConfiguration)
+- ✅ `DdLogsConfiguration` with `CustomEndpoint` support
 - ✅ `_dd.needsClearTextHttp` internal key support via `AdditionalConfiguration`
 - ✅ Unit tests at all three layers (`check.sh`)
-- ✅ Example app validated on both platforms
+- ✅ Example app validated on both platforms with mock local server
 - ✅ Logs successfully reaching Datadog backend
 
 **Architecture**: Multi-layer approach
@@ -114,6 +115,7 @@ dd-sdk-maui/
 │       ├── Configuration/         # Configuration namespace
 │       │   ├── DdSdkConfiguration.cs
 │       │   ├── FileBasedConfiguration.cs  # JSON config parser
+│       │   ├── DdLogsConfiguration.cs  # Logs module configuration (CustomEndpoint)
 │       │   ├── TrackingConsent.cs
 │       │   ├── BatchSize.cs
 │       │   ├── BatchProcessingLevel.cs
@@ -127,6 +129,7 @@ dd-sdk-maui/
 ├── tests/                         # C# unit tests
 │   └── DatadogSdk.Maui.Tests/
 │       ├── DdSdkConfigurationTests.cs    # SDK init via test bridge (INativeBridge)
+│       ├── DdLogsConfigurationTests.cs
 │       ├── DdSdkConversionTests.cs       # ConvertSite, ConvertTrackingConsent,
 │       │                                 # BuildAdditionalConfiguration
 │       ├── FileBasedConfigurationTests.cs # JSON config parsing + validation

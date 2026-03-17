@@ -5,16 +5,24 @@ using Foundation;
 using NativeDdLogs = DatadogSdk.iOS.Binding.DdLogs;
 #endif
 
+using DatadogSdk.Maui.Configuration;
+
 namespace DatadogSdk.Maui
 {
     public static class DdLogs
     {
-        public static void Enable()
+        /// <summary>
+        /// Enable the Logs module with optional configuration.
+        /// Must be called after DdSdk.Initialize().
+        /// </summary>
+        /// <param name="configuration">Optional configuration for the Logs module. If null, default configuration is used.</param>
+        public static void Enable(DdLogsConfiguration? configuration = null)
         {
-            InternalLog.Log("DdLogs.Enable", SdkVerbosity.DEBUG);
+            InternalLog.Log($"DdLogs.Enable called with config: {(configuration != null ? "provided" : "null")}", SdkVerbosity.DEBUG);
 
-            NativeDdLogs.EnableLogs();
+            var customEndpoint = configuration?.CustomEndpoint;
 
+            NativeDdLogs.EnableLogs(customEndpoint);
             InternalLog.Log("DdLogs.Enable completed", SdkVerbosity.DEBUG);
         }
 

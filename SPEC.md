@@ -547,6 +547,7 @@ DatadogSdk.Maui/
 ├── Configuration/              # Configuration namespace
 │   ├── DdSdkConfiguration.cs   # Main configuration class
 │   ├── FileBasedConfiguration.cs # JSON config parser (ParseJsonConfig)
+│   ├── DdLogsConfiguration.cs  # Logs module configuration
 │   ├── TrackingConsent.cs      # Tracking consent enum
 │   ├── BatchSize.cs            # Batch size enum
 │   ├── BatchProcessingLevel.cs # Processing level enum
@@ -684,18 +685,41 @@ internal static Dictionary<string, object>? BuildAdditionalConfiguration(
 
 When `Verbosity` is `DEBUG`, the SDK logs all C# layer calls via `Console.WriteLine("[Datadog] ...")`. The native SDKs also use the verbosity to control their internal logging (iOS: `Datadog.verbosityLevel`, Android: `Datadog.setVerbosity()`).
 
+### DdLogsConfiguration
+
+Configuration object for the Logs module. Located in `DatadogSdk.Maui.Configuration` namespace:
+
+```csharp
+namespace DatadogSdk.Maui.Configuration
+{
+    public class DdLogsConfiguration
+    {
+        /// <summary>
+        /// Optional custom endpoint URL for sending logs.
+        /// If not specified, uses Datadog's default endpoint based on the configured site.
+        /// </summary>
+        public string? CustomEndpoint { get; set; }
+    }
+}
+```
+
+**Optional fields:**
+- `CustomEndpoint` - Custom server URL for logs (e.g., for proxy or on-premises deployments)
+
 ### DdLogs
 
 Wraps native `DdLogs` methods. Each method logs before delegating to native:
 
 ```csharp
-public static void Enable();
+public static void Enable(DdLogsConfiguration? configuration = null);
 public static void Debug(string message);
 public static void Info(string message);
 public static void Warn(string message);
 public static void Error(string message);
 public static void LogWithAttributes(string level, string message, Dictionary<string, string> attributes);
 ```
+
+`Enable()` accepts an optional `DdLogsConfiguration` to customize log upload behavior. If no configuration is provided, uses default Datadog endpoint.
 
 `LogWithAttributes` handles type marshaling: on Android it passes `IDictionary<string, string>` directly; on iOS it converts to `NSDictionary<NSString, NSString>`.
 
@@ -833,9 +857,16 @@ DdSdk.Initialize(new DdSdkConfiguration
 
 ```csharp
 using DatadogSdk.Maui;
+using DatadogSdk.Maui.Configuration;
 
-// Enable logs module
+// Enable logs module with default configuration
 DdLogs.Enable();
+
+// Or enable with custom endpoint (e.g., for proxy or on-premises)
+DdLogs.Enable(new DdLogsConfiguration
+{
+    CustomEndpoint = "https://logs-proxy.example.com/v1/input"
+});
 
 // Log at different levels
 DdLogs.Debug("Debug message");
@@ -870,7 +901,7 @@ When `SdkVerbosity.DEBUG` is set, all calls are logged to the console and the na
 
 4. **No session management**
    - Session IDs not unified across modules
-   - Planned for Phase 2
+   - Planned for Phase 3+
 
 5. **iOS and Android only**
    - No macOS, Windows support (platform bindings don't exist)
