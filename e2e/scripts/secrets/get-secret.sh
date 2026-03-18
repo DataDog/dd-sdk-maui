@@ -1,0 +1,32 @@
+#!/bin/bash
+set -e -o pipefail
+
+DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$DIR/config.sh"
+
+get_secret() {
+    local secret_name="$1"
+
+    export VAULT_ADDR=$DD_VAULT_ADDR
+    if [ "$CI" = "true" ]; then
+        # Export AWS credentials explicitly for Vault (workaround for IMDSv2 + older Vault SDK)
+        eval "$(aws configure export-credentials --format env 2>/dev/null)" || true
+        vault login -method=aws -no-print
+    else
+        if vault token lookup &>/dev/null; then
+            echo "Reading '$secret_name' secret in local env. You are already authenticated with 'vault'." >&2
+        else
+            echo "Reading '$secret_name' secret in local env. You will now be authenticated with OIDC in your web browser." >&2
+            vault login -method=oidc -no-print
+        fi
+    fi
+
+    local secret_value=$(vault kv get -field=value "$DD_SDK_MAUI_SECRETS_PATH_PREFIX/$secret_name")
+
+    if [[ -z "$secret_value" ]]; then
+        echo "Error: Failed to retrieve the '$secret_name' secret or the secret is empty." >&2
+        exit 1
+    fi
+
+    echo "$secret_value"
+}
