@@ -161,22 +161,21 @@ if [ "$RUN_NUGET" = true ]; then
     if [ -f "$BINDING_PKG" ]; then
         # Assembly must always be present
         assert_nupkg_contains \
-            "lib/net10.0-android/DatadogSdk.Android.Binding.dll" \
+            "lib/.../DatadogSdk.Android.Binding.dll" \
             "$BINDING_PKG" \
-            "DatadogSdk.Android.Binding.dll" || NUGET_RESULT=1
+            "lib/.*DatadogSdk.Android.Binding.dll" || NUGET_RESULT=1
 
         # .targets file — injects ProGuard rules into consuming app builds
         assert_nupkg_contains \
-            "buildTransitive/net10.0-android/DatadogSdk.Android.Binding.targets" \
+            "buildTransitive/DatadogSdk.Android.Binding.targets" \
             "$BINDING_PKG" \
-            "DatadogSdk.Android.Binding.targets" || NUGET_RESULT=1
+            "buildTransitive/.*DatadogSdk.Android.Binding.targets" || NUGET_RESULT=1
 
-        # Merged ProGuard rules file — must be in the same TFM subfolder as the
-        # .targets file so $(MSBuildThisFileDirectory)proguard\ resolves correctly
+        # Merged ProGuard rules file — must be under buildTransitive alongside .targets
         assert_nupkg_contains \
-            "buildTransitive/net10.0-android/proguard/datadog-merged.pro" \
+            "buildTransitive/.../datadog-merged.pro" \
             "$BINDING_PKG" \
-            "datadog-merged.pro" || NUGET_RESULT=1
+            "buildTransitive/.*datadog-merged.pro" || NUGET_RESULT=1
     else
         log_warn "Skipping structure checks — DatadogSdk.Android.Binding.1.0.0.nupkg not found"
         NUGET_RESULT=1
@@ -199,12 +198,8 @@ if [ "$RUN_PROGUARD" = true ]; then
     CURRENT_RULES="bindings/DatadogSdk.Android.Binding/Transforms/proguard.txt"
 
     if [ -f "$CURRENT_RULES" ]; then
-        # Wrapper classes — called via JNI from C#, must survive R8
-        assert_pattern "keep DatadogWrapper class"        "$CURRENT_RULES" "com.datadog.wrapper.DatadogWrapper" || PROGUARD_RESULT=1
-        assert_pattern "keep DdLogs class"                "$CURRENT_RULES" "com.datadog.wrapper.DdLogs"         || PROGUARD_RESULT=1
-        # Kotlin companion objects — required for @JvmStatic dispatch
-        assert_pattern "keep DatadogWrapper\$Companion"   "$CURRENT_RULES" 'DatadogWrapper\$Companion'          || PROGUARD_RESULT=1
-        assert_pattern "keep DdLogs\$Companion"           "$CURRENT_RULES" 'DdLogs\$Companion'                  || PROGUARD_RESULT=1
+        assert_pattern "keep com.datadog.** classes"      "$CURRENT_RULES" "keep class com.datadog\.\*\*"       || PROGUARD_RESULT=1
+        assert_pattern "keep com.datadog.** interfaces"   "$CURRENT_RULES" "keep interface com.datadog\.\*\*"   || PROGUARD_RESULT=1
         # Kotlin metadata — required for Kotlin stdlib reflection
         assert_pattern "keep kotlin.Metadata"             "$CURRENT_RULES" "kotlin.Metadata"                    || PROGUARD_RESULT=1
         # JvmStatic annotation — ensures @JvmStatic methods are retained
@@ -222,15 +217,10 @@ if [ "$RUN_PROGUARD" = true ]; then
     MERGED_RULES="bindings/DatadogSdk.Android.Binding/proguard/datadog-merged.pro"
 
     if [ -f "$MERGED_RULES" ]; then
-        # Everything from the baseline must also be present in the merged file
-        assert_pattern "keep DatadogWrapper class"        "$MERGED_RULES" "com.datadog.wrapper.DatadogWrapper" || PROGUARD_RESULT=1
-        assert_pattern "keep DdLogs class"                "$MERGED_RULES" "com.datadog.wrapper.DdLogs"         || PROGUARD_RESULT=1
-        assert_pattern "keep DatadogWrapper\$Companion"   "$MERGED_RULES" 'DatadogWrapper\$Companion'          || PROGUARD_RESULT=1
-        assert_pattern "keep DdLogs\$Companion"           "$MERGED_RULES" 'DdLogs\$Companion'                  || PROGUARD_RESULT=1
+        assert_pattern "keep com.datadog.** classes"      "$MERGED_RULES" "keep class com.datadog\.\*\*"       || PROGUARD_RESULT=1
+        assert_pattern "keep com.datadog.** interfaces"   "$MERGED_RULES" "keep interface com.datadog\.\*\*"   || PROGUARD_RESULT=1
         assert_pattern "keep kotlin.Metadata"             "$MERGED_RULES" "kotlin.Metadata"                    || PROGUARD_RESULT=1
-        # At least the Datadog namespace must be protected (either via wildcard
-        # com.datadog.** from the placeholder, or explicit com.datadog.android.*
-        # rules appended by build.sh from the upstream AAR proguard.txt)
+        # At least the Datadog namespace must be protected
         assert_pattern "upstream Datadog namespace kept"  "$MERGED_RULES" "com.datadog."                        || PROGUARD_RESULT=1
     else
         log_fail "proguard/datadog-merged.pro not found"

@@ -183,17 +183,20 @@ done
 log_section "Extracting and merging ProGuard rules"
 
 PROGUARD_OUT="$SCRIPT_DIR/bindings/DatadogSdk.Android.Binding/proguard/datadog-merged.pro"
+INTERNAL_BIN="$SCRIPT_DIR/bindings/DatadogSdk.Android.Internal/bin/Release/net10.0-android"
 CORE_BIN="$SCRIPT_DIR/bindings/DatadogSdk.Android.Core/bin/Release/net10.0-android"
 LOGS_BIN="$SCRIPT_DIR/bindings/DatadogSdk.Android.Logs/bin/Release/net10.0-android"
 
 log_info "Starting from wrapper consumer-rules.pro..."
-cp "$SCRIPT_DIR/native-wrappers/android/datadogwrapper/consumer-rules.pro" "$PROGUARD_OUT"
+echo "# Auto-generated file - Do not edit" > "$PROGUARD_OUT"
+echo "" >> "$PROGUARD_OUT"
+cat "$SCRIPT_DIR/native-wrappers/android/datadogwrapper/consumer-rules.pro" >> "$PROGUARD_OUT"
 
 # Append rules extracted from each Datadog AAR
 # proguard.txt is the standard consumer-rules location inside an AAR
 for aar in \
     "$CORE_BIN/dd-sdk-android-core-3.5.0.aar" \
-    "$CORE_BIN/dd-sdk-android-internal-3.5.0.aar" \
+    "$INTERNAL_BIN/dd-sdk-android-internal-3.5.0.aar" \
     "$LOGS_BIN/dd-sdk-android-logs-3.5.0.aar"; do
 
     if [ -f "$aar" ]; then

@@ -1,9 +1,6 @@
-# Keep all Datadog SDK classes
+# Keep all Datadog SDK classes and interfaces
 -keep class com.datadog.** { *; }
 -keep interface com.datadog.** { *; }
-
-# Keep wrapper classes and all their methods
--keep class com.datadog.wrapper.** { *; }
 
 # Keep Kotlin metadata (required for Kotlin stdlib)
 -keep class kotlin.Metadata { *; }
@@ -12,11 +9,3 @@
 -keepclassmembers class * {
     @kotlin.jvm.JvmStatic *;
 }
-
-# Kotlin companion objects — required for @JvmStatic dispatch from C# via JNI
--keep class com.datadog.wrapper.DatadogWrapper$Companion { *; }
--keep class com.datadog.wrapper.DdLogs$Companion { *; }
-
-# Prevent obfuscation of wrapper APIs
--keepnames class com.datadog.wrapper.DatadogWrapper
--keepnames class com.datadog.wrapper.DdLogs
