@@ -1,5 +1,6 @@
 stages:
   - build
+  - verify
   - test
   - build-and-upload
 
@@ -23,6 +24,16 @@ build:sdk:
     paths:
       - local-packages/
     expire_in: 1 day
+
+# ============================================================================
+# VERIFY: Validate build artifacts (NuGet structure, ProGuard rules)
+# ============================================================================
+verify:artifacts:
+  stage: verify
+  needs: [build:sdk]
+  timeout: 5m
+  script:
+    - ./verify-artifacts.sh
 
 # ============================================================================
 # TESTS: Run unit tests for each platform independently

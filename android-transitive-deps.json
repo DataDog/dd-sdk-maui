@@ -1,0 +1,169 @@
+{
+  "_comment": "Maps resolved Maven transitive dependencies to NuGet packages and csproj locations. Updated by resolve-android-deps.sh after Gradle dependency resolution. nuget_covers_maven records the max Maven version the current NuGet package is known to satisfy.",
+  "dependencies": {
+    "com.squareup.okhttp3:okhttp": {
+      "maven_version": "4.12.0",
+      "nuget_name": "Square.OkHttp3",
+      "nuget_version": "4.12.0",
+      "nuget_covers_maven": "4.12.0",
+      "maven_library_csproj": [
+        "DatadogSdk.Android.Core"
+      ],
+      "package_ref_csproj": [
+        "DatadogSdk.Android.Core",
+        "DatadogSdk.Maui"
+      ]
+    },
+    "com.squareup.okio:okio": {
+      "maven_version": "3.6.0",
+      "nuget_name": "Square.OkIO",
+      "nuget_version": "3.6.0",
+      "nuget_covers_maven": "3.6.0",
+      "maven_library_csproj": [
+        "DatadogSdk.Android.Core"
+      ],
+      "package_ref_csproj": [
+        "DatadogSdk.Maui"
+      ]
+    },
+    "com.squareup.okio:okio-jvm": {
+      "maven_version": "3.6.0",
+      "nuget_name": null,
+      "nuget_version": null,
+      "maven_library_csproj": [
+        "DatadogSdk.Android.Core"
+      ],
+      "package_ref_csproj": []
+    },
+    "com.lyft.kronos:kronos-android": {
+      "maven_version": "0.0.1-alpha11",
+      "nuget_name": null,
+      "nuget_version": null,
+      "maven_library_csproj": [
+        "DatadogSdk.Android.Core"
+      ],
+      "package_ref_csproj": []
+    },
+    "com.lyft.kronos:kronos-java": {
+      "maven_version": "0.0.1-alpha11",
+      "nuget_name": null,
+      "nuget_version": null,
+      "maven_library_csproj": [
+        "DatadogSdk.Android.Core"
+      ],
+      "package_ref_csproj": []
+    },
+    "com.google.code.gson:gson": {
+      "maven_version": "2.10.1",
+      "nuget_name": "GoogleGson",
+      "nuget_version": "2.13.1.1",
+      "nuget_covers_maven": "2.13.1",
+      "maven_library_csproj": [],
+      "package_ref_csproj": [
+        "DatadogSdk.Android.Core",
+        "DatadogSdk.Maui"
+      ]
+    },
+    "org.jetbrains.kotlin:kotlin-stdlib": {
+      "maven_version": "2.0.21",
+      "nuget_name": "Xamarin.Kotlin.StdLib",
+      "nuget_version": "2.2.0.1",
+      "nuget_covers_maven": "2.2.0",
+      "maven_library_csproj": [],
+      "package_ref_csproj": [
+        "DatadogSdk.Android.Internal",
+        "DatadogSdk.Android.Core",
+        "DatadogSdk.Android.Binding",
+        "DatadogSdk.Maui"
+      ]
+    },
+    "org.jetbrains.kotlin:kotlin-reflect": {
+      "maven_version": null,
+      "nuget_name": "Xamarin.Kotlin.Reflect",
+      "nuget_version": "2.2.0.1",
+      "nuget_covers_maven": "2.2.0",
+      "maven_library_csproj": [],
+      "package_ref_csproj": [
+        "DatadogSdk.Maui"
+      ]
+    },
+    "androidx.annotation:annotation": {
+      "maven_version": "1.9.1",
+      "nuget_name": "Xamarin.AndroidX.Annotation",
+      "nuget_version": "1.9.1.5",
+      "nuget_covers_maven": "1.9.1",
+      "maven_library_csproj": [],
+      "package_ref_csproj": [
+        "DatadogSdk.Maui"
+      ]
+    },
+    "androidx.collection:collection": {
+      "maven_version": "1.4.5",
+      "nuget_name": "Xamarin.AndroidX.Collection",
+      "nuget_version": "1.5.0.3",
+      "nuget_covers_maven": "1.5.0",
+      "maven_library_csproj": [],
+      "package_ref_csproj": [
+        "DatadogSdk.Maui"
+      ]
+    },
+    "androidx.work:work-runtime": {
+      "maven_version": "2.8.1",
+      "nuget_name": "Xamarin.AndroidX.Work.Runtime",
+      "nuget_version": "2.8.1",
+      "nuget_covers_maven": "2.8.1",
+      "maven_library_csproj": [],
+      "package_ref_csproj": [
+        "DatadogSdk.Maui"
+      ]
+    },
+    "org.jetbrains.kotlin:kotlin-stdlib-common": {
+      "maven_version": "2.0.21",
+      "_covered_by": "Xamarin.Kotlin.StdLib",
+      "nuget_name": null,
+      "nuget_version": null,
+      "maven_library_csproj": [],
+      "package_ref_csproj": []
+    },
+    "org.jetbrains.kotlin:kotlin-stdlib-jdk7": {
+      "maven_version": "1.9.10",
+      "_covered_by": "Xamarin.Kotlin.StdLib",
+      "nuget_name": null,
+      "nuget_version": null,
+      "maven_library_csproj": [],
+      "package_ref_csproj": []
+    },
+    "org.jetbrains.kotlin:kotlin-stdlib-jdk8": {
+      "maven_version": "1.9.10",
+      "_covered_by": "Xamarin.Kotlin.StdLib",
+      "nuget_name": null,
+      "nuget_version": null,
+      "maven_library_csproj": [],
+      "package_ref_csproj": []
+    },
+    "androidx.annotation:annotation-jvm": {
+      "maven_version": "1.9.1",
+      "_covered_by": "Xamarin.AndroidX.Annotation",
+      "nuget_name": null,
+      "nuget_version": null,
+      "maven_library_csproj": [],
+      "package_ref_csproj": []
+    },
+    "androidx.annotation:annotation-experimental": {
+      "maven_version": "1.1.0",
+      "_covered_by": "Xamarin.AndroidX.Annotation",
+      "nuget_name": null,
+      "nuget_version": null,
+      "maven_library_csproj": [],
+      "package_ref_csproj": []
+    },
+    "androidx.collection:collection-jvm": {
+      "maven_version": "1.4.5",
+      "_covered_by": "Xamarin.AndroidX.Collection",
+      "nuget_name": null,
+      "nuget_version": null,
+      "maven_library_csproj": [],
+      "package_ref_csproj": []
+    }
+  }
+}

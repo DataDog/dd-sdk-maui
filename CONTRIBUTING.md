@@ -192,7 +192,7 @@ dotnet pack -c Release          # Create NuGet package
 cp bin/Release/*.nupkg ../../local-packages/
 ```
 
-**Output**: `DatadogSdk.iOS.Binding.1.0.0.nupkg`
+**Output**: `DatadogSdk.iOS.Binding.0.0.1.nupkg`
 
 #### Step 4: Android C# Bindings (4 projects)
 
@@ -222,7 +222,7 @@ dotnet pack -c Release
 cp bin/Release/*.nupkg ../../local-packages/
 ```
 
-**Output**: `DatadogSdk.Maui.1.0.0.nupkg` (aggregates iOS + Android bindings)
+**Output**: `DatadogSdk.Maui.0.0.1.nupkg` (aggregates iOS + Android bindings)
 
 ### Example Build Script (`./example/build.sh`)
 
@@ -493,35 +493,31 @@ cd example
 
 ### Updating Native SDK Versions
 
-#### iOS (dd-sdk-ios)
+Use the `update-native-sdk.sh` script to bump native SDK versions across all files:
 
-Edit `native-wrappers/ios/DatadogWrapper/Package.swift`:
-```swift
-dependencies: [
-    .package(url: "https://github.com/DataDog/dd-sdk-ios.git", from: "3.6.0")
-]
-```
-
-Rebuild:
 ```bash
-cd native-wrappers/ios
-./build.sh
+# Update both platforms
+./update-native-sdk.sh --ios 3.8.0 --android 3.8.0
+
+# Update one platform
+./update-native-sdk.sh --android 3.8.0
 ```
 
-#### Android (dd-sdk-android)
+This script updates `versions.properties`, `Package.swift`, `build.gradle.kts`, and all Android binding `.csproj` files in one pass.
 
-Edit `native-wrappers/android/datadogwrapper/build.gradle.kts`:
-```kotlin
-dependencies {
-    implementation("com.datadoghq:dd-sdk-android-core:3.6.0")
-    implementation("com.datadoghq:dd-sdk-android-logs:3.6.0")
-}
-```
+**Android transitive dependencies**: When bumping the Android SDK, the script automatically runs `resolve-android-deps.sh` which:
+1. Resolves the full Gradle dependency tree
+2. Auto-updates `AndroidMavenLibrary` versions in `DatadogSdk.Android.Core.csproj`
+3. Warns if any NuGet `PackageReference` versions need manual updating (e.g., `Xamarin.Kotlin.StdLib`, `GoogleGson`)
 
-Rebuild:
+If you see NuGet warnings, check [nuget.org](https://www.nuget.org) for a compatible release and update the version in the relevant `.csproj` files and `android-transitive-deps.json`.
+
+**iOS transitive dependencies**: Not a concern — SPM statically links all dependencies into the XCFramework at build time. No runtime dependency declarations are needed.
+
+After bumping:
 ```bash
-cd native-wrappers/android
-./gradlew :datadogwrapper:assembleRelease
+./build.sh                  # Full rebuild
+./verify-artifacts.sh       # Validate artifacts + dependency alignment
 ```
 
 ## Troubleshooting
@@ -546,7 +542,7 @@ nm -gU bindings/DatadogSdk.iOS.Binding/NativeReference/DatadogWrapper.xcframewor
 
 **Solution**: Use PackageReference in `.csproj`:
 ```xml
-<PackageReference Include="DatadogSdk.Android.Core" Version="1.0.0" />
+<PackageReference Include="DatadogSdk.Android.Core" Version="0.0.1" />
 ```
 
 ### Example App Doesn't Reflect Changes

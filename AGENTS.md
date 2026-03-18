@@ -69,6 +69,12 @@ Consumer App (.NET MAUI)
 dd-sdk-maui/
 ├── build.sh                       # Root build script (rebuilds everything)
 ├── check.sh                       # Runs all unit tests (iOS/Android/C#)
+├── update-native-sdk.sh           # Bump native SDK versions across all files
+├── resolve-android-deps.sh        # Resolve Android transitive deps via Gradle
+├── verify-artifacts.sh            # Validate build artifacts + dependency alignment
+├── bump-version.sh                # Bump MAUI SDK version across all files
+├── versions.properties            # Single source of truth for all versions
+├── android-transitive-deps.json   # Maven→NuGet dependency mapping for Android
 ├── NuGet.Config                   # Local package source configuration
 │
 ├── native-wrappers/               # Platform-native code
@@ -152,9 +158,9 @@ dd-sdk-maui/
 │               └── network_security_config.xml  # Allows cleartext HTTP
 │
 └── local-packages/                # Local NuGet package output
-    ├── DatadogSdk.iOS.Binding.1.0.0.nupkg
+    ├── DatadogSdk.iOS.Binding.0.0.1.nupkg
     ├── DatadogSdk.Android.*.nupkg
-    └── DatadogSdk.Maui.1.0.0.nupkg
+    └── DatadogSdk.Maui.0.0.1.nupkg
 ```
 
 ## Common Workflows
@@ -346,6 +352,24 @@ class DatadogWrapper {
 - Wrapper binding uses PackageReference (not ProjectReference)
 - This prevents duplicate type definitions
 
+**Android Transitive Dependencies:**
+
+Android runtime dependencies (OkHttp, Gson, Kotlin, AndroidX) are declared in two places:
+1. `AndroidMavenLibrary` entries in `DatadogSdk.Android.Core.csproj` — use Maven versions directly
+2. `PackageReference` entries in multiple `.csproj` files — use NuGet versions (which may differ from Maven versions)
+
+The mapping between Maven artifacts and NuGet packages is tracked in `android-transitive-deps.json`. Key fields:
+- `maven_version`: what Gradle resolves for this artifact
+- `nuget_version`: the NuGet package version in `.csproj` files
+- `nuget_covers_maven`: max Maven version the NuGet package is known to satisfy
+
+When bumping the native Android SDK, `resolve-android-deps.sh` automatically:
+- Resolves the Gradle dependency tree
+- Auto-updates `AndroidMavenLibrary` versions in csproj files
+- Warns when a NuGet `PackageReference` needs manual review (Maven version exceeds `nuget_covers_maven`)
+
+**iOS has no transitive dependency problem** — SPM statically links everything into the XCFramework.
+
 ### Parameter Naming Convention
 
 **Current standard:** Use `service` (not `serviceName`)
@@ -382,6 +406,38 @@ DatadogWrapper.Initialize(
 5. Meta-package → NuGet package
 
 **Output**: All NuGet packages in `./local-packages/`
+
+### update-native-sdk.sh
+
+**Purpose**: Bump native SDK versions across all files that reference them.
+
+**Usage:**
+```bash
+./update-native-sdk.sh --ios 3.8.0 --android 3.8.0
+```
+
+**Files modified**: `versions.properties`, `Package.swift`, `build.gradle.kts`, Android binding `.csproj` files. For Android bumps, also runs `resolve-android-deps.sh` to handle transitive dependencies.
+
+### resolve-android-deps.sh
+
+**Purpose**: Resolve Android Gradle dependency tree and synchronize `android-transitive-deps.json` + `.csproj` files.
+
+**Usage:**
+```bash
+./resolve-android-deps.sh           # Resolve + update files
+./resolve-android-deps.sh --check   # Resolve + report only (no changes)
+```
+
+### verify-artifacts.sh
+
+**Purpose**: Validate build artifacts — NuGet packages, ProGuard rules, and Android transitive dependency alignment.
+
+**Usage:**
+```bash
+./verify-artifacts.sh           # Run all checks
+./verify-artifacts.sh --deps    # Dependency alignment only
+./verify-artifacts.sh --nuget   # NuGet packages only
+```
 
 ### example/build.sh
 

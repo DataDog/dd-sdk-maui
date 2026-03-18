@@ -15,7 +15,7 @@ let package = Package(
             targets: ["DatadogWrapper"])
     ],
     dependencies: [
-        .package(url: "https://github.com/DataDog/dd-sdk-ios.git", from: "3.5.0")
+        .package(url: "https://github.com/DataDog/dd-sdk-ios.git", from: "3.8.1")
     ],
     targets: [
         .target(

@@ -4,7 +4,7 @@
 
 This document provides a comprehensive technical specification for the Datadog SDK .NET MAUI bindings. It describes the architecture, implementation details, build process, and design decisions.
 
-**Version**: 1.0.0 (Phase 2 Complete)
+**Version**: 0.0.1 (Phase 2 Complete)
 **Target Frameworks**: net10.0-ios, net10.0-android
 **Status**: Core SDK configuration complete, Logs module functional
 
@@ -473,7 +473,7 @@ datadogwrapper-release.aar (ZIP archive)
 **DatadogSdk.Android.Core.csproj**:
 ```xml
 <ItemGroup>
-  <PackageReference Include="DatadogSdk.Android.Internal" Version="1.0.0" />
+  <PackageReference Include="DatadogSdk.Android.Internal" Version="0.0.1" />
   <EmbeddedJar Include="Jars\dd-sdk-android-core-3.5.0.aar" />
 </ItemGroup>
 ```
@@ -482,9 +482,9 @@ datadogwrapper-release.aar (ZIP archive)
 ```xml
 <ItemGroup>
   <!-- Core SDK as NuGet packages -->
-  <PackageReference Include="DatadogSdk.Android.Internal" Version="1.0.0" />
-  <PackageReference Include="DatadogSdk.Android.Core" Version="1.0.0" />
-  <PackageReference Include="DatadogSdk.Android.Logs" Version="1.0.0" />
+  <PackageReference Include="DatadogSdk.Android.Internal" Version="0.0.1" />
+  <PackageReference Include="DatadogSdk.Android.Core" Version="0.0.1" />
+  <PackageReference Include="DatadogSdk.Android.Logs" Version="0.0.1" />
 
   <!-- Wrapper AAR -->
   <EmbeddedJar Include="Jars\datadogwrapper-release.aar" />
@@ -643,7 +643,7 @@ public static class FileBasedConfiguration
   "BatchSize": "Medium",
   "UploadFrequency": "Average",
   "BatchProcessingLevel": "Medium",
-  "Version": "1.0.0",
+  "Version": "0.0.1",
   "VersionSuffix": "-beta",
   "AdditionalConfiguration": { "_dd.needsClearTextHttp": true }
 }
@@ -731,17 +731,17 @@ public static void LogWithAttributes(string level, string message, Dictionary<st
     <TargetFrameworks>net10.0-ios;net10.0-android</TargetFrameworks>
     <RootNamespace>DatadogSdk.Maui</RootNamespace>
     <PackageId>DatadogSdk.Maui</PackageId>
-    <Version>1.0.0</Version>
+    <Version>0.0.1</Version>
   </PropertyGroup>
 
   <!-- iOS binding -->
   <ItemGroup Condition="$(TargetFramework.Contains('-ios'))">
-    <PackageReference Include="DatadogSdk.iOS.Binding" Version="1.0.0" />
+    <PackageReference Include="DatadogSdk.iOS.Binding" Version="0.0.1" />
   </ItemGroup>
 
   <!-- Android binding + runtime dependencies -->
   <ItemGroup Condition="$(TargetFramework.Contains('-android'))">
-    <PackageReference Include="DatadogSdk.Android.Binding" Version="1.0.0" />
+    <PackageReference Include="DatadogSdk.Android.Binding" Version="0.0.1" />
     <!-- Kotlin, OkHttp, Gson, AndroidX dependencies -->
   </ItemGroup>
 </Project>
@@ -751,7 +751,7 @@ public static void LogWithAttributes(string level, string message, Dictionary<st
 ```xml
 <!-- Consumer app only needs one package -->
 <ItemGroup>
-  <PackageReference Include="DatadogSdk.Maui" Version="1.0.0" />
+  <PackageReference Include="DatadogSdk.Maui" Version="0.0.1" />
 </ItemGroup>
 ```
 
@@ -821,15 +821,24 @@ public static void LogWithAttributes(string level, string message, Dictionary<st
 
 ### Package Version Management
 
-**Current Strategy**: All packages use version `1.0.0` during development
+**Current Strategy**: All packages share the version defined in `versions.properties` (`SDK_VERSION`)
 
-**Incrementing Versions**:
-1. Update version in each binding `.csproj` file
-2. Rebuild: `./build.sh`
-3. Update meta-package dependencies to match
-4. Example app will automatically pick up new version
+**Incrementing Versions**: Use `./bump-version.sh <version>` to update all `.csproj` files, `versions.properties`, and `NATIVE_SDK_VERSIONS.md` in one pass.
 
-**Future**: Version management will be automated in CI/CD pipeline
+**Bumping Native SDK Versions**: Use `./update-native-sdk.sh --ios <ver> --android <ver>`. This updates all native SDK references and runs `resolve-android-deps.sh` to synchronize Android transitive dependencies.
+
+### Android Transitive Dependency Management
+
+Android runtime dependencies (OkHttp, Gson, Kotlin stdlib, AndroidX) must be explicitly declared in `.csproj` files because the AAR format doesn't statically link them. The mapping between Maven artifacts and NuGet packages is tracked in `android-transitive-deps.json`.
+
+**`resolve-android-deps.sh`** resolves the Gradle dependency tree and:
+- Auto-updates `AndroidMavenLibrary` Version attributes (these use Maven versions directly)
+- Warns when NuGet `PackageReference` versions may need manual review
+- Uses `nuget_covers_maven` to determine if the current NuGet package already satisfies the new Maven version (avoids false warnings)
+
+**`verify-artifacts.sh --deps`** runs `resolve-android-deps.sh --check` to detect drift without modifying files.
+
+**iOS does not have this problem** — SPM statically links all transitive dependencies into the XCFramework at build time.
 
 ## API Surface (Current)
 
@@ -1020,7 +1029,7 @@ See `CONTRIBUTING.md` for:
 
 ## Versioning
 
-**Current**: 1.0.0 (Phase 1 Complete)
+**Current**: 0.0.1
 
 **Strategy**: Semantic Versioning (SemVer)
 - Major: Breaking API changes

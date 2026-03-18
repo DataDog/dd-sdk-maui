@@ -7,11 +7,12 @@
     <AndroidClassParser>class-parse</AndroidClassParser>
     <!-- Suppress XA4241/XA4242: Java transitive deps are satisfied via NuGet; verification not needed -->
     <NoWarn>$(NoWarn);XA4241;XA4242</NoWarn>
+    <Version>0.1.0</Version>
   </PropertyGroup>
 
   <ItemGroup>
     <!-- dd-sdk-android-logs from Maven Central -->
-    <AndroidMavenLibrary Include="com.datadoghq:dd-sdk-android-logs" Version="3.5.0" VerifyDependencies="false" />
+    <AndroidMavenLibrary Include="com.datadoghq:dd-sdk-android-logs" Version="3.7.1" VerifyDependencies="false" />
 
     <!-- Metadata transformations -->
     <TransformFile Include="Transforms\Metadata.xml" />

@@ -32,6 +32,9 @@ log_error() {
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 cd "$SCRIPT_DIR"
 
+# Load version references
+source "$SCRIPT_DIR/versions.properties"
+
 # Parse command line arguments
 FORMAT_ONLY=false
 CHECK_FORMAT=false
@@ -195,9 +198,9 @@ cat "$SCRIPT_DIR/native-wrappers/android/datadogwrapper/consumer-rules.pro" >> "
 # Append rules extracted from each Datadog AAR
 # proguard.txt is the standard consumer-rules location inside an AAR
 for aar in \
-    "$CORE_BIN/dd-sdk-android-core-3.5.0.aar" \
-    "$INTERNAL_BIN/dd-sdk-android-internal-3.5.0.aar" \
-    "$LOGS_BIN/dd-sdk-android-logs-3.5.0.aar"; do
+    "$CORE_BIN/dd-sdk-android-core-${ANDROID_NATIVE_VERSION}.aar" \
+    "$INTERNAL_BIN/dd-sdk-android-internal-${ANDROID_NATIVE_VERSION}.aar" \
+    "$LOGS_BIN/dd-sdk-android-logs-${ANDROID_NATIVE_VERSION}.aar"; do
 
     if [ -f "$aar" ]; then
         aar_name=$(basename "$aar")
