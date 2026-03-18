@@ -124,7 +124,7 @@ if [ "$RUN_IOS" = true ]; then
     log_section "iOS Tests (XCTest)"
 
     log_info "Running swift test..."
-    if (cd "$SCRIPT_DIR/native-wrappers/ios/DatadogWrapper" && swift test); then
+    if (cd "$SCRIPT_DIR/native-wrappers/ios/DatadogWrapper" && xcrun swift test); then
         IOS_RESULT=0
         log_info "iOS tests passed"
     else

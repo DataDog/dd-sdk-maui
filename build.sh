@@ -163,6 +163,8 @@ ANDROID_DEPS=(
     "DatadogSdk.Android.Internal"
     "DatadogSdk.Android.Core"
     "DatadogSdk.Android.Logs"
+    "DatadogSdk.Android.Trace"
+    "DatadogSdk.Android.Binding"
 )
 
 for BINDING in "${ANDROID_DEPS[@]}"; do
@@ -189,6 +191,7 @@ PROGUARD_OUT="$SCRIPT_DIR/bindings/DatadogSdk.Android.Binding/proguard/datadog-m
 INTERNAL_BIN="$SCRIPT_DIR/bindings/DatadogSdk.Android.Internal/bin/Release/net10.0-android"
 CORE_BIN="$SCRIPT_DIR/bindings/DatadogSdk.Android.Core/bin/Release/net10.0-android"
 LOGS_BIN="$SCRIPT_DIR/bindings/DatadogSdk.Android.Logs/bin/Release/net10.0-android"
+TRACE_BIN="$SCRIPT_DIR/bindings/DatadogSdk.Android.Trace/bin/Release/net10.0-android"
 
 log_info "Starting from wrapper consumer-rules.pro..."
 echo "# Auto-generated file - Do not edit" > "$PROGUARD_OUT"
@@ -200,7 +203,8 @@ cat "$SCRIPT_DIR/native-wrappers/android/datadogwrapper/consumer-rules.pro" >> "
 for aar in \
     "$CORE_BIN/dd-sdk-android-core-${ANDROID_NATIVE_VERSION}.aar" \
     "$INTERNAL_BIN/dd-sdk-android-internal-${ANDROID_NATIVE_VERSION}.aar" \
-    "$LOGS_BIN/dd-sdk-android-logs-${ANDROID_NATIVE_VERSION}.aar"; do
+    "$LOGS_BIN/dd-sdk-android-logs-${ANDROID_NATIVE_VERSION}.aar" \
+    "$TRACE_BIN/dd-sdk-android-trace-${ANDROID_NATIVE_VERSION}.aar"; do
 
     if [ -f "$aar" ]; then
         aar_name=$(basename "$aar")

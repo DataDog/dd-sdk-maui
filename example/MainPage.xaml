@@ -20,10 +20,30 @@
 
             <Button
                 x:Name="SendLogsBtn"
-                Text="Send Logs" 
+                Text="Send Logs"
                 SemanticProperties.Hint="Send a batch of logs"
                 Clicked="OnSendLogsClicked"
                 HorizontalOptions="Fill" />
+
+            <Button
+                x:Name="StartTraceBtn"
+                Text="Start Span"
+                SemanticProperties.Hint="Start a new trace span"
+                Clicked="OnStartTraceClicked"
+                HorizontalOptions="Fill" />
+
+            <Button
+                x:Name="StopTraceBtn"
+                Text="Stop Span"
+                SemanticProperties.Hint="Stop the most recent trace span"
+                Clicked="OnStopTraceClicked"
+                HorizontalOptions="Fill" />
+
+            <Label
+                x:Name="TraceStatusLabel"
+                Text="No active spans"
+                HorizontalOptions="Center"
+                FontSize="14" />
         </VerticalStackLayout>
     </ScrollView>
 

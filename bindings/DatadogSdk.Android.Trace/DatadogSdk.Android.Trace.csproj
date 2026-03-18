@@ -1,0 +1,33 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0-android</TargetFramework>
+    <SupportedOSPlatformVersion>23</SupportedOSPlatformVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AndroidClassParser>class-parse</AndroidClassParser>
+    <!-- Suppress XA4241/XA4242: Java transitive deps are satisfied via NuGet; verification not needed -->
+    <NoWarn>$(NoWarn);XA4241;XA4242</NoWarn>
+    <Version>0.1.0</Version>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- dd-sdk-android-trace from Maven Central (bound to C#) -->
+    <AndroidMavenLibrary Include="com.datadoghq:dd-sdk-android-trace" Version="3.8.0" VerifyDependencies="false" />
+    <!-- Runtime transitive dependencies - included for DEX but NOT bound to C# -->
+    <AndroidMavenLibrary Include="com.datadoghq:dd-sdk-android-trace-api" Version="3.8.0" VerifyDependencies="false" Bind="false" />
+    <AndroidMavenLibrary Include="com.datadoghq:dd-sdk-android-trace-internal" Version="3.8.0" VerifyDependencies="false" Bind="false" />
+    <AndroidMavenLibrary Include="org.jctools:jctools-core" Version="3.3.0" VerifyDependencies="false" Bind="false" />
+    <AndroidMavenLibrary Include="com.google.re2j:re2j" Version="1.7" VerifyDependencies="false" Bind="false" />
+
+    <!-- Metadata transformations -->
+    <TransformFile Include="Transforms\Metadata.xml" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Reference core binding project (which includes internal) -->
+    <ProjectReference Include="..\DatadogSdk.Android.Core\DatadogSdk.Android.Core.csproj" />
+
+    <!-- Required for Kotlin-based libraries -->
+    <PackageReference Include="Xamarin.Kotlin.StdLib" Version="2.2.0.1" />
+  </ItemGroup>
+</Project>

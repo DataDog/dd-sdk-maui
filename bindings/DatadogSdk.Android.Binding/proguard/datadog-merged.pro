@@ -16,3 +16,10 @@
 # This is needed for the Datadog Error Tracking feature to work reliably,
  # this file is used by Logs and RUM modules
 -keepattributes SourceFile,LineNumberTable
+
+# --- Rules from dd-sdk-android-trace-3.8.0.aar ---
+-keep class com.datadog.android.trace.GlobalDatadogTracer {
+    public com.datadog.android.trace.api.tracer.DatadogTracer getOrNull();
+    public static com.datadog.android.trace.GlobalDatadogTracer INSTANCE;
+}
+-keepclassmembernames class org.jctools.** { *; }
