@@ -1,10 +1,52 @@
 stages:
+  - build
+  - test
   - build-and-upload
+
+variables:
+  DEVELOP_BRANCH: 'develop'
 
 default:
   tags:
     - macos:sequoia-arm64
     - specific:true
+
+# ============================================================================
+# BUILD: Compile all native wrappers, bindings, and NuGet packages
+# ============================================================================
+build:sdk:
+  stage: build
+  timeout: 30m
+  script:
+    - ./build.sh
+  artifacts:
+    paths:
+      - local-packages/
+    expire_in: 1 day
+
+# ============================================================================
+# TESTS: Run unit tests for each platform independently
+# ============================================================================
+test:maui:
+  stage: test
+  needs: [build:sdk]
+  timeout: 15m
+  script:
+    - ./check.sh --maui
+
+test:ios:
+  stage: test
+  needs: [build:sdk]
+  timeout: 15m
+  script:
+    - ./check.sh --ios
+
+test:android:
+  stage: test
+  needs: [build:sdk]
+  timeout: 15m
+  script:
+    - ./check.sh --android
 
 # ============================================================================
 # E2E: Build Shopist MAUI app with SDK and upload to Synthetics
