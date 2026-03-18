@@ -56,8 +56,7 @@ e2e:build-and-upload:
   stage: build-and-upload
   rules:
     - if: $BUILD_E2E == "true"
-    - if: $CI_COMMIT_BRANCH == "feature/conservative"
-      when: on_success
+    - if: $CI_COMMIT_BRANCH == "develop"
   script:
     # 1. Build the SDK NuGet packages
     - echo "Building SDK packages..."
