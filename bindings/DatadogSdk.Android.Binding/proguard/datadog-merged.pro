@@ -23,3 +23,13 @@
     public static com.datadog.android.trace.GlobalDatadogTracer INSTANCE;
 }
 -keepclassmembernames class org.jctools.** { *; }
+
+# --- Rules from dd-sdk-android-rum-3.8.0.aar ---
+# This is needed for the Datadog Error Tracking feature to work reliably,
+ # this file is used by Logs and RUM modules
+-keepattributes SourceFile,LineNumberTable
+
+# Kept for our internal telemetry
+-keepnames class com.datadog.android.rum.internal.monitor.DatadogRumMonitor
+-keepnames class com.datadog.android.rum.internal.domain.scope.RumRawEvent
+-keepnames class * extends com.datadog.android.rum.internal.domain.scope.RumRawEvent

@@ -168,3 +168,16 @@ Add `-v n -tl:off` to your `dotnet publish` command to disable the terminal logg
 
 **Upload seems to work but no symbols appear in Datadog**
 Symbols take up to 5 minutes to process after upload. Check **Error Tracking > Settings > Symbol Files** in Datadog.
+
+## Known limitations
+
+### Android NDK crash symbols
+
+When `nativeCrashReportEnabled` is set to `true` in the RUM configuration, `dd-sdk-android-ndk` captures crashes in native (C/C++) code. These stack traces require unstripped `.so` files (ELF debug symbols) for symbolication — the R8 `mapping.txt` only covers Java/Kotlin obfuscation and does not help with native frames.
+
+In a MAUI app, native `.so` files come from:
+- **The .NET runtime** (`libmonosgen-2.0.so`, `libmonodroid.so`) — symbols are published by Microsoft on their symbol server, not generated during your build
+- **Datadog's NDK library** (`libdatadog-native-lib.so`) — Datadog resolves these server-side using their own published symbols
+- **Custom native C/C++ libraries** — rare in MAUI apps, but if present their symbols would need manual upload via `datadog-ci dsyms upload <path-to-so-directory>`
+
+The current automatic upload (mapping.txt + dSYM) covers the typical MAUI use case. If you see unsymbolicated native frames in NDK crash reports, the missing symbols likely belong to the .NET runtime and would need to be sourced from Microsoft's symbol server.

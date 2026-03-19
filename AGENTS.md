@@ -6,13 +6,15 @@ This document provides context and instructions for AI agents working on the Dat
 
 **Purpose**: Provide .NET MAUI bindings for Datadog's native iOS and Android SDKs, enabling observability features (logs, RUM, traces) in cross-platform mobile applications.
 
-**Current Status**: Phase 2 Complete (Core SDK Configuration + Logs Configuration)
+**Current Status**: Phase 3 In Progress (Core SDK + Logs + RUM Configuration & Enablement)
 - ✅ iOS native wrapper with XCFramework bindings
 - ✅ Android native wrapper with multi-project NuGet bindings
 - ✅ Unified meta-package (DatadogSdk.Maui)
 - ✅ Full `DdSdkConfiguration` object (TrackingConsent, BatchSize, BatchProcessingLevel, UploadFrequency, Site, Service, Version/VersionSuffix, Verbosity, AdditionalConfiguration)
 - ✅ Runtime `SetTrackingConsent` API
 - ✅ `DdLogsConfiguration` with `CustomEndpoint` support
+- ✅ `DdRumConfiguration` with full RUM parameter set (sampling, tracking, vitals, crash reporting, first-party hosts)
+- ✅ `DdRum.Enable()` wired to native iOS (DatadogRUM + DatadogCrashReporting) and Android (dd-sdk-android-rum + dd-sdk-android-ndk)
 - ✅ `_dd.needsClearTextHttp` internal key support via `AdditionalConfiguration`
 - ✅ Unit tests at all three layers (`check.sh`)
 - ✅ Example app validated on both platforms with mock local server
@@ -86,6 +88,7 @@ dd-sdk-maui/
 │   │       └── Sources/DatadogWrapper/
 │   │           ├── DatadogWrapper.swift   # SDK initialization (DdSdkNativeWrapper)
 │   │           ├── DdLogs.swift           # Logging API
+│   │           ├── DdRum.swift            # RUM API
 │   │           └── Protocols/             # Dependency injection protocols
 │   │
 │   └── android/
@@ -96,10 +99,12 @@ dd-sdk-maui/
 │           └── src/
 │               ├── main/kotlin/com/datadog/wrapper/
 │               │   ├── DatadogWrapper.kt   # SDK initialization
-│               │   └── DdLogs.kt           # Logging API
+│               │   ├── DdLogs.kt           # Logging API
+│               │   └── DdRum.kt            # RUM API
 │               └── test/kotlin/com/datadog/wrapper/
 │                   ├── DatadogWrapperTest.kt
-│                   └── DdLogsTest.kt
+│                   ├── DdLogsTest.kt
+│                   └── DdRumTest.kt
 │
 ├── bindings/                      # C# binding projects
 │   ├── DatadogSdk.iOS.Binding/
@@ -111,6 +116,7 @@ dd-sdk-maui/
 │   ├── DatadogSdk.Android.Internal/    # dd-sdk-android-internal bindings
 │   ├── DatadogSdk.Android.Core/        # dd-sdk-android-core bindings
 │   ├── DatadogSdk.Android.Logs/        # dd-sdk-android-logs bindings
+│   ├── DatadogSdk.Android.Rum/         # dd-sdk-android-rum AAR binding
 │   ├── DatadogSdk.Android.Binding/     # Kotlin wrapper bindings
 │   │   ├── Jars/
 │   │   │   └── datadogwrapper-release.aar
@@ -123,6 +129,10 @@ dd-sdk-maui/
 │       │   ├── DdSdkConfiguration.cs
 │       │   ├── FileBasedConfiguration.cs  # JSON config parser
 │       │   ├── DdLogsConfiguration.cs  # Logs module configuration (CustomEndpoint)
+│       │   ├── DdRumConfiguration.cs   # RUM module configuration
+│       │   ├── VitalsUpdateFrequency.cs
+│       │   ├── TracingHeaderType.cs
+│       │   ├── DdFirstPartyHost.cs
 │       │   ├── TrackingConsent.cs
 │       │   ├── BatchSize.cs
 │       │   ├── BatchProcessingLevel.cs
@@ -131,12 +141,14 @@ dd-sdk-maui/
 │       │   └── SdkVerbosity.cs
 │       ├── DdSdk.cs               # SDK initialization + SetTrackingConsent + BuildAdditionalConfiguration
 │       ├── DdLogs.cs              # Logging API
+│       ├── DdRum.cs               # RUM API
 │       └── InternalLog.cs         # SDK-internal console logging
 │
 ├── tests/                         # C# unit tests
 │   └── DatadogSdk.Maui.Tests/
 │       ├── DdSdkConfigurationTests.cs    # SDK init via test bridge (INativeBridge)
 │       ├── DdLogsConfigurationTests.cs
+│       ├── DdRumConfigurationTests.cs
 │       ├── DdSdkConversionTests.cs       # ConvertSite, ConvertTrackingConsent,
 │       │                                 # BuildAdditionalConfiguration
 │       ├── FileBasedConfigurationTests.cs # JSON config parsing + validation

@@ -6,7 +6,8 @@ This document provides a comprehensive technical specification for the Datadog S
 
 **Version**: See `versions.properties` for current SDK and native SDK versions
 **Target Frameworks**: net10.0-ios, net10.0-android
-**Status**: Core SDK configuration complete, Logs and Trace modules functional
+**Status**: Core SDK configuration complete, Logs module functional, Trace module functional, RUM module configuration and enablement complete
+
 
 ## Project Goals
 
@@ -38,6 +39,7 @@ This document provides a comprehensive technical specification for the Datadog S
 │  using DatadogSdk.Maui;                         │
 │  DdSdk.Initialize(config);                      │
 │  DdLogs.Info("message");                        │
+│  DdRum.Enable(rumConfig);                       │
 └─────────────────────┬───────────────────────────┘
                       │ PackageReference
                       ↓
@@ -45,8 +47,8 @@ This document provides a comprehensive technical specification for the Datadog S
 │     C# Intermediary Layer (DatadogSdk.Maui)     │
 │     bindings/DatadogSdk.Maui/...csproj          │
 │                                                 │
-│  - Unified cross-platform API (DdSdk, DdLogs,    │
-│    DdTrace)                                      │
+│  - Unified cross-platform API (DdSdk, DdLogs,   │
+│    DdTrace, DdRum)                              │
 │  - Internal debug logging (Console.WriteLine)   │
 │  - Platform branching via #if ANDROID / IOS     │
 │  - Type marshaling (e.g. Dict → NSDictionary)   │
@@ -73,6 +75,7 @@ This document provides a comprehensive technical specification for the Datadog S
 │  - DatadogWrapper    │  │  - DatadogWrapper    │
 │  - DdLogs            │  │  - DdLogs            │
 │  - DdTrace           │  │  - DdTrace           │
+│  - DdRum             │  │  - DdRum             │
 └──────────┬───────────┘  └──────────┬───────────┘
            │                         │
            │ Imports                 │ Imports
@@ -383,6 +386,7 @@ dependencies {
     implementation("com.datadoghq:dd-sdk-android-core:<ANDROID_NATIVE_VERSION>")
     implementation("com.datadoghq:dd-sdk-android-logs:<ANDROID_NATIVE_VERSION>")
     implementation("com.datadoghq:dd-sdk-android-trace:<ANDROID_NATIVE_VERSION>")
+    implementation("com.datadoghq:dd-sdk-android-rum:<ANDROID_NATIVE_VERSION>")
 }
 ```
 
@@ -465,7 +469,8 @@ datadogwrapper-release.aar (ZIP archive)
 2. **DatadogSdk.Android.Core** - Binds `dd-sdk-android-core` AAR
 3. **DatadogSdk.Android.Logs** - Binds `dd-sdk-android-logs` AAR
 4. **DatadogSdk.Android.Trace** - Binds `dd-sdk-android-trace` AAR (with `trace-api`, `trace-internal`, `jctools-core`, `re2j` as `Bind="false"` runtime deps)
-5. **DatadogSdk.Android.Binding** - Binds `datadogwrapper-release.aar`
+5. **DatadogSdk.Android.Rum** - Binds `dd-sdk-android-rum` AAR (with `metrics-performance`, `dd-sdk-android-ndk` as `Bind="false"` runtime deps)
+6. **DatadogSdk.Android.Binding** - Binds `datadogwrapper-release.aar`
 
 **Key Pattern**: Core SDK bindings are **PackageReferences**, not ProjectReferences.
 
@@ -479,7 +484,7 @@ datadogwrapper-release.aar (ZIP archive)
 **DatadogSdk.Android.Core.csproj**:
 ```xml
 <ItemGroup>
-  <ProjectReference Include="..\DatadogSdk.Android.Internal\DatadogSdk.Android.Internal.csproj" />
+  <PackageReference Include="DatadogSdk.Android.Internal" Version="0.1.0" />
   <AndroidMavenLibrary Include="com.datadoghq:dd-sdk-android-core" Version="<ANDROID_NATIVE_VERSION>" />
 </ItemGroup>
 ```
@@ -980,13 +985,56 @@ When `SdkVerbosity.DEBUG` is set, all calls are logged to the console and the na
 [Datadog] DdLogs.Info called: Info message
 ```
 
+### RUM
+
+```csharp
+using DatadogSdk.Maui;
+using DatadogSdk.Maui.Configuration;
+
+// Enable RUM module
+DdRum.Enable(new DdRumConfiguration
+{
+    ApplicationId = "your-rum-application-id",
+
+    // Sampling
+    SessionSampleRate = 100.0,
+    TelemetrySampleRate = 20.0,
+    ResourceTraceSampleRate = 20.0,
+
+    // Tracking
+    TrackFrustrations = true,
+    TrackBackgroundEvents = false,
+    NativeCrashReportEnabled = true,
+    NativeViewTracking = true,
+    NativeInteractionTracking = true,
+    TrackMemoryWarnings = false,              // iOS only
+    NativeLongTaskThresholdMs = 200.0,
+
+    // Platform-specific (optional)
+    AppHangThreshold = 2.0,                   // iOS only, seconds
+    TrackWatchdogTerminations = true,          // iOS only
+    TrackNonFatalAnrs = true,                  // Android only
+
+    // Vitals and endpoints
+    VitalsUpdateFrequency = VitalsUpdateFrequency.Average,
+    CustomEndpoint = null,                     // optional
+
+    // Distributed tracing
+    FirstPartyHosts = new List<DdFirstPartyHost>
+    {
+        new() { Match = "api.example.com", HeaderTypes = new List<TracingHeaderType> { TracingHeaderType.Datadog, TracingHeaderType.TraceContext } }
+    }
+});
+```
+
 ## Known Limitations
 
 ### Current Limitations
 
-1. **Logs and Traces only**
-   - RUM, Crash Reporting not yet implemented
-   - Planned for Phases 3-6
+1. **Logs,traces and RUM configuration**
+   - RUM tracking API (views, actions, resources) not yet implemented
+   - Traces module in review, Crash Reporting planned
+   - Event mappers (error, resource, action) accepted but not wired to native
 
 4. **No session management**
    - Session IDs not unified across modules
@@ -1024,11 +1072,15 @@ When `SdkVerbosity.DEBUG` is set, all calls are logged to the console and the na
 - ✅ Unit tests at all three layers (iOS XCTest, Android JUnit/MockK, C# xUnit)
 - ✅ Example app uses full configuration object
 
-### Phase 3: RUM Foundation (Planned)
-- RUM module initialization
-- View tracking
-- Action tracking
-- Resource tracking
+### Phase 3: RUM Configuration & Enablement (In Progress)
+- ✅ `DdRumConfiguration` with all RUM parameters
+- ✅ `DdRum.Enable()` wired to native iOS and Android
+- ✅ Native crash reporting (iOS: CrashReporting, Android: NdkCrashReports)
+- ✅ First-party hosts for distributed tracing (iOS)
+- ✅ Vitals, view tracking, interaction tracking, long tasks configuration
+- ✅ Unit tests at all three layers
+- 🔲 RUM tracking API (views, actions, resources, errors) — RUM-15184
+- 🔲 Error tracking / C# crash handler — RUM-15107
 
 ### Phase 4: Error & Crash Reporting (Planned)
 - Error tracking

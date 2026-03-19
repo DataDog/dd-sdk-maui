@@ -3,20 +3,49 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              x:Class="example.MainPage">
 
+    <Shell.TitleView>
+        <HorizontalStackLayout
+            Spacing="10"
+            HorizontalOptions="Center"
+            VerticalOptions="Center">
+            <Image
+                Source="dd_icon_rgb"
+                HeightRequest="30"
+                Aspect="AspectFit"
+                SemanticProperties.Description="Datadog logo" />
+            <Label
+                Text=".NET MAUI test"
+                FontSize="18"
+                FontAttributes="Bold"
+                VerticalOptions="Center" />
+        </HorizontalStackLayout>
+    </Shell.TitleView>
+
     <ScrollView>
         <VerticalStackLayout
             Padding="30,0"
             Spacing="25">
-            <Image
-                Source="dd_icon_rgb"
-                HeightRequest="200"
-                Aspect="AspectFit"
-                SemanticProperties.Description="Datadog logo" />
 
             <Label
-                Text=".NET MAUI test"
-                Style="{StaticResource Headline}"
-                SemanticProperties.HeadingLevel="Level1" />
+                Text="Config"
+                FontSize="18"
+                FontAttributes="Bold"
+                SemanticProperties.HeadingLevel="Level1"
+                HorizontalOptions="Start" />
+
+            <Button
+                x:Name="TrackingConsentBtn"
+                Text="Set Tracking Consent"
+                SemanticProperties.Hint="Change the tracking consent"
+                Clicked="OnSetTrackingConsentClicked"
+                HorizontalOptions="Fill" />
+
+            <Label
+                Text="Logs"
+                FontSize="18"
+                FontAttributes="Bold"
+                SemanticProperties.HeadingLevel="Level1"
+                HorizontalOptions="Start" />
 
             <Button
                 x:Name="SendLogsBtn"
@@ -25,12 +54,12 @@
                 Clicked="OnSendLogsClicked"
                 HorizontalOptions="Fill" />
 
-            <Button
-                x:Name="TrackingConsentBtn"
-                Text="Set Tracking Consent"
-                SemanticProperties.Hint="Change the tracking consent"
-                Clicked="OnSetTrackingConsentClicked"
-                HorizontalOptions="Fill" />
+            <Label
+                Text="Traces"
+                FontSize="18"
+                FontAttributes="Bold"
+                SemanticProperties.HeadingLevel="Level1"
+                HorizontalOptions="Start" />
 
             <Button
                 x:Name="StartTraceBtn"
@@ -52,6 +81,46 @@
                 HorizontalOptions="Center"
                 FontSize="14" />
 
+            <Label
+                Text="RUM"
+                FontSize="18"
+                FontAttributes="Bold"
+                SemanticProperties.HeadingLevel="Level1"
+                HorizontalOptions="Start" />
+
+            <Button
+                x:Name="NativeCrashBtn"
+                Text="Trigger Native Crash"
+                SemanticProperties.Hint="Triggers a native crash for testing"
+                Clicked="OnNativeCrashClicked"
+                BackgroundColor="Red"
+                TextColor="White"
+                HorizontalOptions="Fill" />
+
+            <Button
+                x:Name="ManagedCrashBtn"
+                Text="Trigger C# Crash"
+                SemanticProperties.Hint="Triggers a managed C# crash for testing"
+                Clicked="OnManagedCrashClicked"
+                BackgroundColor="DarkRed"
+                TextColor="White"
+                HorizontalOptions="Fill" />
+
+            <Button
+                x:Name="NdkCrashBtn"
+                Text="Trigger NDK Crash"
+                SemanticProperties.Hint="Triggers a C/NDK SIGABRT crash for testing"
+                Clicked="OnNdkCrashClicked"
+                BackgroundColor="OrangeRed"
+                TextColor="White"
+                HorizontalOptions="Fill">
+                <Button.IsVisible>
+                    <OnPlatform x:TypeArguments="x:Boolean">
+                        <On Platform="Android" Value="True" />
+                        <On Platform="iOS" Value="False" />
+                    </OnPlatform>
+                </Button.IsVisible>
+            </Button>
         </VerticalStackLayout>
     </ScrollView>
 
