@@ -12,7 +12,7 @@
     @kotlin.jvm.JvmStatic *;
 }
 
-# --- Rules from dd-sdk-android-logs-3.7.1.aar ---
+# --- Rules from dd-sdk-android-logs-3.8.0.aar ---
 # This is needed for the Datadog Error Tracking feature to work reliably,
  # this file is used by Logs and RUM modules
 -keepattributes SourceFile,LineNumberTable
