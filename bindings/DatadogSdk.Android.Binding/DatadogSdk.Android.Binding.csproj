@@ -6,6 +6,8 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <!-- Use class-parse for Kotlin support -->
     <AndroidClassParser>class-parse</AndroidClassParser>
+    <!-- Suppress XA4241/XA4242: Java transitive deps are satisfied via NuGet; verification not needed -->
+    <NoWarn>$(NoWarn);XA4241;XA4242</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>
@@ -15,8 +17,24 @@
     <!-- Metadata transformations -->
     <TransformFile Include="Transforms\Metadata.xml" />
 
-    <!-- ProGuard rules - CRITICAL for R8 -->
+    <!-- ProGuard rules applied when building this library -->
     <ProguardConfiguration Include="Transforms\proguard.txt" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!--
+      Pack the .targets file and merged ProGuard rules into the NuGet package
+      under buildTransitive/ so MSBuild auto-loads them for any project that
+      references this package (directly or transitively).
+      The .targets file adds a <ProguardConfiguration> item pointing to the
+      merged rules, ensuring R8 retains Datadog classes in Release builds.
+    -->
+    <None Include="build\DatadogSdk.Android.Binding.targets"
+          Pack="true"
+          PackagePath="buildTransitive\net10.0-android\" />
+    <None Include="proguard\datadog-merged.pro"
+          Pack="true"
+          PackagePath="buildTransitive\net10.0-android\proguard\" />
   </ItemGroup>
 
   <ItemGroup>

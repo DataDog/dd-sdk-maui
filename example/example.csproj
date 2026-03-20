@@ -40,13 +40,6 @@
 		<TargetPlatformMinVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">10.0.17763.0</TargetPlatformMinVersion>
 	</PropertyGroup>
 
-	<!-- Disable Java dependency verification for dd-sdk-android transitive dependencies -->
-	<PropertyGroup Condition="$(TargetFramework.Contains('-android'))">
-		<!-- Suppress XA4241 and XA4242 errors (unsatisfied Java dependencies) -->
-		<!-- We provide runtime dependencies via NuGet; test dependencies not needed -->
-		<NoWarn>$(NoWarn);XA4241;XA4242</NoWarn>
-	</PropertyGroup>
-
 	<ItemGroup>
 		<!-- App Icon -->
 		<MauiIcon Include="Resources\AppIcon\appicon.svg" ForegroundFile="Resources\AppIcon\appiconfg.svg" Color="#512BD4" />

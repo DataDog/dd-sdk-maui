@@ -5,6 +5,8 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <AndroidClassParser>class-parse</AndroidClassParser>
+    <!-- Suppress XA4241/XA4242: Java transitive deps are satisfied via NuGet; verification not needed -->
+    <NoWarn>$(NoWarn);XA4241;XA4242</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>
