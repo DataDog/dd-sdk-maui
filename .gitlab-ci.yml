@@ -60,6 +60,25 @@ test:android:
     - ./check.sh --android
 
 # ============================================================================
+# EXAMPLE APPS: Verify example apps build with the SDK packages
+# ============================================================================
+build:example-ios:
+  stage: test
+  needs: [build:sdk]
+  timeout: 15m
+  script:
+    - cd example
+    - ./build.sh --ios
+
+build:example-android:
+  stage: test
+  needs: [build:sdk]
+  timeout: 15m
+  script:
+    - cd example
+    - ./build.sh --android
+
+# ============================================================================
 # E2E: Build Shopist MAUI app with SDK and upload to Synthetics
 # Runs on merges to the integration branch, or manually via BUILD_E2E=true
 # ============================================================================
