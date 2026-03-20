@@ -19,6 +19,13 @@
     <PackageTags>datadog;maui;logging;monitoring;rum;apm;ios;android</PackageTags>
   </PropertyGroup>
 
+  <!-- Pack the .targets file into the NuGet package so consuming apps get it automatically -->
+  <ItemGroup>
+    <None Include="build\DatadogSdk.Maui.targets"
+          Pack="true"
+          PackagePath="buildTransitive\DatadogSdk.Maui.targets" />
+  </ItemGroup>
+
   <!-- iOS platform dependencies -->
   <ItemGroup Condition="$(TargetFramework.Contains('-ios'))">
     <PackageReference Include="DatadogSdk.iOS.Binding" Version="0.1.0" />
