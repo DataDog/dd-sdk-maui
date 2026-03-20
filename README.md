@@ -15,7 +15,7 @@ To integrate the Datadog SDK into your .NET MAUI application, see the setup inst
 Add the NuGet package to your MAUI `.csproj`:
 
 ```xml
-<PackageReference Include="DatadogSdk.Maui" Version="1.0.0" />
+<PackageReference Include="DatadogSdk.Maui" Version="0.0.1" />
 ```
 
 ### Initialization

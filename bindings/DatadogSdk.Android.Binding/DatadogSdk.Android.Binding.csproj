@@ -8,6 +8,7 @@
     <AndroidClassParser>class-parse</AndroidClassParser>
     <!-- Suppress XA4241/XA4242: Java transitive deps are satisfied via NuGet; verification not needed -->
     <NoWarn>$(NoWarn);XA4241;XA4242</NoWarn>
+    <Version>0.1.0</Version>
   </PropertyGroup>
 
   <ItemGroup>
@@ -39,7 +40,7 @@
 
   <ItemGroup>
     <!-- Reference dd-sdk-android binding packages -->
-    <PackageReference Include="DatadogSdk.Android.Logs" Version="1.0.0" />
+    <PackageReference Include="DatadogSdk.Android.Logs" Version="0.1.0" />
 
     <!-- Required for Kotlin-based libraries -->
     <PackageReference Include="Xamarin.Kotlin.StdLib" Version="2.2.0.1" />

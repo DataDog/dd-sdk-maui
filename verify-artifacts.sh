@@ -35,10 +35,14 @@ log_warn() { echo -e "  ${YELLOW}⚠${NC} $1"; }
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 cd "$SCRIPT_DIR"
 
+# Load version references
+source "$SCRIPT_DIR/versions.properties"
+
 # ── Argument parsing ─────────────────────────────────────────────────────────
 
 RUN_NUGET=false
 RUN_PROGUARD=false
+RUN_DEPS=false
 RUN_ALL=true
 
 while [[ $# -gt 0 ]]; do
@@ -53,6 +57,11 @@ while [[ $# -gt 0 ]]; do
             RUN_ALL=false
             shift
             ;;
+        --deps)
+            RUN_DEPS=true
+            RUN_ALL=false
+            shift
+            ;;
         -h|--help)
             echo "Usage: ./verify-artifacts.sh [OPTIONS]"
             echo ""
@@ -62,6 +71,7 @@ while [[ $# -gt 0 ]]; do
             echo "Options:"
             echo "  --nuget      Check NuGet package existence and structure"
             echo "  --proguard   Check ProGuard rules content and completeness"
+            echo "  --deps       Check Android transitive dependency version alignment"
             echo "  -h, --help   Show this help message"
             exit 0
             ;;
@@ -76,6 +86,7 @@ done
 if [ "$RUN_ALL" = true ]; then
     RUN_NUGET=true
     RUN_PROGUARD=true
+    RUN_DEPS=true
 fi
 
 FAILED=0
@@ -139,12 +150,12 @@ if [ "$RUN_NUGET" = true ]; then
     log_section "NuGet packages exist"
 
     PACKAGES=(
-        "DatadogSdk.iOS.Binding.1.0.0.nupkg"
-        "DatadogSdk.Android.Internal.1.0.0.nupkg"
-        "DatadogSdk.Android.Core.1.0.0.nupkg"
-        "DatadogSdk.Android.Logs.1.0.0.nupkg"
-        "DatadogSdk.Android.Binding.1.0.0.nupkg"
-        "DatadogSdk.Maui.1.0.0.nupkg"
+        "DatadogSdk.iOS.Binding.${SDK_VERSION}.nupkg"
+        "DatadogSdk.Android.Internal.${SDK_VERSION}.nupkg"
+        "DatadogSdk.Android.Core.${SDK_VERSION}.nupkg"
+        "DatadogSdk.Android.Logs.${SDK_VERSION}.nupkg"
+        "DatadogSdk.Android.Binding.${SDK_VERSION}.nupkg"
+        "DatadogSdk.Maui.${SDK_VERSION}.nupkg"
     )
 
     for pkg in "${PACKAGES[@]}"; do
@@ -156,7 +167,7 @@ if [ "$RUN_NUGET" = true ]; then
     # implemented in build.sh and the .csproj is updated to pack them.
     log_section "DatadogSdk.Android.Binding NuGet structure"
 
-    BINDING_PKG="local-packages/DatadogSdk.Android.Binding.1.0.0.nupkg"
+    BINDING_PKG="local-packages/DatadogSdk.Android.Binding.${SDK_VERSION}.nupkg"
 
     if [ -f "$BINDING_PKG" ]; then
         # Assembly must always be present
@@ -177,7 +188,7 @@ if [ "$RUN_NUGET" = true ]; then
             "$BINDING_PKG" \
             "buildTransitive/.*datadog-merged.pro" || NUGET_RESULT=1
     else
-        log_warn "Skipping structure checks — DatadogSdk.Android.Binding.1.0.0.nupkg not found"
+        log_warn "Skipping structure checks — DatadogSdk.Android.Binding.${SDK_VERSION}.nupkg not found"
         NUGET_RESULT=1
     fi
 
@@ -232,6 +243,30 @@ if [ "$RUN_PROGUARD" = true ]; then
 fi
 
 # ════════════════════════════════════════════════════════════════════════════
+# TRANSITIVE DEPENDENCY CHECKS
+# ════════════════════════════════════════════════════════════════════════════
+
+DEPS_RESULT=0
+
+if [ "$RUN_DEPS" = true ]; then
+
+    log_section "Android transitive dependency alignment"
+
+    if [ -f "$SCRIPT_DIR/resolve-android-deps.sh" ] && [ -f "$SCRIPT_DIR/android-transitive-deps.json" ]; then
+        if "$SCRIPT_DIR/resolve-android-deps.sh" --check 2>&1 | tail -n +7; then
+            log_pass "Transitive dependency versions match the mapping"
+        else
+            log_fail "Transitive dependency drift detected"
+            log_warn "  Run ./resolve-android-deps.sh to update the mapping and csproj files"
+            DEPS_RESULT=1
+        fi
+    else
+        log_warn "resolve-android-deps.sh or android-transitive-deps.json not found — skipping"
+    fi
+
+fi
+
+# ════════════════════════════════════════════════════════════════════════════
 # Summary
 # ════════════════════════════════════════════════════════════════════════════
 
@@ -253,10 +288,19 @@ if [ "$RUN_PROGUARD" = true ]; then
     fi
 fi
 
+if [ "$RUN_DEPS" = true ]; then
+    if [ "$DEPS_RESULT" -eq 0 ]; then
+        echo -e "  ${GREEN}✓${NC} Dependency alignment checks"
+    else
+        echo -e "  ${RED}✗${NC} Dependency alignment checks"
+    fi
+fi
+
 echo ""
 
 [ "$NUGET_RESULT" -ne 0 ] && FAILED=1
 [ "$PROGUARD_RESULT" -ne 0 ] && FAILED=1
+[ "$DEPS_RESULT" -ne 0 ] && FAILED=1
 
 if [ "$FAILED" -ne 0 ]; then
     echo -e "${RED}Some checks failed.${NC}"

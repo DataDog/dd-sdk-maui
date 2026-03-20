@@ -9,7 +9,7 @@
 
     <!-- Package metadata -->
     <PackageId>DatadogSdk.Maui</PackageId>
-    <Version>1.0.0</Version>
+    <Version>0.1.0</Version>
     <Authors>Your Name</Authors>
     <Company>Your Company</Company>
     <Description>Datadog SDK bindings for .NET MAUI applications. Provides logging, RUM, and APM capabilities for iOS and Android.</Description>
@@ -21,12 +21,12 @@
 
   <!-- iOS platform dependencies -->
   <ItemGroup Condition="$(TargetFramework.Contains('-ios'))">
-    <PackageReference Include="DatadogSdk.iOS.Binding" Version="1.0.0" />
+    <PackageReference Include="DatadogSdk.iOS.Binding" Version="0.1.0" />
   </ItemGroup>
 
   <!-- Android platform dependencies -->
   <ItemGroup Condition="$(TargetFramework.Contains('-android'))">
-    <PackageReference Include="DatadogSdk.Android.Binding" Version="1.0.0" />
+    <PackageReference Include="DatadogSdk.Android.Binding" Version="0.1.0" />
     <!-- Runtime dependencies for Android -->
     <PackageReference Include="Xamarin.Kotlin.StdLib" Version="2.2.0.1" />
     <PackageReference Include="Xamarin.Kotlin.Reflect" Version="2.2.0.1" />
