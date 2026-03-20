@@ -30,6 +30,13 @@
 		<ApplicationDisplayVersion>1.0</ApplicationDisplayVersion>
 		<ApplicationVersion>1</ApplicationVersion>
 
+		<!-- Datadog symbol upload settings -->
+		<DatadogServiceName>datadog-maui-test</DatadogServiceName>
+
+		<!-- Enable R8 for Android Release builds (generates mapping.txt for deobfuscation) -->
+		<AndroidLinkTool Condition="'$(Configuration)' == 'Release'">r8</AndroidLinkTool>
+		<AndroidCreateProguardMappingFile Condition="'$(Configuration)' == 'Release'">true</AndroidCreateProguardMappingFile>
+
 		<!-- To develop, package, and publish an app to the Microsoft Store, see: https://aka.ms/MauiTemplateUnpackaged -->
 		<WindowsPackageType>None</WindowsPackageType>
 

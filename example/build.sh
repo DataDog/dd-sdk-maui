@@ -35,6 +35,7 @@ cd "$SCRIPT_DIR"
 # Parse command line arguments
 TARGET=""
 RUN_APP=false
+CONFIG="Debug"
 
 show_help() {
     echo "Usage: ./build.sh [OPTIONS]"
@@ -42,13 +43,14 @@ show_help() {
     echo "Options:"
     echo "  --ios          Build for iOS (default if no target specified)"
     echo "  --android      Build for Android"
+    echo "  --release      Build in Release mode (enables AOT, trimming)"
     echo "  --run          Run the app after building"
     echo "  -h, --help     Show this help message"
     echo ""
     echo "Examples:"
-    echo "  ./build.sh --ios --run           # Build and run iOS app"
-    echo "  ./build.sh --android             # Build Android app"
-    echo "  ./build.sh --ios --run           # Build and run iOS app"
+    echo "  ./build.sh --ios --run              # Build and run iOS app (Debug)"
+    echo "  ./build.sh --android --release      # Build Android app in Release mode"
+    echo "  ./build.sh --ios --release --run    # Build and run iOS release app"
 }
 
 # Parse arguments
@@ -60,6 +62,10 @@ while [[ $# -gt 0 ]]; do
             ;;
         --android)
             TARGET="android"
+            shift
+            ;;
+        --release)
+            CONFIG="Release"
             shift
             ;;
         --run)
@@ -105,30 +111,30 @@ log_info "Restore complete"
 # Build and Run
 # ============================================================================
 if [ "$TARGET" = "ios" ]; then
-    log_section "Building iOS App"
+    log_section "Building iOS App ($CONFIG)"
 
     # Ensure actool intermediate directory exists (workaround for .NET 10 preview ACTool bug)
-    mkdir -p obj/Debug/net10.0-ios/iossimulator-arm64/actool
+    mkdir -p "obj/${CONFIG}/net10.0-ios/iossimulator-arm64/actool"
 
     log_info "Building iOS app..."
-    dotnet build -f net10.0-ios --no-restore
+    dotnet build -c "$CONFIG" -f net10.0-ios --no-restore
 
     if [ "$RUN_APP" = true ]; then
         log_info "Launching iOS app on simulator..."
-        dotnet build -t:Run -f net10.0-ios --no-restore
+        dotnet build -t:Run -c "$CONFIG" -f net10.0-ios --no-restore
     fi
 
     log_info "iOS app built successfully"
 
 elif [ "$TARGET" = "android" ]; then
-    log_section "Building Android App"
+    log_section "Building Android App ($CONFIG)"
 
     if [ "$RUN_APP" = true ]; then
         log_info "Building and running Android app on emulator..."
-        dotnet build -t:Run -f net10.0-android -p:AndroidAttachDebugger=false --no-restore
+        dotnet build -t:Run -c "$CONFIG" -f net10.0-android -p:AndroidAttachDebugger=false --no-restore
     else
         log_info "Building Android app..."
-        dotnet build -f net10.0-android --no-restore
+        dotnet build -c "$CONFIG" -f net10.0-android --no-restore
     fi
 
     log_info "Android app built successfully"
