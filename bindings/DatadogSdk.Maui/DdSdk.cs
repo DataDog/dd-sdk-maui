@@ -15,14 +15,14 @@ namespace DatadogSdk.Maui
         internal interface INativeBridge
         {
             bool Initialize(
-                string clientToken, 
-                string environment, 
+                string clientToken,
+                string environment,
                 string? service,
-                string site, 
-                string verbosity, 
+                string site,
+                string verbosity,
                 string trackingConsent,
-                string? batchSize, 
-                string? uploadFrequency, 
+                string? batchSize,
+                string? uploadFrequency,
                 string? batchProcessingLevel,
                 Dictionary<string, object>? additionalConfiguration);
         }
@@ -84,10 +84,10 @@ namespace DatadogSdk.Maui
                     androidConfig[kvp.Key] = kvp.Value switch
                     {
                         string s => new Java.Lang.String(s),
-                        int i => new Java.Lang.Integer(i),
-                        bool b => new Java.Lang.Boolean(b),
-                        long l => new Java.Lang.Long(l),
-                        double d => new Java.Lang.Double(d),
+                        int i => Java.Lang.Integer.ValueOf(i),
+                        bool b => Java.Lang.Boolean.ValueOf(b),
+                        long l => Java.Lang.Long.ValueOf(l),
+                        double d => Java.Lang.Double.ValueOf(d),
                         _ => new Java.Lang.String(kvp.Value?.ToString() ?? "")
                     };
                 }
@@ -107,27 +107,27 @@ namespace DatadogSdk.Maui
                 androidConfig
             );
 #elif IOS
-            NSDictionary? iosConfig = null;
-            if (mergedConfig != null)
-            {
-                iosConfig = NSDictionary.FromObjectsAndKeys(
-                    mergedConfig.Values.Select(v => NSObject.FromObject(v)).ToArray(),
-                    mergedConfig.Keys.Select(k => (NSObject)new NSString(k)).ToArray()
-                );
-            }
+                NSDictionary? iosConfig = null;
+                if (mergedConfig != null)
+                {
+                    iosConfig = NSDictionary.FromObjectsAndKeys(
+                        mergedConfig.Values.Select(v => NSObject.FromObject(v)).ToArray(),
+                        mergedConfig.Keys.Select(k => (NSObject)new NSString(k)).ToArray()
+                    );
+                }
 
-            sdkInitialized = NativeDatadogWrapper.Initialize(
-                config.ClientToken,
-                config.Environment,
-                config.Service,
-                site,
-                verbosity,
-                trackingConsent,
-                batchSize,
-                uploadFrequency,
-                batchProcessingLevel,
-                iosConfig
-            );
+                sdkInitialized = NativeDatadogWrapper.Initialize(
+                    config.ClientToken,
+                    config.Environment,
+                    config.Service,
+                    site,
+                    verbosity,
+                    trackingConsent,
+                    batchSize,
+                    uploadFrequency,
+                    batchProcessingLevel,
+                    iosConfig
+                );
 #endif
             }
 
