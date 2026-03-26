@@ -33,6 +33,30 @@ public partial class MainPage : ContentPage
         DdLogs.Error($"DDLogs - {platform} - LogError");
     }
 
+    private async void OnSetTrackingConsentClicked(object? sender, EventArgs e)
+    {
+        string? choice = await DisplayActionSheet(
+            "Set Tracking Consent",
+            "Cancel",
+            null,
+            "Granted",
+            "Not Granted",
+            "Pending");
+
+        switch (choice)
+        {
+            case "Granted":
+                DdSdk.SetTrackingConsent(TrackingConsent.Granted);
+                break;
+            case "Not Granted":
+                DdSdk.SetTrackingConsent(TrackingConsent.NotGranted);
+                break;
+            case "Pending":
+                DdSdk.SetTrackingConsent(TrackingConsent.Pending);
+                break;
+        }
+    }
+
     private void OnStartTraceClicked(object? sender, EventArgs e)
     {
         var platform = DeviceInfo.Platform.ToString();
