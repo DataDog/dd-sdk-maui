@@ -22,5 +22,9 @@ namespace DatadogSdk.iOS.Binding
             [NullAllowed] string batchProcessingLevel,
             [NullAllowed] NSDictionary additionalConfiguration
         );
+
+        [Static]
+        [Export("setTrackingConsent:")]
+        void SetTrackingConsent(string consent);
     }
 }

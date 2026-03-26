@@ -265,4 +265,28 @@ public class DdSdkConfigurationTests : IDisposable
 
         Assert.Equal("error", bridge.Verbosity);
     }
+
+    // --- SetTrackingConsent --------------------------------------------------
+
+    [Theory]
+    [InlineData(TrackingConsent.Granted, "granted")]
+    [InlineData(TrackingConsent.NotGranted, "not_granted")]
+    [InlineData(TrackingConsent.Pending, "pending")]
+    public void SetTrackingConsent_PassesConvertedValueToNative(TrackingConsent consent, string expected)
+    {
+        DdSdk.SetTrackingConsent(consent);
+
+        Assert.Equal(1, bridge.SetTrackingConsentCallCount);
+        Assert.Equal(expected, bridge.LastSetTrackingConsent);
+    }
+
+    [Fact]
+    public void SetTrackingConsent_CanBeCalledMultipleTimes()
+    {
+        DdSdk.SetTrackingConsent(TrackingConsent.Pending);
+        DdSdk.SetTrackingConsent(TrackingConsent.Granted);
+
+        Assert.Equal(2, bridge.SetTrackingConsentCallCount);
+        Assert.Equal("granted", bridge.LastSetTrackingConsent);
+    }
 }

@@ -4,6 +4,7 @@
 
 ## Current Features
 
+- **Core SDK**: Initialize Datadog with full configuration support, including runtime tracking consent updates.
 - **Logs**: Send logs from your .NET MAUI application to Datadog with support for debug, info, warn, and error levels, plus custom attributes.
 - **Traces**: Manual span tracking with support for nested parent-child relationships, custom context attributes, and configurable endpoints.
 
@@ -78,6 +79,15 @@ DdSdk.Initialize(config);
 - `VersionSuffix` - Version suffix
 - `Verbosity` - SDK logging level
 - `AdditionalConfiguration` - Additional configuration dictionary
+
+### Tracking Consent
+
+You can update the tracking consent at any time after initialization:
+
+```csharp
+// Update tracking consent at runtime (e.g., after user accepts a consent dialog)
+DdSdk.SetTrackingConsent(TrackingConsent.Granted);
+```
 
 ### Logs
 

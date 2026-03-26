@@ -196,4 +196,39 @@ final class DatadogWrapperTests: XCTestCase {
 
         XCTAssertEqual(Datadog.verbosityLevel, .debug)
     }
+
+    // MARK: - Set tracking consent
+
+    func test_setTrackingConsent_granted_callsDatadogWithGranted() {
+        let mockCore = MockDatadogCore()
+        DdSdkNativeWrapper.setDatadogCore(mockCore)
+        defer { DdSdkNativeWrapper.resetDependencies() }
+
+        DdSdkNativeWrapper.setTrackingConsent("granted")
+
+        XCTAssertEqual(mockCore.setTrackingConsentCalls.count, 1)
+        XCTAssertEqual(mockCore.setTrackingConsentCalls[0], .granted)
+    }
+
+    func test_setTrackingConsent_notGranted_callsDatadogWithNotGranted() {
+        let mockCore = MockDatadogCore()
+        DdSdkNativeWrapper.setDatadogCore(mockCore)
+        defer { DdSdkNativeWrapper.resetDependencies() }
+
+        DdSdkNativeWrapper.setTrackingConsent("not_granted")
+
+        XCTAssertEqual(mockCore.setTrackingConsentCalls.count, 1)
+        XCTAssertEqual(mockCore.setTrackingConsentCalls[0], .notGranted)
+    }
+
+    func test_setTrackingConsent_pending_callsDatadogWithPending() {
+        let mockCore = MockDatadogCore()
+        DdSdkNativeWrapper.setDatadogCore(mockCore)
+        defer { DdSdkNativeWrapper.resetDependencies() }
+
+        DdSdkNativeWrapper.setTrackingConsent("pending")
+
+        XCTAssertEqual(mockCore.setTrackingConsentCalls.count, 1)
+        XCTAssertEqual(mockCore.setTrackingConsentCalls[0], .pending)
+    }
 }

@@ -11,6 +11,7 @@ This document provides context and instructions for AI agents working on the Dat
 - ✅ Android native wrapper with multi-project NuGet bindings
 - ✅ Unified meta-package (DatadogSdk.Maui)
 - ✅ Full `DdSdkConfiguration` object (TrackingConsent, BatchSize, BatchProcessingLevel, UploadFrequency, Site, Service, Version/VersionSuffix, Verbosity, AdditionalConfiguration)
+- ✅ Runtime `SetTrackingConsent` API
 - ✅ `DdLogsConfiguration` with `CustomEndpoint` support
 - ✅ `_dd.needsClearTextHttp` internal key support via `AdditionalConfiguration`
 - ✅ Unit tests at all three layers (`check.sh`)
@@ -128,7 +129,7 @@ dd-sdk-maui/
 │       │   ├── UploadFrequency.cs
 │       │   ├── DatadogSite.cs
 │       │   └── SdkVerbosity.cs
-│       ├── DdSdk.cs               # SDK initialization + BuildAdditionalConfiguration
+│       ├── DdSdk.cs               # SDK initialization + SetTrackingConsent + BuildAdditionalConfiguration
 │       ├── DdLogs.cs              # Logging API
 │       └── InternalLog.cs         # SDK-internal console logging
 │

@@ -119,5 +119,12 @@ class DatadogWrapper {
                 false
             }
         }
+
+        // -- Tracking Consent --
+
+        @JvmStatic
+        fun setTrackingConsent(consent: String) {
+            Datadog.setTrackingConsent(mapTrackingConsent(consent))
+        }
     }
 }

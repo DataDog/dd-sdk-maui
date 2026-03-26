@@ -25,6 +25,8 @@ namespace DatadogSdk.Maui
                 string? uploadFrequency,
                 string? batchProcessingLevel,
                 Dictionary<string, object>? additionalConfiguration);
+
+            void SetTrackingConsent(string consent);
         }
 
         internal static DdSdkConfiguration? Configuration { get; private set; }
@@ -133,6 +135,28 @@ namespace DatadogSdk.Maui
 
             InternalLog.Log($"DdSdk.Initialize completed: {sdkInitialized}", SdkVerbosity.INFO);
             return sdkInitialized;
+        }
+
+        public static void SetTrackingConsent(TrackingConsent consent)
+        {
+            var consentString = ConvertTrackingConsent(consent);
+
+            InternalLog.Log(
+                $"Setting tracking consent to {consentString}",
+                SdkVerbosity.DEBUG
+            );
+
+            if (testBridge is not null)
+            {
+                testBridge.SetTrackingConsent(consentString);
+                return;
+            }
+
+#if ANDROID
+            NativeDatadogWrapper.SetTrackingConsent(consentString);
+#elif IOS
+            NativeDatadogWrapper.SetTrackingConsent(consentString);
+#endif
         }
 
         internal static string ConvertSite(DatadogSite site) => site switch

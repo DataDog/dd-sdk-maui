@@ -265,4 +265,40 @@ class DatadogWrapperTest {
             verify { Datadog.initialize(mockContext, any<Configuration>(), TrackingConsent.GRANTED) }
         }
     }
+
+    // -- Set tracking consent --
+
+    private fun withMockedDatadogSetTrackingConsent(block: () -> Unit) {
+        mockkStatic(Datadog::class)
+        every { Datadog.setTrackingConsent(any()) } returns Unit
+        try {
+            block()
+        } finally {
+            unmockkStatic(Datadog::class)
+        }
+    }
+
+    @Test
+    fun setTrackingConsent_granted_callsDatadogWithGranted() {
+        withMockedDatadogSetTrackingConsent {
+            DatadogWrapper.setTrackingConsent("granted")
+            verify { Datadog.setTrackingConsent(TrackingConsent.GRANTED) }
+        }
+    }
+
+    @Test
+    fun setTrackingConsent_notGranted_callsDatadogWithNotGranted() {
+        withMockedDatadogSetTrackingConsent {
+            DatadogWrapper.setTrackingConsent("not_granted")
+            verify { Datadog.setTrackingConsent(TrackingConsent.NOT_GRANTED) }
+        }
+    }
+
+    @Test
+    fun setTrackingConsent_pending_callsDatadogWithPending() {
+        withMockedDatadogSetTrackingConsent {
+            DatadogWrapper.setTrackingConsent("pending")
+            verify { Datadog.setTrackingConsent(TrackingConsent.PENDING) }
+        }
+    }
 }
