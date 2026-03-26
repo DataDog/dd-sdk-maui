@@ -1,4 +1,4 @@
-﻿using DatadogSdk.Maui;
+using DatadogSdk.Maui;
 using DatadogSdk.Maui.Configuration;
 using Microsoft.Extensions.Logging;
 

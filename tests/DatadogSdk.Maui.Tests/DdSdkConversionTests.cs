@@ -28,7 +28,7 @@ public class DdSdkConversionTests
     {
         Assert.Equal(expected, DdSdk.ConvertTrackingConsent(consent));
     }
-  
+
     // --- BuildAdditionalConfiguration ---
 
     [Fact]

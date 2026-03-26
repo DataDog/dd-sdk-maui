@@ -26,7 +26,7 @@ build:sdk:
     expire_in: 1 day
 
 # ============================================================================
-# VERIFY: Validate build artifacts (NuGet structure, ProGuard rules)
+# VERIFY: Validate build artifacts and linting (NuGet structure, ProGuard rules)
 # ============================================================================
 verify:artifacts:
   stage: verify
@@ -34,6 +34,13 @@ verify:artifacts:
   timeout: 5m
   script:
     - ./verify-artifacts.sh
+
+verify:lint:
+  stage: verify
+  needs: [build:sdk]
+  timeout: 5m
+  script:
+    - dotnet format --verify-no-changes
 
 # ============================================================================
 # TESTS: Run unit tests for each platform independently
