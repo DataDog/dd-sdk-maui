@@ -7,6 +7,7 @@
 - **Core SDK**: Initialize Datadog with full configuration support, including runtime tracking consent updates.
 - **Logs**: Send logs from your .NET MAUI application to Datadog with support for debug, info, warn, and error levels, plus custom attributes.
 - **Traces**: Manual span tracking with support for nested parent-child relationships, custom context attributes, and configurable endpoints.
+- **RUM (Real User Monitoring)**: Enable RUM to track user sessions, views, actions, and crashes. Configure session sampling, vitals monitoring, native view/interaction tracking, crash reporting, and first-party hosts for distributed tracing.
 
 ## Setup
 
@@ -144,6 +145,27 @@ DdTrace.FinishSpan(childSpanId, new Dictionary<string, string>(),
     DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
 DdTrace.FinishSpan(spanId, new Dictionary<string, string> { { "status", "200" } },
     DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
+```
+
+### RUM
+
+```csharp
+// Enable RUM with configuration
+DdRum.Enable(new DdRumConfiguration
+{
+    ApplicationId = "your-rum-application-id",
+    SessionSampleRate = 100.0,
+    TrackFrustrations = true,
+    TrackBackgroundEvents = true,
+    NativeCrashReportEnabled = true,
+    NativeViewTracking = true,
+    NativeInteractionTracking = true,
+    VitalsUpdateFrequency = VitalsUpdateFrequency.Average,
+    FirstPartyHosts = new List<DdFirstPartyHost>
+    {
+        new() { Match = "api.example.com", HeaderTypes = new List<TracingHeaderType> { TracingHeaderType.Datadog, TracingHeaderType.TraceContext } }
+    }
+});
 ```
 
 ## Troubleshooting

@@ -129,18 +129,30 @@ dd-sdk-maui/
 │   ├── ios/
 │   │   ├── build.sh           # iOS-specific build script
 │   │   └── DatadogWrapper/    # Swift Package Manager project
+│   │   └── Sources/DatadogWrapper/
+│   │       ├── DatadogWrapper.swift  # SDK initialization
+│   │       ├── DdLogs.swift          # Logging API
+│   │       └── DdRum.swift           # RUM API
 │   └── android/
 │       ├── gradlew            # Gradle wrapper
 │       └── datadogwrapper/    # Android library module
+│           └── src/main/kotlin/com/datadog/wrapper/
+│               ├── DatadogWrapper.kt  # SDK initialization
+│               ├── DdLogs.kt          # Logging API
+│               └── DdRum.kt           # RUM API
 │
 ├── bindings/                   # C# binding projects
 │   ├── DatadogSdk.iOS.Binding/
-│   ├── DatadogSdk.Android.*/  # 5 Android binding projects
+│   ├── DatadogSdk.Android.*/  # 4+ Android binding projects
+│   │   └── DatadogSdk.Android.Logs/  # Android Logs AAR binding
+│   │   └── DatadogSdk.Android.Trace/  # Android Trace AAR binding
+│   │   └── DatadogSdk.Android.Rum/  # Android RUM AAR binding
 │   └── DatadogSdk.Maui/       # C# intermediary layer + meta-package
 │       ├── DdSdkConfiguration.cs  # Configuration object
 │       ├── DdSdk.cs               # SDK init (unified API)
 │       ├── DdLogs.cs              # Logging (unified API)
 │       └── DdTrace.cs             # Tracing (unified API)
+│       └── DdRum.cs               # RUM (unified API)
 │
 ├── example/                    # Test/demo application
 │   ├── build.sh               # Example app build script
@@ -486,6 +498,8 @@ public static void Critical(string message)
 ```
 
 This is the method consumers will call. The `#if ANDROID / #elif IOS` directives are only needed when the native APIs differ between platforms (e.g. different parameter types).
+
+> **RUM module pattern**: The RUM module (`DdRum.cs`) uses a **dictionary bridge pattern** rather than individual parameters. Instead of passing each configuration field as a separate argument to the native layer, the entire `DdRumConfiguration` object is serialized into a `Dictionary<string, object>` (or equivalent native map) and passed as a single argument. This keeps the native bridge stable as new configuration fields are added. See `DdRum.cs` for a worked example of this pattern.
 
 #### 4. Rebuild and Test
 ```bash

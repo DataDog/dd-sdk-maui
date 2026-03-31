@@ -123,8 +123,35 @@ fi
 if [ "$RUN_IOS" = true ]; then
     log_section "iOS Tests (XCTest)"
 
-    log_info "Running swift test..."
-    if (cd "$SCRIPT_DIR/native-wrappers/ios/DatadogWrapper" && xcrun swift test); then
+    log_info "Running xcodebuild test (iOS Simulator)..."
+    # DatadogRUM requires UIKit, so swift test (macOS) won't work.
+    # We must use xcodebuild with an iOS Simulator destination.
+    # Pick the first available iPhone simulator by UDID.
+    SIM_UDID=$(xcrun simctl list devices available -j | python3 -c "
+import json, sys
+data = json.load(sys.stdin)
+# Prefer an already-booted iPhone, otherwise pick the newest available one
+best = None
+for runtime, devices in sorted(data['devices'].items(), reverse=True):
+    if 'iOS' not in runtime:
+        continue
+    for d in devices:
+        if 'iPhone' in d['name'] and d['isAvailable']:
+            if d.get('state') == 'Booted':
+                print(d['udid']); sys.exit(0)
+            if best is None:
+                best = d['udid']
+if best:
+    print(best)
+" 2>/dev/null)
+
+    if [ -z "$SIM_UDID" ]; then
+        log_error "No available iPhone simulator found"
+        IOS_RESULT=1
+    elif (cd "$SCRIPT_DIR/native-wrappers/ios/DatadogWrapper" && xcodebuild test \
+        -scheme DatadogWrapper \
+        -destination "platform=iOS Simulator,id=$SIM_UDID" \
+        -quiet); then
         IOS_RESULT=0
         log_info "iOS tests passed"
     else

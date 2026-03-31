@@ -11,6 +11,8 @@ public partial class MainPage : ContentPage
     public MainPage()
     {
         InitializeComponent();
+
+        // Enable Logs
         var logsConfiguration = new DdLogsConfiguration
         {
             //CustomEndpoint = "http://custom.endpoint"
@@ -22,6 +24,31 @@ public partial class MainPage : ContentPage
             //CustomEndpoint = "http://custom.endpoint"
         };
         DdTrace.Enable(traceConfiguration);
+
+        // Enable RUM
+        var config = AppSettings.Load();
+        var applicationId = config["Datadog"]!["ApplicationId"]!.ToString();
+        var rumConfiguration = new DdRumConfiguration
+        {
+            ApplicationId = applicationId,
+            SessionSampleRate = 100.0,
+            TelemetrySampleRate = 100.0,
+            ResourceTraceSampleRate = 100.0,
+            TrackFrustrations = true,
+            TrackBackgroundEvents = true,
+            NativeCrashReportEnabled = true,
+            NativeViewTracking = true,
+            NativeInteractionTracking = true,
+            TrackMemoryWarnings = true,
+            NativeLongTaskThresholdMs = 200.0,
+            VitalsUpdateFrequency = VitalsUpdateFrequency.Average,
+            FirstPartyHosts = new List<DdFirstPartyHost>
+            {
+                new() { Match = "datadoghq.com", HeaderTypes = new List<TracingHeaderType> { TracingHeaderType.Datadog, TracingHeaderType.TraceContext } }
+            }
+        };
+
+        DdRum.Enable(rumConfiguration);
     }
 
     private void OnSendLogsClicked(object? sender, EventArgs e)
@@ -95,5 +122,17 @@ public partial class MainPage : ContentPage
         TraceStatusLabel.Text = _activeSpans.Count > 0
             ? $"Active spans: {string.Join(", ", _activeSpans.Select(s => $"#{s.id}"))}"
             : "No active spans";
+    }
+    private void OnNativeCrashClicked(object? sender, EventArgs e) =>
+        NativeCrashHelper.TriggerNativeCrash();
+
+    private void OnManagedCrashClicked(object? sender, EventArgs e) =>
+        throw new InvalidOperationException("C# crash example");
+
+    private void OnNdkCrashClicked(object? sender, EventArgs e)
+    {
+#if ANDROID
+        NativeCrashHelper.TriggerNdkCrash();
+#endif
     }
 }
