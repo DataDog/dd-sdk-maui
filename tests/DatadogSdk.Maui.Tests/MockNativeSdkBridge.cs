@@ -14,6 +14,8 @@ internal class MockNativeSdkBridge : DdSdk.INativeBridge
     public string? BatchProcessingLevel { get; private set; }
     public Dictionary<string, object>? AdditionalConfiguration { get; private set; }
     public bool ReturnValue { get; set; } = true;
+    public int SetTrackingConsentCallCount { get; private set; }
+    public string? LastSetTrackingConsent { get; private set; }
 
     public bool Initialize(
         string clientToken, string environment, string? service,
@@ -33,5 +35,11 @@ internal class MockNativeSdkBridge : DdSdk.INativeBridge
         BatchProcessingLevel = batchProcessingLevel;
         AdditionalConfiguration = additionalConfiguration;
         return ReturnValue;
+    }
+
+    public void SetTrackingConsent(string consent)
+    {
+        SetTrackingConsentCallCount++;
+        LastSetTrackingConsent = consent;
     }
 }

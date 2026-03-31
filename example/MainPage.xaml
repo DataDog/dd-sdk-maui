@@ -26,6 +26,13 @@
                 HorizontalOptions="Fill" />
 
             <Button
+                x:Name="TrackingConsentBtn"
+                Text="Set Tracking Consent"
+                SemanticProperties.Hint="Change the tracking consent"
+                Clicked="OnSetTrackingConsentClicked"
+                HorizontalOptions="Fill" />
+
+            <Button
                 x:Name="StartTraceBtn"
                 Text="Start Span"
                 SemanticProperties.Hint="Start a new trace span"
@@ -44,6 +51,7 @@
                 Text="No active spans"
                 HorizontalOptions="Center"
                 FontSize="14" />
+
         </VerticalStackLayout>
     </ScrollView>
 

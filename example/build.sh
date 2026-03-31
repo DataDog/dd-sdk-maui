@@ -113,6 +113,12 @@ log_info "Restore complete"
 if [ "$TARGET" = "ios" ]; then
     log_section "Building iOS App ($CONFIG)"
 
+    # Auto-detect Xcode version to pick the matching iOS SDK pack
+    XCODE_VERSION=$(xcodebuild -version 2>/dev/null | head -1 | sed 's/Xcode //')
+    XCODE_MAJOR_MINOR=$(echo "$XCODE_VERSION" | cut -d. -f1,2)
+    XCODE_ARG="-p:iOSTargetPlatformVersion=$XCODE_MAJOR_MINOR"
+    log_info "Detected Xcode $XCODE_VERSION → targeting iOS platform version $XCODE_MAJOR_MINOR"
+
     # Auto-detect an available iOS simulator (prefer iPhone, latest runtime)
     SIMULATOR_UDID=$(xcrun simctl list devices available -j \
         | python3 -c "
@@ -143,11 +149,11 @@ if candidates:
     mkdir -p "obj/${CONFIG}/net10.0-ios/iossimulator-arm64/actool"
 
     log_info "Building iOS app..."
-    dotnet build -c "$CONFIG" -f net10.0-ios --no-restore $DEVICE_ARG
+    dotnet build -c "$CONFIG" -f net10.0-ios --no-restore $DEVICE_ARG $XCODE_ARG
 
     if [ "$RUN_APP" = true ]; then
         log_info "Launching iOS app on simulator..."
-        dotnet build -t:Run -c "$CONFIG" -f net10.0-ios --no-restore $DEVICE_ARG
+        dotnet build -t:Run -c "$CONFIG" -f net10.0-ios --no-restore $DEVICE_ARG $XCODE_ARG
     fi
 
     log_info "iOS app built successfully"

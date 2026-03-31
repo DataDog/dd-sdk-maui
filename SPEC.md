@@ -560,7 +560,7 @@ DatadogSdk.Maui/
 │   ├── UploadFrequency.cs      # Upload frequency enum
 │   ├── DatadogSite.cs          # Datadog site enum
 │   └── SdkVerbosity.cs         # SDK verbosity enum
-├── DdSdk.cs                    # SDK initialization (wraps native DatadogWrapper)
+├── DdSdk.cs                    # SDK initialization + SetTrackingConsent (wraps native DatadogWrapper)
 ├── DdLogs.cs                   # Logging API (wraps native DdLogs)
 ├── DdTrace.cs                  # Tracing API (wraps native DdTrace)
 └── InternalLog.cs              # SDK-internal console logging
@@ -902,6 +902,15 @@ DdSdk.Initialize(new DdSdkConfiguration
     BatchSize = BatchSize.Medium,               // optional
     UploadFrequency = UploadFrequency.Average   // optional
 });
+```
+
+### Tracking Consent
+
+```csharp
+// Update tracking consent at runtime (e.g., after user accepts a consent dialog)
+DdSdk.SetTrackingConsent(TrackingConsent.Granted);
+DdSdk.SetTrackingConsent(TrackingConsent.NotGranted);
+DdSdk.SetTrackingConsent(TrackingConsent.Pending);
 ```
 
 ### Logging
