@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<metadata>
+  <!-- Auto-generated implementor fails: method signatures use Kotlin-internal types not in public API -->
+  <remove-node path="/api/package[@name='com.datadog.android.trace']/interface[@name='NetworkTracedRequestListener']" />
+</metadata>

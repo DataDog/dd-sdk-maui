@@ -37,6 +37,7 @@ dependencies {
     // Dependencies will be needed at runtime but won't be in the binding API
     implementation("com.datadoghq:dd-sdk-android-core:3.8.0")
     implementation("com.datadoghq:dd-sdk-android-logs:3.8.0")
+    implementation("com.datadoghq:dd-sdk-android-trace:3.8.0")
 
     // Test dependencies
     testImplementation("junit:junit:4.13.2")

@@ -4,9 +4,9 @@
 
 This document provides a comprehensive technical specification for the Datadog SDK .NET MAUI bindings. It describes the architecture, implementation details, build process, and design decisions.
 
-**Version**: 0.0.1 (Phase 2 Complete)
+**Version**: See `versions.properties` for current SDK and native SDK versions
 **Target Frameworks**: net10.0-ios, net10.0-android
-**Status**: Core SDK configuration complete, Logs module functional
+**Status**: Core SDK configuration complete, Logs and Trace modules functional
 
 ## Project Goals
 
@@ -45,7 +45,8 @@ This document provides a comprehensive technical specification for the Datadog S
 │     C# Intermediary Layer (DatadogSdk.Maui)     │
 │     bindings/DatadogSdk.Maui/...csproj          │
 │                                                 │
-│  - Unified cross-platform API (DdSdk, DdLogs)   │
+│  - Unified cross-platform API (DdSdk, DdLogs,    │
+│    DdTrace)                                      │
 │  - Internal debug logging (Console.WriteLine)   │
 │  - Platform branching via #if ANDROID / IOS     │
 │  - Type marshaling (e.g. Dict → NSDictionary)   │
@@ -71,6 +72,7 @@ This document provides a comprehensive technical specification for the Datadog S
 │                      │  │                      │
 │  - DatadogWrapper    │  │  - DatadogWrapper    │
 │  - DdLogs            │  │  - DdLogs            │
+│  - DdTrace           │  │  - DdTrace           │
 └──────────┬───────────┘  └──────────┬───────────┘
            │                         │
            │ Imports                 │ Imports
@@ -118,7 +120,7 @@ This document provides a comprehensive technical specification for the Datadog S
 **Technology Stack**:
 - Swift 5.9+
 - Swift Package Manager
-- dd-sdk-ios 3.5.0+ (Swift Package dependency)
+- dd-sdk-ios (Swift Package dependency, version defined in `versions.properties`)
 
 **Key Files**:
 ```
@@ -126,7 +128,8 @@ DatadogWrapper/
 ├── Package.swift                    # SPM manifest
 └── Sources/DatadogWrapper/
     ├── DatadogWrapper.swift         # SDK initialization
-    └── DdLogs.swift            # Logging API
+    ├── DdLogs.swift                 # Logging API
+    └── DdTrace.swift                # Tracing API
 ```
 
 **Package.swift**:
@@ -138,14 +141,15 @@ let package = Package(
         .library(name: "DatadogWrapper", type: .dynamic, targets: ["DatadogWrapper"])
     ],
     dependencies: [
-        .package(url: "https://github.com/DataDog/dd-sdk-ios.git", from: "3.5.0")
+        .package(url: "https://github.com/DataDog/dd-sdk-ios.git", from: "<IOS_NATIVE_VERSION>")
     ],
     targets: [
         .target(
             name: "DatadogWrapper",
             dependencies: [
                 .product(name: "DatadogCore", package: "dd-sdk-ios"),
-                .product(name: "DatadogLogs", package: "dd-sdk-ios")
+                .product(name: "DatadogLogs", package: "dd-sdk-ios"),
+                .product(name: "DatadogTrace", package: "dd-sdk-ios")
             ],
             path: "Sources/DatadogWrapper"
         )
@@ -340,7 +344,7 @@ Pattern: First parameter name becomes method name, subsequent become part of sel
 **Technology Stack**:
 - Kotlin 1.9+
 - Gradle 8.10+
-- dd-sdk-android 3.5.0 (Maven dependencies)
+- dd-sdk-android (Maven dependencies, version defined in `versions.properties`)
 
 **Key Files**:
 ```
@@ -348,7 +352,8 @@ datadogwrapper/
 ├── build.gradle.kts                 # Module configuration
 └── src/main/kotlin/com/datadog/wrapper/
     ├── DatadogWrapper.kt            # SDK initialization
-    └── DdLogs.kt               # Logging API
+    ├── DdLogs.kt                    # Logging API
+    └── DdTrace.kt                   # Tracing API
 ```
 
 **build.gradle.kts**:
@@ -360,11 +365,10 @@ plugins {
 
 android {
     namespace = "com.datadog.wrapper"
-    compileSdk = 36
+    compileSdk = 34
 
     defaultConfig {
         minSdk = 23
-        targetSdk = 36
     }
 
     buildTypes {
@@ -376,8 +380,9 @@ android {
 }
 
 dependencies {
-    implementation("com.datadoghq:dd-sdk-android-core:3.5.0")
-    implementation("com.datadoghq:dd-sdk-android-logs:3.5.0")
+    implementation("com.datadoghq:dd-sdk-android-core:<ANDROID_NATIVE_VERSION>")
+    implementation("com.datadoghq:dd-sdk-android-logs:<ANDROID_NATIVE_VERSION>")
+    implementation("com.datadoghq:dd-sdk-android-trace:<ANDROID_NATIVE_VERSION>")
 }
 ```
 
@@ -456,38 +461,38 @@ datadogwrapper-release.aar (ZIP archive)
 **Solution**: Multi-project approach
 
 **Projects** (in dependency order):
-1. **DatadogSdk.Android.Internal** - Binds `dd-sdk-android-internal-3.5.0.aar`
-2. **DatadogSdk.Android.Core** - Binds `dd-sdk-android-core-3.5.0.aar`
-3. **DatadogSdk.Android.Logs** - Binds `dd-sdk-android-logs-3.5.0.aar`
-4. **DatadogSdk.Android.Binding** - Binds `datadogwrapper-release.aar`
+1. **DatadogSdk.Android.Internal** - Binds `dd-sdk-android-internal` AAR
+2. **DatadogSdk.Android.Core** - Binds `dd-sdk-android-core` AAR
+3. **DatadogSdk.Android.Logs** - Binds `dd-sdk-android-logs` AAR
+4. **DatadogSdk.Android.Trace** - Binds `dd-sdk-android-trace` AAR (with `trace-api`, `trace-internal`, `jctools-core`, `re2j` as `Bind="false"` runtime deps)
+5. **DatadogSdk.Android.Binding** - Binds `datadogwrapper-release.aar`
 
 **Key Pattern**: Core SDK bindings are **PackageReferences**, not ProjectReferences.
 
 **DatadogSdk.Android.Internal.csproj**:
 ```xml
 <ItemGroup>
-  <EmbeddedJar Include="Jars\dd-sdk-android-internal-3.5.0.aar" />
+  <AndroidMavenLibrary Include="com.datadoghq:dd-sdk-android-internal" Version="<ANDROID_NATIVE_VERSION>" />
 </ItemGroup>
 ```
 
 **DatadogSdk.Android.Core.csproj**:
 ```xml
 <ItemGroup>
-  <PackageReference Include="DatadogSdk.Android.Internal" Version="0.0.1" />
-  <EmbeddedJar Include="Jars\dd-sdk-android-core-3.5.0.aar" />
+  <ProjectReference Include="..\DatadogSdk.Android.Internal\DatadogSdk.Android.Internal.csproj" />
+  <AndroidMavenLibrary Include="com.datadoghq:dd-sdk-android-core" Version="<ANDROID_NATIVE_VERSION>" />
 </ItemGroup>
 ```
 
 **DatadogSdk.Android.Binding.csproj**:
 ```xml
 <ItemGroup>
-  <!-- Core SDK as NuGet packages -->
-  <PackageReference Include="DatadogSdk.Android.Internal" Version="0.0.1" />
-  <PackageReference Include="DatadogSdk.Android.Core" Version="0.0.1" />
-  <PackageReference Include="DatadogSdk.Android.Logs" Version="0.0.1" />
+  <!-- Binding references -->
+  <PackageReference Include="DatadogSdk.Android.Logs" Version="<SDK_VERSION>" />
+  <PackageReference Include="DatadogSdk.Android.Trace" Version="<SDK_VERSION>" />
 
   <!-- Wrapper AAR -->
-  <EmbeddedJar Include="Jars\datadogwrapper-release.aar" />
+  <AndroidLibrary Include="Jars\datadogwrapper-release.aar" />
 </ItemGroup>
 ```
 
@@ -548,6 +553,7 @@ DatadogSdk.Maui/
 │   ├── DdSdkConfiguration.cs   # Main configuration class
 │   ├── FileBasedConfiguration.cs # JSON config parser (ParseJsonConfig)
 │   ├── DdLogsConfiguration.cs  # Logs module configuration
+│   ├── DdTraceConfiguration.cs # Trace module configuration
 │   ├── TrackingConsent.cs      # Tracking consent enum
 │   ├── BatchSize.cs            # Batch size enum
 │   ├── BatchProcessingLevel.cs # Processing level enum
@@ -556,6 +562,7 @@ DatadogSdk.Maui/
 │   └── SdkVerbosity.cs         # SDK verbosity enum
 ├── DdSdk.cs                    # SDK initialization (wraps native DatadogWrapper)
 ├── DdLogs.cs                   # Logging API (wraps native DdLogs)
+├── DdTrace.cs                  # Tracing API (wraps native DdTrace)
 └── InternalLog.cs              # SDK-internal console logging
 ```
 
@@ -723,6 +730,40 @@ public static void LogWithAttributes(string level, string message, Dictionary<st
 
 `LogWithAttributes` handles type marshaling: on Android it passes `IDictionary<string, string>` directly; on iOS it converts to `NSDictionary<NSString, NSString>`.
 
+### DdTraceConfiguration
+
+Configuration object for the Trace module. Located in `DatadogSdk.Maui.Configuration` namespace:
+
+```csharp
+namespace DatadogSdk.Maui.Configuration
+{
+    public class DdTraceConfiguration
+    {
+        public string? CustomEndpoint { get; set; }
+    }
+}
+```
+
+### DdTrace
+
+Wraps native `DdTrace` methods for manual span tracking with parent-child nesting:
+
+```csharp
+public static void Enable(DdTraceConfiguration? configuration = null);
+public static string StartSpan(string operation, Dictionary<string, string> context, long timestampMs);
+public static void FinishSpan(string spanId, Dictionary<string, string> context, long timestampMs);
+```
+
+`Enable()` accepts an optional `DdTraceConfiguration` to customize the trace upload endpoint.
+
+`StartSpan` creates a new span and returns a unique span ID. If another span is currently active, the new span is automatically nested as a child. On iOS this uses `childOf` + `setActive()`; on Android it uses `tracer.activateSpan()` with scope tracking.
+
+`FinishSpan` finishes the span identified by `spanId`, sets any additional context tags, and restores the previous active span for continued nesting.
+
+Both `StartSpan` and `FinishSpan` are thread-safe (iOS: `objc_sync_enter`/`objc_sync_exit`, Android: `synchronized` blocks).
+
+Type marshaling: on Android, `context` passes as `Map<String, String>` directly; on iOS it converts to `NSDictionary<NSString, NSString>`.
+
 ### Project Configuration
 
 ```xml
@@ -736,12 +777,12 @@ public static void LogWithAttributes(string level, string message, Dictionary<st
 
   <!-- iOS binding -->
   <ItemGroup Condition="$(TargetFramework.Contains('-ios'))">
-    <PackageReference Include="DatadogSdk.iOS.Binding" Version="0.0.1" />
+    <PackageReference Include="DatadogSdk.iOS.Binding" Version="<SDK_VERSION>" />
   </ItemGroup>
 
   <!-- Android binding + runtime dependencies -->
   <ItemGroup Condition="$(TargetFramework.Contains('-android'))">
-    <PackageReference Include="DatadogSdk.Android.Binding" Version="0.0.1" />
+    <PackageReference Include="DatadogSdk.Android.Binding" Version="<SDK_VERSION>" />
     <!-- Kotlin, OkHttp, Gson, AndroidX dependencies -->
   </ItemGroup>
 </Project>
@@ -751,7 +792,7 @@ public static void LogWithAttributes(string level, string message, Dictionary<st
 ```xml
 <!-- Consumer app only needs one package -->
 <ItemGroup>
-  <PackageReference Include="DatadogSdk.Maui" Version="0.0.1" />
+  <PackageReference Include="DatadogSdk.Maui" Version="<SDK_VERSION>" />
 </ItemGroup>
 ```
 
@@ -776,6 +817,7 @@ public static void LogWithAttributes(string level, string message, Dictionary<st
    ├─> DatadogSdk.Android.Internal → NuGet
    ├─> DatadogSdk.Android.Core → NuGet
    ├─> DatadogSdk.Android.Logs → NuGet
+   ├─> DatadogSdk.Android.Trace → NuGet
    └─> DatadogSdk.Android.Binding → NuGet
 
 5. Meta-package
@@ -891,6 +933,35 @@ DdLogs.LogWithAttributes("info", "Order placed", new Dictionary<string, string>
 });
 ```
 
+### Tracing
+
+```csharp
+using DatadogSdk.Maui;
+using DatadogSdk.Maui.Configuration;
+
+// Enable trace module
+DdTrace.Enable(new DdTraceConfiguration
+{
+    CustomEndpoint = "https://traces-proxy.example.com/v1/input"  // optional
+});
+
+// Start a span
+var spanId = DdTrace.StartSpan("operation.name",
+    new Dictionary<string, string> { { "key", "value" } },
+    DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
+
+// Start a nested child span (automatically linked)
+var childId = DdTrace.StartSpan("child.operation",
+    new Dictionary<string, string>(),
+    DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
+
+// Finish spans in LIFO order
+DdTrace.FinishSpan(childId, new Dictionary<string, string>(),
+    DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
+DdTrace.FinishSpan(spanId, new Dictionary<string, string> { { "status", "ok" } },
+    DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
+```
+
 When `SdkVerbosity.DEBUG` is set, all calls are logged to the console and the native SDK uses verbose logging:
 ```
 [Datadog] DdSdk.Initialize called with service=my-app, env=prod, site=us1
@@ -904,8 +975,8 @@ When `SdkVerbosity.DEBUG` is set, all calls are logged to the console and the na
 
 ### Current Limitations
 
-1. **Logs only**
-   - RUM, Traces, Crash Reporting not yet implemented
+1. **Logs and Traces only**
+   - RUM, Crash Reporting not yet implemented
    - Planned for Phases 3-6
 
 4. **No session management**
@@ -955,10 +1026,14 @@ When `SdkVerbosity.DEBUG` is set, all calls are logged to the console and the na
 - Crash reporting integration
 - Custom error reporting
 
-### Phase 5: Tracing & APM (Planned)
-- Distributed tracing
-- Network request tracing
-- Custom span creation
+### Phase 5: Tracing & APM (Complete — Manual Spans)
+- ✅ Manual span creation with `DdTrace.StartSpan` / `FinishSpan`
+- ✅ Parent-child span nesting (iOS: `childOf` + `setActive()`, Android: `activateSpan` + scope)
+- ✅ Thread-safe span state management
+- ✅ Custom endpoint configuration
+- ✅ Unit tests at all three layers
+- Distributed tracing (planned)
+- Network request tracing (planned)
 
 ### Phase 6: Advanced Features (Planned)
 - Global context attributes
@@ -987,9 +1062,9 @@ Run with `check.sh`:
 
 | Layer | Framework | Key test files |
 |-------|-----------|---------------|
-| iOS native | XCTest | `DatadogWrapperTests.swift` (mapping helpers + SDK init) |
-| Android native | JUnit + MockK | `DatadogWrapperTest.kt` (mapping helpers + SDK init via mockkStatic) |
-| C# intermediary | xUnit | `DdSdkConfigurationTests.cs`, `FileBasedConfigurationTests.cs`, `DdSdkConversionTests.cs`, `InternalLogTests.cs` |
+| iOS native | XCTest | `DatadogWrapperTests.swift`, `DdLogsTests.swift`, `DdTraceTests.swift` |
+| Android native | JUnit + MockK | `DatadogWrapperTest.kt`, `DdLogsTest.kt`, `DdTraceTest.kt` |
+| C# intermediary | xUnit | `DdSdkConfigurationTests.cs`, `FileBasedConfigurationTests.cs`, `DdSdkConversionTests.cs`, `InternalLogTests.cs`, `DdLogsConfigurationTests.cs`, `DdTraceConfigurationTests.cs` |
 
 **C# test approach**: `DdSdk.INativeBridge` is a nested interface with an `internal static testBridge` field. `MockNativeSdkBridge` implements it and captures all parameters, enabling assertions without platform compilation.
 
@@ -1029,7 +1104,7 @@ See `CONTRIBUTING.md` for:
 
 ## Versioning
 
-**Current**: 0.0.1
+**Current**: Defined in `versions.properties` (`SDK_VERSION`)
 
 **Strategy**: Semantic Versioning (SemVer)
 - Major: Breaking API changes

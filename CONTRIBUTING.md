@@ -135,11 +135,12 @@ dd-sdk-maui/
 │
 ├── bindings/                   # C# binding projects
 │   ├── DatadogSdk.iOS.Binding/
-│   ├── DatadogSdk.Android.*/  # 4 Android binding projects
+│   ├── DatadogSdk.Android.*/  # 5 Android binding projects
 │   └── DatadogSdk.Maui/       # C# intermediary layer + meta-package
 │       ├── DdSdkConfiguration.cs  # Configuration object
 │       ├── DdSdk.cs               # SDK init (unified API)
-│       └── DdLogs.cs              # Logging (unified API)
+│       ├── DdLogs.cs              # Logging (unified API)
+│       └── DdTrace.cs             # Tracing (unified API)
 │
 ├── example/                    # Test/demo application
 │   ├── build.sh               # Example app build script
@@ -200,7 +201,8 @@ Builds in dependency order:
 1. **DatadogSdk.Android.Internal** - Internal APIs binding
 2. **DatadogSdk.Android.Core** - Core SDK binding (depends on Internal)
 3. **DatadogSdk.Android.Logs** - Logs module binding (depends on Core)
-4. **DatadogSdk.Android.Binding** - Wrapper binding (depends on all above)
+4. **DatadogSdk.Android.Trace** - Trace module binding (depends on Core)
+5. **DatadogSdk.Android.Binding** - Wrapper binding (depends on all above)
 
 Each project:
 ```bash
@@ -393,6 +395,8 @@ dotnet test tests/DatadogSdk.Maui.Tests --filter "FullyQualifiedName~DdSdkConfig
 - `DdSdkConversionTests` - Enum-to-string conversions (site, consent, additional config)
 - `FileBasedConfigurationTests` - JSON config parsing, validation, and error handling
 - `InternalLogTests` - SDK logging with verbosity filtering
+- `DdLogsConfigurationTests` - Logs module configuration
+- `DdTraceConfigurationTests` - Trace module configuration
 
 ### Native Wrapper Tests
 

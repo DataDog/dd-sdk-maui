@@ -22,7 +22,8 @@ let package = Package(
             name: "DatadogWrapper",
             dependencies: [
                 .product(name: "DatadogCore", package: "dd-sdk-ios"),
-                .product(name: "DatadogLogs", package: "dd-sdk-ios")
+                .product(name: "DatadogLogs", package: "dd-sdk-ios"),
+                .product(name: "DatadogTrace", package: "dd-sdk-ios")
             ],
             path: "Sources/DatadogWrapper"
         ),

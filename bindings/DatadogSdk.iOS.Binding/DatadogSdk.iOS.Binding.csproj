@@ -11,6 +11,7 @@
   <ItemGroup>
     <ObjcBindingApiDefinition Include="ApiDefinition.Core.cs" />
     <ObjcBindingApiDefinition Include="ApiDefinition.Logs.cs" />
+    <ObjcBindingApiDefinition Include="ApiDefinition.Trace.cs" />
     <ObjcBindingCoreSource Include="StructsAndEnums.cs" />
   </ItemGroup>
 

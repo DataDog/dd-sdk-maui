@@ -5,6 +5,7 @@
 ## Current Features
 
 - **Logs**: Send logs from your .NET MAUI application to Datadog with support for debug, info, warn, and error levels, plus custom attributes.
+- **Traces**: Manual span tracking with support for nested parent-child relationships, custom context attributes, and configurable endpoints.
 
 ## Setup
 
@@ -97,6 +98,42 @@ DdLogs.Debug("Debug message");
 DdLogs.Info("Info message");
 DdLogs.Warn("Warning message");
 DdLogs.Error("Error message");
+```
+
+### Traces
+
+```csharp
+using DatadogSdk.Maui;
+using DatadogSdk.Maui.Configuration;
+
+// Enable with default Datadog endpoint
+DdTrace.Enable();
+
+// Or with a custom endpoint
+DdTrace.Enable(new DdTraceConfiguration
+{
+    CustomEndpoint = "https://traces-proxy.example.com/v1/input"
+});
+
+// Start a span (returns a span ID for later use)
+var spanId = DdTrace.StartSpan(
+    "network.request",
+    new Dictionary<string, string> { { "url", "/api/data" } },
+    DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
+);
+
+// Nested spans are automatically linked as parent-child
+var childSpanId = DdTrace.StartSpan(
+    "json.parse",
+    new Dictionary<string, string>(),
+    DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
+);
+
+// Finish spans (LIFO order for proper nesting)
+DdTrace.FinishSpan(childSpanId, new Dictionary<string, string>(),
+    DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
+DdTrace.FinishSpan(spanId, new Dictionary<string, string> { { "status", "200" } },
+    DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
 ```
 
 ## Troubleshooting

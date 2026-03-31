@@ -20,6 +20,7 @@
 #   bindings/DatadogSdk.Android.Internal/DatadogSdk.Android.Internal.csproj
 #   bindings/DatadogSdk.Android.Core/DatadogSdk.Android.Core.csproj
 #   bindings/DatadogSdk.Android.Logs/DatadogSdk.Android.Logs.csproj
+#   bindings/DatadogSdk.Android.Trace/DatadogSdk.Android.Trace.csproj
 
 set -e
 
@@ -178,7 +179,8 @@ if [ -n "$NEW_ANDROID" ]; then
         for rel_path in \
             "bindings/DatadogSdk.Android.Internal/DatadogSdk.Android.Internal.csproj" \
             "bindings/DatadogSdk.Android.Core/DatadogSdk.Android.Core.csproj" \
-            "bindings/DatadogSdk.Android.Logs/DatadogSdk.Android.Logs.csproj"; do
+            "bindings/DatadogSdk.Android.Logs/DatadogSdk.Android.Logs.csproj" \
+            "bindings/DatadogSdk.Android.Trace/DatadogSdk.Android.Trace.csproj"; do
 
             replace_in_file "$SCRIPT_DIR/$rel_path" \
                 "s|(Include=\"com\.datadoghq:[^\"]+\"\s+Version=\")${ESC_ANDROID}(\")|\${1}${NEW_ANDROID}\${2}|g" \
