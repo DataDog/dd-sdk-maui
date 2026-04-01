@@ -196,4 +196,14 @@ else
     echo -e "Users can now add the SDK with:"
     echo -e "  ${YELLOW}dotnet add package DatadogSdk.Maui${NC}"
 fi
+
+# ── Upload SDK framework symbols ─────────────────────────────────────────────
+
+if [ -x "$SCRIPT_DIR/upload-sdk-symbols.sh" ]; then
+    if [ "$DRY_RUN" = true ]; then
+        "$SCRIPT_DIR/upload-sdk-symbols.sh" --dry-run
+    else
+        "$SCRIPT_DIR/upload-sdk-symbols.sh"
+    fi
+fi
 echo ""

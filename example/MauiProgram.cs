@@ -35,7 +35,12 @@ public static class MauiProgram
             Site = DatadogSite.Us1,
             TrackingConsent = TrackingConsent.Granted,
             Verbosity = SdkVerbosity.DEBUG,
-            UploadFrequency = UploadFrequency.Frequent
+            UploadFrequency = UploadFrequency.Frequent,
+            NativeCrashReportEnabled = true,
+            // AdditionalConfiguration = new Dictionary<string, object>
+            // {
+            //     { "_dd.needsClearTextHttp", true }
+            // },
         });
 
         return builder.Build();

@@ -333,27 +333,101 @@ final class DdRumTests: XCTestCase {
         XCTAssertNil(DdRum.initialResourceThreshold)
     }
 
-    // MARK: - Native crash report enabled (stored for RUM-15107)
+    // MARK: - addError
 
-    func testEnableRum_storesNativeCrashReportEnabled() {
-        let config: NSDictionary = [
-            "applicationId": "test-app-id",
-            "nativeCrashReportEnabled": true
-        ]
-
-        DdRum.enableRum(configuration: config)
-
-        XCTAssertTrue(DdRum.nativeCrashReportEnabled)
-    }
-
-    func testEnableRum_nativeCrashReportDefaultsFalse() {
+    func testAddError_callsRumModuleWithMessage() {
         let config: NSDictionary = [
             "applicationId": "test-app-id"
         ]
-
         DdRum.enableRum(configuration: config)
 
-        XCTAssertFalse(DdRum.nativeCrashReportEnabled)
+        DdRum.addError(
+            message: "Test error",
+            source: "source",
+            stacktrace: "at Foo.Bar()",
+            context: [:],
+            timestampMs: 0
+        )
+
+        XCTAssertTrue(mockRumModule.addErrorCalled)
+        XCTAssertEqual(mockRumModule.capturedErrorMessage, "Test error")
+    }
+
+    func testAddError_mapsSourceCorrectly() {
+        let config: NSDictionary = [
+            "applicationId": "test-app-id"
+        ]
+        DdRum.enableRum(configuration: config)
+
+        DdRum.addError(
+            message: "Error",
+            source: "network",
+            stacktrace: "stack",
+            context: [:],
+            timestampMs: 0
+        )
+
+        XCTAssertEqual(mockRumModule.capturedErrorSource, .network)
+    }
+
+    func testAddError_passesStacktrace() {
+        let config: NSDictionary = [
+            "applicationId": "test-app-id"
+        ]
+        DdRum.enableRum(configuration: config)
+
+        DdRum.addError(
+            message: "Error",
+            source: "source",
+            stacktrace: "System.Exception: test\n   at Foo.Bar()",
+            context: [:],
+            timestampMs: 0
+        )
+
+        XCTAssertEqual(mockRumModule.capturedErrorStacktrace, "System.Exception: test\n   at Foo.Bar()")
+    }
+
+    func testAddError_mergesContextAndTimestamp() {
+        let config: NSDictionary = [
+            "applicationId": "test-app-id"
+        ]
+        DdRum.enableRum(configuration: config)
+
+        let context: NSDictionary = [
+            "_dd.error.is_crash": true
+        ]
+
+        DdRum.addError(
+            message: "Error",
+            source: "source",
+            stacktrace: "stack",
+            context: context,
+            timestampMs: 1234567890
+        )
+
+        XCTAssertNotNil(mockRumModule.capturedErrorAttributes)
+        let attrs = mockRumModule.capturedErrorAttributes!
+        XCTAssertEqual(attrs["_dd.error.is_crash"] as? Bool, true)
+        XCTAssertEqual(attrs["_dd.timestamp"] as? Int64, 1234567890)
+        XCTAssertEqual(attrs["_dd.error.source_type"] as? String, "maui")
+    }
+
+    func testAddError_withZeroTimestamp_doesNotAddTimestampAttribute() {
+        let config: NSDictionary = [
+            "applicationId": "test-app-id"
+        ]
+        DdRum.enableRum(configuration: config)
+
+        DdRum.addError(
+            message: "Error",
+            source: "source",
+            stacktrace: "stack",
+            context: [:],
+            timestampMs: 0
+        )
+
+        let attrs = mockRumModule.capturedErrorAttributes!
+        XCTAssertNil(attrs["_dd.timestamp"] as? Int64)
     }
 
     // MARK: - Mapping helpers
@@ -365,6 +439,16 @@ final class DdRumTests: XCTestCase {
         XCTAssertEqual(DdRum.mapVitalsUpdateFrequency("frequent"), .frequent)
         // Unknown defaults to average
         XCTAssertEqual(DdRum.mapVitalsUpdateFrequency("unknown"), .average)
+    }
+
+    func testMapErrorSource_allValues() {
+        XCTAssertEqual(DdRum.mapErrorSource("source"), .source)
+        XCTAssertEqual(DdRum.mapErrorSource("network"), .network)
+        XCTAssertEqual(DdRum.mapErrorSource("console"), .console)
+        XCTAssertEqual(DdRum.mapErrorSource("webview"), .webview)
+        XCTAssertEqual(DdRum.mapErrorSource("custom"), .custom)
+        // Unknown defaults to custom
+        XCTAssertEqual(DdRum.mapErrorSource("unknown"), .custom)
     }
 
     func testMapTracingHeaderType_allValues() {

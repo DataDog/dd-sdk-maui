@@ -2,25 +2,21 @@ package com.datadog.wrapper
 
 import android.util.Log
 import com.datadog.android.Datadog
-import com.datadog.android.ndk.NdkCrashReports
+import com.datadog.android.rum.GlobalRumMonitor
 import com.datadog.android.rum.Rum
 import com.datadog.android.rum.RumConfiguration
+import com.datadog.android.rum.RumErrorSource
 import com.datadog.android.rum.tracking.ActivityViewTrackingStrategy
 import com.datadog.android.rum.configuration.VitalsUpdateFrequency
 
 class DdRum {
     companion object {
-        // Stored for RUM-15107 (error tracking/crash reporting)
-        var nativeCrashReportEnabled: Boolean = false
-            private set
-
         // Stored for future resource tracking configuration
         var initialResourceThreshold: Double? = null
             private set
 
         // For testing: reset static state between tests
         internal fun resetForTesting() {
-            nativeCrashReportEnabled = false
             initialResourceThreshold = null
         }
 
@@ -35,6 +31,17 @@ class DdRum {
                 "frequent" -> VitalsUpdateFrequency.FREQUENT
                 else -> VitalsUpdateFrequency.AVERAGE
             }
+
+        @JvmStatic
+        fun mapErrorSource(source: String): RumErrorSource =
+            when (source.lowercase()) {
+                "network" -> RumErrorSource.NETWORK
+                "source" -> RumErrorSource.SOURCE
+                "console" -> RumErrorSource.CONSOLE
+                "webview" -> RumErrorSource.WEBVIEW
+                else -> RumErrorSource.CUSTOM
+            }
+
 
         // -- Enable --
 
@@ -104,16 +111,38 @@ class DdRum {
                 // Initial resource threshold (stored for resource tracking configuration)
                 initialResourceThreshold = (configuration["initialResourceThreshold"] as? Number)?.toDouble()
 
-                // Enable native crash reporting if requested
-                nativeCrashReportEnabled = configuration["nativeCrashReportEnabled"] as? Boolean ?: false
-                if (nativeCrashReportEnabled) {
-                    NdkCrashReports.enable()
-                }
-
                 val rumConfig = builder.build()
                 Rum.enable(rumConfig, Datadog.getInstance())
             } catch (e: Exception) {
                 Log.e("DatadogWrapper", "DdRum.enableRum failed", e)
+            }
+        }
+
+        // -- Add Error --
+
+        @JvmStatic
+        fun addError(
+            message: String,
+            source: String,
+            stacktrace: String,
+            context: Map<String, Any?>,
+            timestampMs: Long
+        ) {
+            try {
+                val attributes = context.toMutableMap()
+                if (timestampMs > 0) {
+                    attributes["_dd.timestamp"] = timestampMs
+                }
+                attributes["_dd.error.source_type"] = "maui"
+
+                GlobalRumMonitor.get().addErrorWithStacktrace(
+                    message = message,
+                    source = mapErrorSource(source),
+                    stacktrace = stacktrace,
+                    attributes = attributes
+                )
+            } catch (e: Exception) {
+                Log.e("DatadogWrapper", "DdRum.addError failed", e)
             }
         }
     }

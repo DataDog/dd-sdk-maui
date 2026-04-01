@@ -21,5 +21,6 @@ namespace DatadogSdk.Maui.Configuration
         public SdkVerbosity? Verbosity { get; set; }
         public ProxyConfiguration? ProxyConfiguration { get; set; }
         public List<FirstPartyHost>? FirstPartyHosts { get; set; }
+        public bool NativeCrashReportEnabled { get; set; } = false;
     }
 }

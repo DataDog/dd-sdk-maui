@@ -56,6 +56,13 @@ namespace DatadogSdk.Maui.Configuration
                 config.FirstPartyHosts = ParseFirstPartyHosts(hostsElement);
             }
 
+            // Optional boolean fields
+            if (root.TryGetProperty("NativeCrashReportEnabled", out JsonElement crashElement)
+                && (crashElement.ValueKind == JsonValueKind.True || crashElement.ValueKind == JsonValueKind.False))
+            {
+                config.NativeCrashReportEnabled = crashElement.GetBoolean();
+            }
+
             // Optional additional configuration
             if (root.TryGetProperty("AdditionalConfiguration", out JsonElement additionalElement)
                 && additionalElement.ValueKind == JsonValueKind.Object)

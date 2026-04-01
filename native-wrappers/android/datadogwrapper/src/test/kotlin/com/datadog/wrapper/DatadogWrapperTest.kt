@@ -4,6 +4,7 @@ import android.content.Context
 import android.util.Log
 import com.datadog.android.Datadog
 import com.datadog.android.DatadogSite
+import com.datadog.android.ndk.NdkCrashReports
 import com.datadog.android.core.configuration.BatchProcessingLevel
 import com.datadog.android.core.configuration.BatchSize
 import com.datadog.android.core.configuration.Configuration
@@ -17,8 +18,10 @@ import java.net.Proxy
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import io.mockk.every
+import io.mockk.just
 import io.mockk.mockk
 import io.mockk.mockkStatic
+import io.mockk.runs
 import io.mockk.unmockkStatic
 import io.mockk.verify
 import org.junit.After
@@ -302,6 +305,63 @@ class DatadogWrapperTest {
             )
 
             verify { Datadog.initialize(mockContext, any<Configuration>(), TrackingConsent.GRANTED) }
+        }
+    }
+
+    // -- Native crash report enabled --
+
+    @Test
+    fun initialize_withNativeCrashReportEnabled_callsNdkCrashReportsEnable() {
+        mockkStatic(Datadog::class)
+        mockkStatic(NdkCrashReports::class)
+        every { Datadog.initialize(any(), any<Configuration>(), any()) } returns null
+        every { Datadog.setVerbosity(any()) } returns Unit
+        every { NdkCrashReports.enable() } just runs
+        every { NdkCrashReports.enable(any()) } just runs
+
+        try {
+            DatadogWrapper.initialize(
+                context = mockContext,
+                clientToken = "pub-test-token",
+                environment = "test",
+                service = null,
+                site = "us1",
+                verbosity = "error",
+                trackingConsent = "pending",
+                nativeCrashReportEnabled = true
+            )
+
+            verify { NdkCrashReports.enable() }
+        } finally {
+            unmockkStatic(Datadog::class)
+            unmockkStatic(NdkCrashReports::class)
+        }
+    }
+
+    @Test
+    fun initialize_withNativeCrashReportDisabled_doesNotCallNdkCrashReportsEnable() {
+        mockkStatic(Datadog::class)
+        mockkStatic(NdkCrashReports::class)
+        every { Datadog.initialize(any(), any<Configuration>(), any()) } returns null
+        every { Datadog.setVerbosity(any()) } returns Unit
+
+        try {
+            DatadogWrapper.initialize(
+                context = mockContext,
+                clientToken = "pub-test-token",
+                environment = "test",
+                service = null,
+                site = "us1",
+                verbosity = "error",
+                trackingConsent = "pending",
+                nativeCrashReportEnabled = false
+            )
+
+            verify(exactly = 0) { NdkCrashReports.enable() }
+            verify(exactly = 0) { NdkCrashReports.enable(any()) }
+        } finally {
+            unmockkStatic(Datadog::class)
+            unmockkStatic(NdkCrashReports::class)
         }
     }
 

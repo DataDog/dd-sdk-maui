@@ -7,7 +7,8 @@
 - **Core SDK**: Initialize Datadog with full configuration support, including runtime tracking consent updates, global attributes, user info, and account info.
 - **Logs**: Send logs from your .NET MAUI application to Datadog with support for debug, info, warn, and error levels, plus custom attributes.
 - **Traces**: Manual span tracking with support for nested parent-child relationships, custom context attributes, and configurable endpoints.
-- **RUM (Real User Monitoring)**: Enable RUM to track user sessions, views, actions, and crashes. Configure session sampling, vitals monitoring, native view/interaction tracking, crash reporting, and first-party hosts for distributed tracing.
+- **RUM (Real User Monitoring)**: Enable RUM to track user sessions, views, actions, and crashes. Configure session sampling, vitals monitoring, native view/interaction tracking, and first-party hosts for distributed tracing.
+- **Error Tracking**: Automatic C# error and crash tracking. When RUM is enabled, unhandled exceptions and unobserved task exceptions are automatically captured and reported to Datadog. You can also manually report errors using `DdRum.AddError()`.
 
 ## Setup
 
@@ -46,7 +47,8 @@ DdSdk.Initialize(new DdSdkConfiguration
     FirstPartyHosts = new List<FirstPartyHost>
     {
         new() { Match = "api.example.com", HeaderTypes = new List<TracingHeaderType> { TracingHeaderType.Datadog, TracingHeaderType.TraceContext } }
-    }
+    },
+    NativeCrashReportEnabled = true   // Enable native iOS/Android crash reporting
 });
 ```
 
@@ -89,6 +91,7 @@ DdSdk.Initialize(config);
 - `VersionSuffix` - Version suffix
 - `Verbosity` - SDK logging level
 - `FirstPartyHosts` - List of first-party hosts for distributed tracing
+- `NativeCrashReportEnabled` - Enable native iOS/Android crash reporting (default: `false`)
 - `AdditionalConfiguration` - Additional configuration dictionary
 - `ProxyConfiguration` - Proxy configuration object (see Proxy Configuration section)
 
@@ -273,12 +276,51 @@ DdRum.Enable(new DdRumConfiguration
     SessionSampleRate = 100.0,
     TrackFrustrations = true,
     TrackBackgroundEvents = true,
-    NativeCrashReportEnabled = true,
     NativeViewTracking = true,
     NativeInteractionTracking = true,
     VitalsUpdateFrequency = VitalsUpdateFrequency.Average
 });
 ```
+
+When RUM is enabled, C# error tracking is automatically started. Unhandled exceptions (`AppDomain.UnhandledException`) and unobserved task exceptions (`TaskScheduler.UnobservedTaskException`) are captured and reported as RUM errors.
+
+You can also manually report errors:
+
+```csharp
+DdRum.AddError(
+    "Something went wrong",
+    "source",
+    exception.ToString(),
+    new Dictionary<string, object> { { "custom_key", "custom_value" } }
+);
+```
+
+#### Error Event Mapper
+
+Use `ErrorEventMapper` to modify or drop error events before they are sent to Datadog:
+
+```csharp
+DdRum.Enable(new DdRumConfiguration
+{
+    ApplicationId = "your-rum-application-id",
+    ErrorEventMapper = errorEvent =>
+    {
+        // Add custom context
+        errorEvent.Context["team"] = "mobile";
+
+        // Drop errors matching a pattern (return null to discard)
+        if (errorEvent.Message.Contains("ignore-this"))
+            return null;
+
+        // Modify the message
+        errorEvent.Message = "[MyApp] " + errorEvent.Message;
+
+        return errorEvent;
+    }
+});
+```
+
+The mapper receives a `DdRumErrorEvent` with `Message`, `Source`, `Stacktrace`, `Context`, and `TimestampMs` properties. It applies to all C# errors — both automatic (crash tracking) and manual (`DdRum.AddError`).
 
 ## Troubleshooting
 

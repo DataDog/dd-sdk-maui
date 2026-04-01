@@ -36,12 +36,20 @@ public partial class MainPage : ContentPage
             ResourceTraceSampleRate = 100.0,
             TrackFrustrations = true,
             TrackBackgroundEvents = true,
-            NativeCrashReportEnabled = true,
             NativeViewTracking = true,
             NativeInteractionTracking = true,
             TrackMemoryWarnings = true,
             NativeLongTaskThresholdMs = 200.0,
-            VitalsUpdateFrequency = VitalsUpdateFrequency.Average
+            VitalsUpdateFrequency = VitalsUpdateFrequency.Average,
+            FirstPartyHosts = new List<FirstPartyHost>
+            {
+                new() { Match = "datadoghq.com", HeaderTypes = new List<TracingHeaderType> { TracingHeaderType.Datadog, TracingHeaderType.TraceContext } }
+            },
+            ErrorEventMapper = e =>
+            {
+                e.Context["processedByErrorMapper"] = true;
+                return e;
+            }
         };
 
         DdRum.Enable(rumConfiguration);
@@ -156,11 +164,11 @@ public partial class MainPage : ContentPage
             ? $"Active spans: {string.Join(", ", _activeSpans.Select(s => $"#{s.id}"))}"
             : "No active spans";
     }
-    private void OnNativeCrashClicked(object? sender, EventArgs e) =>
-        NativeCrashHelper.TriggerNativeCrash();
-
     private void OnManagedCrashClicked(object? sender, EventArgs e) =>
         throw new InvalidOperationException("C# crash example");
+
+    private void OnNativeCrashClicked(object? sender, EventArgs e) =>
+        NativeCrashHelper.TriggerNativeCrash();
 
     private void OnNdkCrashClicked(object? sender, EventArgs e)
     {

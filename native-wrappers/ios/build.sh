@@ -53,8 +53,14 @@ if [ -f "./build/DatadogWrapper.xcframework/Info.plist" ]; then
   echo "📊 Architecture slices:"
   ls -1 ./build/DatadogWrapper.xcframework/ | grep -v Info.plist
 
-  # Clean up intermediate archives (optional, but saves space)
+  # Preserve dSYMs for symbol upload, then clean intermediate archives
   echo ""
+  echo "📦 Preserving dSYMs..."
+  if [ -d "./build/ios-arm64.xcarchive/dSYMs" ]; then
+    cp -R ./build/ios-arm64.xcarchive/dSYMs ./build/dSYMs
+    echo "📋 dSYMs saved to $(pwd)/build/dSYMs"
+  fi
+
   echo "🧹 Cleaning up intermediate archives..."
   rm -rf ./build/ios-arm64.xcarchive
   rm -rf ./build/ios-simulator.xcarchive
@@ -66,6 +72,13 @@ if [ -f "./build/DatadogWrapper.xcframework/Info.plist" ]; then
   rm -rf "$BINDINGS_DIR/DatadogWrapper.xcframework"
   cp -R ./build/DatadogWrapper.xcframework "$BINDINGS_DIR/"
   echo "📋 Copied to $BINDINGS_DIR/DatadogWrapper.xcframework"
+
+  # Copy dSYMs to bindings so they can be included in symbol uploads
+  if [ -d "./build/dSYMs" ]; then
+    rm -rf "$BINDINGS_DIR/dSYMs"
+    cp -R ./build/dSYMs "$BINDINGS_DIR/"
+    echo "📋 dSYMs copied to $BINDINGS_DIR/dSYMs"
+  fi
 
   echo "✨ Build complete!"
 else

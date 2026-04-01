@@ -318,6 +318,33 @@ public class DdSdkConfigurationTests : IDisposable
         Assert.Null(bridge.FirstPartyHosts);
     }
 
+    // --- NativeCrashReportEnabled --------------------------------------------
+
+    [Fact]
+    public void Initialize_WithNativeCrashReportEnabled_PassesTrueToNative()
+    {
+        DdSdk.Initialize(new DdSdkConfiguration
+        {
+            ClientToken = "pub-token",
+            Environment = "test",
+            NativeCrashReportEnabled = true
+        });
+
+        Assert.True(bridge.NativeCrashReportEnabled);
+    }
+
+    [Fact]
+    public void Initialize_WithoutNativeCrashReportEnabled_DefaultsFalse()
+    {
+        DdSdk.Initialize(new DdSdkConfiguration
+        {
+            ClientToken = "pub-token",
+            Environment = "test"
+        });
+
+        Assert.False(bridge.NativeCrashReportEnabled);
+    }
+
     // --- SetTrackingConsent --------------------------------------------------
 
     [Theory]

@@ -3,6 +3,7 @@ using Xunit;
 
 namespace DatadogSdk.Maui.Tests;
 
+[Collection("InternalLog")]
 public class InternalLogTests : IDisposable
 {
     private readonly StringWriter _consoleOutput;

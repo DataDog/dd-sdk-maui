@@ -1,17 +1,13 @@
 import Foundation
 import DatadogCore
+import DatadogCrashReporting
 import DatadogInternal
 import DatadogRUM
-import DatadogCrashReporting
-
 @objc(DdRum)
 public class DdRum: NSObject {
 
     // Dependencies - injectable for testing
     private static var rumModule: RumModuleProtocol = RealRumModule()
-
-    // Stored for RUM-15107 (error tracking/crash reporting)
-    static var nativeCrashReportEnabled: Bool = false
 
     // Stored for future resource tracking configuration
     static var initialResourceThreshold: Double? = nil
@@ -24,7 +20,6 @@ public class DdRum: NSObject {
     // Reset to production dependencies (for test cleanup)
     static func resetDependencies() {
         rumModule = RealRumModule()
-        nativeCrashReportEnabled = false
         initialResourceThreshold = nil
     }
 
@@ -46,6 +41,16 @@ public class DdRum: NSObject {
         case "b3multi": return .b3multi
         case "tracecontext": return .tracecontext
         default: return .datadog
+        }
+    }
+
+    static func mapErrorSource(_ source: String) -> RUMErrorSource {
+        switch source.lowercased() {
+        case "network": return .network
+        case "source": return .source
+        case "console": return .console
+        case "webview": return .webview
+        default: return .custom
         }
     }
 
@@ -143,12 +148,62 @@ public class DdRum: NSObject {
         // Initial resource threshold (stored for resource tracking configuration)
         initialResourceThreshold = config["initialResourceThreshold"] as? Double
 
-        // Enable native crash reporting if requested
-        nativeCrashReportEnabled = config["nativeCrashReportEnabled"] as? Bool ?? false
-        if nativeCrashReportEnabled {
+        rumModule.enable(with: rumConfig)
+
+        if DdSdkNativeWrapper.nativeCrashReportEnabled {
             CrashReporting.enable()
         }
+    }
 
-        rumModule.enable(with: rumConfig)
+    // MARK: - Add Error
+
+    /// Add a RUM error event
+    /// - Parameters:
+    ///   - message: Error message
+    ///   - source: Error source (e.g., "source", "network", "console", "webview", "custom")
+    ///   - stacktrace: Error stacktrace string
+    ///   - context: Additional context dictionary
+    ///   - timestampMs: Timestamp in milliseconds
+    @objc(addError:source:stacktrace:context:timestampMs:)
+    public static func addError(
+        message: String,
+        source: String,
+        stacktrace: String,
+        context: NSDictionary,
+        timestampMs: Int64
+    ) {
+        var attributes: [AttributeKey: AttributeValue] = [:]
+
+        if let contextDict = context as? [String: Any] {
+            for (key, value) in contextDict {
+                switch value {
+                case let boolVal as Bool:
+                    attributes[key] = boolVal
+                case let intVal as Int:
+                    attributes[key] = intVal
+                case let doubleVal as Double:
+                    attributes[key] = doubleVal
+                case let stringVal as String:
+                    attributes[key] = stringVal
+                case let int64Val as Int64:
+                    attributes[key] = int64Val
+                default:
+                    attributes[key] = String(describing: value)
+                }
+            }
+        }
+
+        if timestampMs > 0 {
+            attributes["_dd.timestamp"] = timestampMs
+        }
+
+        attributes["_dd.error.source_type"] = "maui"
+
+        rumModule.addError(
+            message: message,
+            source: mapErrorSource(source),
+            stacktrace: stacktrace,
+            attributes: attributes
+        )
     }
 }

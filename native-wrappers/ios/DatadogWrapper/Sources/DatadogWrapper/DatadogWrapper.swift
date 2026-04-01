@@ -1,6 +1,7 @@
 import Foundation
 import DatadogCore
 import DatadogInternal
+import DatadogCrashReporting
 
 @objc(DatadogWrapper)
 public class DdSdkNativeWrapper: NSObject {
@@ -149,6 +150,7 @@ public class DdSdkNativeWrapper: NSObject {
         batchProcessingLevel: String?,
         proxyConfiguration: NSDictionary?,
         firstPartyHosts firstPartyHostsDict: NSDictionary?,
+        nativeCrashReportEnabled: Bool,
         additionalConfiguration: NSDictionary?
     ) -> Bool {
         var configuration = DatadogCore.Datadog.Configuration(
@@ -196,8 +198,18 @@ public class DdSdkNativeWrapper: NSObject {
             trackingConsent: mapTrackingConsent(trackingConsent)
         )
 
-        return !(core is DatadogInternal.NOPDatadogCore)
+        let initialized = !(core is DatadogInternal.NOPDatadogCore)
+
+        if initialized {
+            // DdRum.enableRum() will read this and activate crashReporting
+            DdSdkNativeWrapper.nativeCrashReportEnabled = nativeCrashReportEnabled
+        }
+
+        return initialized
     }
+
+    // Stored for DdRum to enable CrashReporting after RUM.enable()
+    static var nativeCrashReportEnabled: Bool = false
 
     // MARK: - Tracking Consent
 

@@ -9,6 +9,7 @@ import com.datadog.android.core.configuration.BatchProcessingLevel
 import com.datadog.android.core.configuration.BatchSize
 import com.datadog.android.core.configuration.Configuration
 import com.datadog.android.core.configuration.UploadFrequency
+import com.datadog.android.ndk.NdkCrashReports
 import com.datadog.android.privacy.TrackingConsent
 import com.datadog.android.rum.GlobalRumMonitor
 import com.datadog.android.trace.TracingHeaderType
@@ -184,6 +185,7 @@ class DatadogWrapper {
             batchProcessingLevel: String? = null,
             proxyConfiguration: Map<String, Any> = emptyMap(),
             firstPartyHosts: Map<String, Any?> = emptyMap(),
+            nativeCrashReportEnabled: Boolean = false,
             additionalConfiguration: Map<String, Any> = emptyMap()
         ): Boolean {
             return try {
@@ -226,9 +228,15 @@ class DatadogWrapper {
                     builder.setFirstPartyHostsWithHeaderType(hosts)
                 }
 
+                builder.setCrashReportsEnabled(nativeCrashReportEnabled)
+
                 Datadog.initialize(context, builder.build(), mapTrackingConsent(trackingConsent))
 
                 Datadog.setVerbosity(mapVerbosity(verbosity))
+
+                if (nativeCrashReportEnabled) {
+                    NdkCrashReports.enable()
+                }
 
                 true
             } catch (e: Exception) {

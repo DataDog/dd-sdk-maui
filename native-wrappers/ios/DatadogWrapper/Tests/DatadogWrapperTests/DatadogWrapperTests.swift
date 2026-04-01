@@ -180,6 +180,7 @@ final class DatadogWrapperTests: XCTestCase {
             batchProcessingLevel: nil,
             proxyConfiguration: nil,
             firstPartyHosts: nil,
+            nativeCrashReportEnabled: false,
             additionalConfiguration: nil
         )
 
@@ -200,6 +201,7 @@ final class DatadogWrapperTests: XCTestCase {
             batchProcessingLevel: nil,
             proxyConfiguration: nil,
             firstPartyHosts: nil,
+            nativeCrashReportEnabled: false,
             additionalConfiguration: nil
         )
 
@@ -219,10 +221,53 @@ final class DatadogWrapperTests: XCTestCase {
             batchProcessingLevel: nil,
             proxyConfiguration: nil,
             firstPartyHosts: nil,
+            nativeCrashReportEnabled: false,
             additionalConfiguration: nil
         )
 
         XCTAssertEqual(Datadog.verbosityLevel, .debug)
+    }
+
+    // MARK: - Native crash report enabled
+
+    func test_initialize_withNativeCrashReportEnabled_initializesSuccessfully() {
+        let result = DdSdkNativeWrapper.initialize(
+            clientToken: "pub-test-token",
+            environment: "test",
+            service: nil,
+            site: "us1",
+            verbosity: "error",
+            trackingConsent: "pending",
+            batchSize: nil,
+            uploadFrequency: nil,
+            batchProcessingLevel: nil,
+            proxyConfiguration: nil,
+            firstPartyHosts: nil,
+            nativeCrashReportEnabled: true,
+            additionalConfiguration: nil
+        )
+
+        XCTAssertTrue(result)
+    }
+
+    func test_initialize_withNativeCrashReportDisabled_initializesSuccessfully() {
+        let result = DdSdkNativeWrapper.initialize(
+            clientToken: "pub-test-token",
+            environment: "test",
+            service: nil,
+            site: "us1",
+            verbosity: "error",
+            trackingConsent: "pending",
+            batchSize: nil,
+            uploadFrequency: nil,
+            batchProcessingLevel: nil,
+            proxyConfiguration: nil,
+            firstPartyHosts: nil,
+            nativeCrashReportEnabled: false,
+            additionalConfiguration: nil
+        )
+
+        XCTAssertTrue(result)
     }
 
     // MARK: - Set tracking consent
