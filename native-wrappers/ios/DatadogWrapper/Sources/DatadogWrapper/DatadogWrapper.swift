@@ -97,6 +97,30 @@ public class DdSdkNativeWrapper: NSObject {
         return proxyDict
     }
 
+    // MARK: - First-party hosts storage
+
+    /// Parsed first-party hosts stored during initialization.
+    /// DdRum reads this when enabling RUM to configure urlSessionTracking on iOS.
+    static var firstPartyHosts: [String: Set<TracingHeaderType>]? = nil
+
+    /// Parses a flat dictionary of host -> comma-separated header types
+    /// into the format expected by the Datadog SDK.
+    static func parseFirstPartyHosts(_ dictionary: NSDictionary) -> [String: Set<TracingHeaderType>]? {
+        guard let dict = dictionary as? [String: String] else { return nil }
+
+        var hosts: [String: Set<TracingHeaderType>] = [:]
+        for (host, headerTypesStr) in dict {
+            let types = Set(
+                headerTypesStr.split(separator: ",")
+                    .map { DdRum.mapTracingHeaderType(String($0).trimmingCharacters(in: .whitespaces)) }
+            )
+            if !types.isEmpty {
+                hosts[host] = types
+            }
+        }
+        return hosts.isEmpty ? nil : hosts
+    }
+
     // MARK: - Initialization
 
     /// Initialize the Datadog SDK with configuration
@@ -111,6 +135,7 @@ public class DdSdkNativeWrapper: NSObject {
     ///   - uploadFrequency: Upload frequency for data batches
     ///   - batchProcessingLevel: Batch processing level
     ///   - additionalConfiguration: Additional configuration dictionary (includes _dd.version, _dd.version_suffix, etc.)
+    ///   - firstPartyHosts: Dictionary of host -> comma-separated header types (nullable)
     /// - Returns: Boolean indicating successful initialization
     @objc public static func initialize(
         clientToken: String,
@@ -123,7 +148,8 @@ public class DdSdkNativeWrapper: NSObject {
         uploadFrequency: String?,
         batchProcessingLevel: String?,
         additionalConfiguration: NSDictionary?,
-        proxyConfiguration: NSDictionary?
+        proxyConfiguration: NSDictionary?,
+        firstPartyHosts firstPartyHostsDict: NSDictionary?
     ) -> Bool {
         var configuration = DatadogCore.Datadog.Configuration(
             clientToken: clientToken,
@@ -157,6 +183,13 @@ public class DdSdkNativeWrapper: NSObject {
             configuration.proxyConfiguration = proxyConfig
         }
 
+        // Store first-party hosts for RUM configuration
+        if let hostsDict = firstPartyHostsDict {
+            firstPartyHosts = parseFirstPartyHosts(hostsDict)
+        } else {
+            firstPartyHosts = nil
+        }
+
         // Initialize Datadog SDK
         let core = DatadogCore.Datadog.initialize(
             with: configuration,
@@ -178,6 +211,7 @@ public class DdSdkNativeWrapper: NSObject {
     // Reset to production dependencies (for test cleanup)
     static func resetDependencies() {
         datadogCore = RealDatadogSdk()
+        firstPartyHosts = nil
     }
 
     @objc public static func setTrackingConsent(_ consent: String) {

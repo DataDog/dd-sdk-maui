@@ -7,7 +7,6 @@ import com.datadog.android.rum.Rum
 import com.datadog.android.rum.RumConfiguration
 import com.datadog.android.rum.configuration.VitalsUpdateFrequency
 import com.datadog.android.rum.tracking.ActivityViewTrackingStrategy
-import com.datadog.android.trace.TracingHeaderType
 import io.mockk.*
 import org.junit.After
 import org.junit.Assert.*
@@ -287,12 +286,4 @@ class DdRumTest {
         assertEquals(VitalsUpdateFrequency.AVERAGE, DdRum.mapVitalsUpdateFrequency("unknown"))
     }
 
-    @Test
-    fun `mapTracingHeaderType maps all values`() {
-        assertEquals(TracingHeaderType.DATADOG, DdRum.mapTracingHeaderType("datadog"))
-        assertEquals(TracingHeaderType.B3, DdRum.mapTracingHeaderType("b3"))
-        assertEquals(TracingHeaderType.B3MULTI, DdRum.mapTracingHeaderType("b3multi"))
-        assertEquals(TracingHeaderType.TRACECONTEXT, DdRum.mapTracingHeaderType("tracecontext"))
-        assertEquals(TracingHeaderType.DATADOG, DdRum.mapTracingHeaderType("unknown"))
-    }
 }

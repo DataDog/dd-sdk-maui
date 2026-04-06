@@ -11,6 +11,7 @@ import com.datadog.android.core.configuration.Configuration
 import com.datadog.android.core.configuration.UploadFrequency
 import com.datadog.android.privacy.TrackingConsent
 import com.datadog.android.rum.GlobalRumMonitor
+import com.datadog.android.trace.TracingHeaderType
 import java.net.InetSocketAddress
 import java.net.Proxy
 import okhttp3.Authenticator
@@ -142,6 +143,33 @@ class DatadogWrapper {
         // -- Initialization --
 
         @JvmStatic
+        fun mapTracingHeaderType(type: String): TracingHeaderType = when (type.lowercase()) {
+            "b3" -> TracingHeaderType.B3
+            "b3multi" -> TracingHeaderType.B3MULTI
+            "tracecontext" -> TracingHeaderType.TRACECONTEXT
+            else -> TracingHeaderType.DATADOG
+        }
+
+        /// Parses a flat dictionary of host -> comma-separated header types
+        /// into the format expected by the Datadog SDK.
+        @JvmStatic
+        fun parseFirstPartyHosts(hosts: Map<String, Any?>): Map<String, Set<TracingHeaderType>> {
+            val result = mutableMapOf<String, Set<TracingHeaderType>>()
+            for ((host, value) in hosts) {
+                val headerTypesStr = value?.toString() ?: continue
+                val types = headerTypesStr.split(",")
+                    .map { it.trim() }
+                    .filter { it.isNotEmpty() }
+                    .map { mapTracingHeaderType(it) }
+                    .toSet()
+                if (types.isNotEmpty()) {
+                    result[host] = types
+                }
+            }
+            return result
+        }
+
+        @JvmStatic
         fun initialize(
             context: Context,
             clientToken: String,
@@ -154,7 +182,8 @@ class DatadogWrapper {
             uploadFrequency: String? = null,
             batchProcessingLevel: String? = null,
             additionalConfiguration: Map<String, Any>? = null,
-            proxyConfiguration: Map<String, Any>? = null
+            proxyConfiguration: Map<String, Any>? = null,
+            firstPartyHosts: Map<String, Any?>? = null
         ): Boolean {
             return try {
                 val builder = Configuration.Builder(
@@ -188,6 +217,14 @@ class DatadogWrapper {
 
                 if (additionalConfiguration?.get("_dd.needsClearTextHttp") == true) {
                     _InternalProxy.allowClearTextHttp(builder)
+                }
+
+                // Configure first-party hosts for distributed tracing
+                if (firstPartyHosts != null) {
+                    val hosts = parseFirstPartyHosts(firstPartyHosts)
+                    if (hosts.isNotEmpty()) {
+                        builder.setFirstPartyHostsWithHeaderType(hosts)
+                    }
                 }
 
                 Datadog.initialize(context, builder.build(), mapTrackingConsent(trackingConsent))

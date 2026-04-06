@@ -11,6 +11,7 @@ import com.datadog.android.core.configuration.UploadFrequency
 import com.datadog.android.privacy.TrackingConsent
 import com.datadog.android.rum.GlobalRumMonitor
 import com.datadog.android.rum.RumMonitor
+import com.datadog.android.trace.TracingHeaderType
 import java.net.InetSocketAddress
 import java.net.Proxy
 import org.junit.Assert.assertNotNull
@@ -186,6 +187,38 @@ class DatadogWrapperTest {
     @Test
     fun mapBatchProcessingLevel_unknownDefaultsToMedium() {
         assertEquals(BatchProcessingLevel.MEDIUM, DatadogWrapper.mapBatchProcessingLevel("invalid"))
+    }
+
+    // -- Tracing header type mapping --
+
+    @Test
+    fun `mapTracingHeaderType maps all values`() {
+        assertEquals(TracingHeaderType.DATADOG, DatadogWrapper.mapTracingHeaderType("datadog"))
+        assertEquals(TracingHeaderType.B3, DatadogWrapper.mapTracingHeaderType("b3"))
+        assertEquals(TracingHeaderType.B3MULTI, DatadogWrapper.mapTracingHeaderType("b3multi"))
+        assertEquals(TracingHeaderType.TRACECONTEXT, DatadogWrapper.mapTracingHeaderType("tracecontext"))
+        assertEquals(TracingHeaderType.DATADOG, DatadogWrapper.mapTracingHeaderType("unknown"))
+    }
+
+    // -- First-party hosts parsing --
+
+    @Test
+    fun `parseFirstPartyHosts parses dictionary with comma-separated types`() {
+        val hosts = mapOf<String, Any?>(
+            "api.example.com" to "datadog,tracecontext",
+            "cdn.example.com" to "b3"
+        )
+        val result = DatadogWrapper.parseFirstPartyHosts(hosts)
+
+        assertEquals(2, result.size)
+        assertEquals(setOf(TracingHeaderType.DATADOG, TracingHeaderType.TRACECONTEXT), result["api.example.com"])
+        assertEquals(setOf(TracingHeaderType.B3), result["cdn.example.com"])
+    }
+
+    @Test
+    fun `parseFirstPartyHosts returns empty map for empty input`() {
+        val result = DatadogWrapper.parseFirstPartyHosts(emptyMap())
+        assertTrue(result.isEmpty())
     }
 
     // -- SDK initialization --

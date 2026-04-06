@@ -10,6 +10,10 @@
   "BatchProcessingLevel": "High",
   "Version": "2.1.0",
   "VersionSuffix": "-rc1",
+  "FirstPartyHosts": [
+    { "Match": "api.example.com", "HeaderTypes": ["Datadog", "TraceContext"] },
+    { "Match": "cdn.example.com", "HeaderTypes": ["B3"] }
+  ],
   "AdditionalConfiguration": {
     "_dd.needsClearTextHttp": true,
     "_dd.custom_key": "custom_value"

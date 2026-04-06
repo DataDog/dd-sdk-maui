@@ -137,11 +137,33 @@ final class DatadogWrapperTests: XCTestCase {
         XCTAssertEqual(DdSdkNativeWrapper.mapBatchProcessingLevel("invalid"), .medium)
     }
 
+    // MARK: - First-party hosts parsing
+
+    func test_parseFirstPartyHosts_parsesDictionary() {
+        let dict: NSDictionary = [
+            "api.example.com": "datadog,tracecontext",
+            "cdn.example.com": "b3"
+        ]
+
+        let result = DdSdkNativeWrapper.parseFirstPartyHosts(dict)
+
+        XCTAssertNotNil(result)
+        XCTAssertEqual(result?.count, 2)
+        XCTAssertEqual(result?["api.example.com"], Set([.datadog, .tracecontext]))
+        XCTAssertEqual(result?["cdn.example.com"], Set([.b3]))
+    }
+
+    func test_parseFirstPartyHosts_returnsNilForEmptyDictionary() {
+        let result = DdSdkNativeWrapper.parseFirstPartyHosts(NSDictionary())
+        XCTAssertNil(result)
+    }
+
     // MARK: - SDK initialization
 
     override func tearDown() {
         Datadog.stopInstance()
         Datadog.verbosityLevel = nil
+        DdSdkNativeWrapper.firstPartyHosts = nil
         super.tearDown()
     }
 
@@ -157,7 +179,8 @@ final class DatadogWrapperTests: XCTestCase {
             uploadFrequency: nil,
             batchProcessingLevel: nil,
             additionalConfiguration: nil,
-            proxyConfiguration: nil
+            proxyConfiguration: nil,
+            firstPartyHosts: nil
         )
 
         XCTAssertTrue(result)
@@ -176,7 +199,8 @@ final class DatadogWrapperTests: XCTestCase {
             uploadFrequency: nil,
             batchProcessingLevel: nil,
             additionalConfiguration: nil,
-            proxyConfiguration: nil
+            proxyConfiguration: nil,
+            firstPartyHosts: nil
         )
 
         XCTAssertEqual(Datadog.verbosityLevel, .warn)
@@ -194,7 +218,8 @@ final class DatadogWrapperTests: XCTestCase {
             uploadFrequency: nil,
             batchProcessingLevel: nil,
             additionalConfiguration: nil,
-            proxyConfiguration: nil
+            proxyConfiguration: nil,
+            firstPartyHosts: nil
         )
 
         XCTAssertEqual(Datadog.verbosityLevel, .debug)

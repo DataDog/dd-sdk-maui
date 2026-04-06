@@ -26,7 +26,8 @@ namespace DatadogSdk.Maui
                 string? uploadFrequency,
                 string? batchProcessingLevel,
                 Dictionary<string, object>? additionalConfiguration,
-                Dictionary<string, object>? proxyConfiguration);
+                Dictionary<string, object>? proxyConfiguration,
+                Dictionary<string, object>? firstPartyHosts);
 
             void SetTrackingConsent(string consent);
             void AddAttribute(string key, object value);
@@ -75,6 +76,13 @@ namespace DatadogSdk.Maui
 
             var proxyConfig = ConvertProxyConfiguration(config.ProxyConfiguration);
 
+            // Convert first-party hosts to a flat dictionary: host -> comma-separated header types
+            Dictionary<string, object>? firstPartyHosts = null;
+            if (config.FirstPartyHosts != null && config.FirstPartyHosts.Count > 0)
+            {
+                firstPartyHosts = BuildFirstPartyHostsDictionary(config.FirstPartyHosts);
+            }
+
             var sdkInitialized = false;
 
             if (testBridge is not null)
@@ -90,7 +98,8 @@ namespace DatadogSdk.Maui
                     uploadFrequency,
                     batchProcessingLevel,
                     mergedConfig,
-                    proxyConfig);
+                    proxyConfig,
+                    firstPartyHosts);
             }
             else
             {
@@ -121,6 +130,16 @@ namespace DatadogSdk.Maui
                 }
             }
 
+            IDictionary<string, Java.Lang.Object>? androidHosts = null;
+            if (firstPartyHosts != null)
+            {
+                androidHosts = new Dictionary<string, Java.Lang.Object>();
+                foreach (var kvp in firstPartyHosts)
+                {
+                    androidHosts[kvp.Key] = new Java.Lang.String(kvp.Value?.ToString() ?? "");
+                }
+            }
+
             sdkInitialized = NativeDatadogWrapper.Initialize(
                 context,
                 config.ClientToken,
@@ -133,7 +152,8 @@ namespace DatadogSdk.Maui
                 uploadFrequency,
                 batchProcessingLevel,
                 androidConfig,
-                androidProxyConfig
+                androidProxyConfig,
+                androidHosts
             );
 #elif IOS
                 NSDictionary? iosConfig = null;
@@ -151,6 +171,15 @@ namespace DatadogSdk.Maui
                     );
                 }
 
+                NSDictionary? iosHosts = null;
+                if (firstPartyHosts != null)
+                {
+                    iosHosts = NSDictionary.FromObjectsAndKeys(
+                        firstPartyHosts.Values.Select(v => NSObject.FromObject(v)).ToArray(),
+                        firstPartyHosts.Keys.Select(k => (NSObject)new NSString(k)).ToArray()
+                    );
+                }
+
                 sdkInitialized = NativeDatadogWrapper.Initialize(
                     config.ClientToken,
                     config.Environment,
@@ -162,7 +191,8 @@ namespace DatadogSdk.Maui
                     uploadFrequency,
                     batchProcessingLevel,
                     iosConfig,
-                    iosProxyConfig
+                    iosProxyConfig,
+                    iosHosts
                 );
 #endif
             }
@@ -720,5 +750,21 @@ namespace DatadogSdk.Maui
             return NSArray.FromNSObjects(items.ToArray());
         }
 #endif
+
+        /// Converts a list of DdFirstPartyHost into a flat dictionary
+        /// where keys are host matches and values are comma-separated header type strings.
+        /// e.g. { "api.example.com": "datadog,tracecontext", "cdn.example.com": "b3" }
+        internal static Dictionary<string, object> BuildFirstPartyHostsDictionary(
+            List<DdFirstPartyHost> hosts)
+        {
+            var dict = new Dictionary<string, object>();
+            foreach (var host in hosts)
+            {
+                var headerTypes = string.Join(",",
+                    host.HeaderTypes.Select(DdRumConfiguration.ConvertTracingHeaderType));
+                dict[host.Match] = headerTypes;
+            }
+            return dict;
+        }
     }
 }

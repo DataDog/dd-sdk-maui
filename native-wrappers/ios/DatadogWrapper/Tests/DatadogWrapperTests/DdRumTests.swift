@@ -13,6 +13,7 @@ final class DdRumTests: XCTestCase {
 
     override func tearDown() {
         DdRum.resetDependencies()
+        DdSdkNativeWrapper.firstPartyHosts = nil
         mockRumModule = nil
         super.tearDown()
     }
@@ -279,21 +280,34 @@ final class DdRumTests: XCTestCase {
         XCTAssertNil(mockRumModule.capturedConfig?.customEndpoint)
     }
 
-    // MARK: - First party hosts
+    // MARK: - First party hosts (stored during SDK init)
 
-    func testEnableRum_firstPartyHosts_parsesJsonAndSetsUrlSessionTracking() {
-        let hostsJson = """
-        [{"match":"api.example.com","headerTypes":["datadog","tracecontext"]}]
-        """
+    func testEnableRum_withStoredFirstPartyHosts_setsUrlSessionTracking() {
+        // Simulate hosts stored during DdSdk.Initialize()
+        DdSdkNativeWrapper.firstPartyHosts = [
+            "api.example.com": Set([.datadog, .tracecontext])
+        ]
+
         let config: NSDictionary = [
             "applicationId": "test-app-id",
-            "firstPartyHosts": hostsJson,
             "resourceTraceSampleRate": 50.0
         ]
 
         DdRum.enableRum(configuration: config)
 
         XCTAssertNotNil(mockRumModule.capturedConfig?.urlSessionTracking)
+    }
+
+    func testEnableRum_withoutStoredFirstPartyHosts_doesNotSetUrlSessionTracking() {
+        DdSdkNativeWrapper.firstPartyHosts = nil
+
+        let config: NSDictionary = [
+            "applicationId": "test-app-id"
+        ]
+
+        DdRum.enableRum(configuration: config)
+
+        XCTAssertNil(mockRumModule.capturedConfig?.urlSessionTracking)
     }
 
     // MARK: - Initial resource threshold

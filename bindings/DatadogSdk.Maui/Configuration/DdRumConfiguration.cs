@@ -100,11 +100,6 @@ namespace DatadogSdk.Maui.Configuration
         /// </summary>
         public string? CustomEndpoint { get; set; }
 
-        /// <summary>
-        /// List of first-party hosts for distributed tracing. Optional.
-        /// </summary>
-        public List<DdFirstPartyHost>? FirstPartyHosts { get; set; }
-
         // Event mappers (stubs - not wired to native yet)
         /// <summary>
         /// Mapper for RUM error events. Not yet implemented - setting this will log a warning.
@@ -124,7 +119,6 @@ namespace DatadogSdk.Maui.Configuration
         /// <summary>
         /// Converts this configuration to a flat dictionary for passing to the native bridge.
         /// </summary>
-        [RequiresUnreferencedCode("Calls DatadogSdk.Maui.Configuration.DdRumConfiguration.SerializeFirstPartyHosts(List<DdFirstPartyHost>)")]
         internal Dictionary<string, object> ToDictionary()
         {
             var dict = new Dictionary<string, object>
@@ -157,9 +151,6 @@ namespace DatadogSdk.Maui.Configuration
 
             if (CustomEndpoint != null)
                 dict["customEndpoint"] = CustomEndpoint;
-
-            if (FirstPartyHosts != null && FirstPartyHosts.Count > 0)
-                dict["firstPartyHosts"] = SerializeFirstPartyHosts(FirstPartyHosts);
 
             return dict;
         }

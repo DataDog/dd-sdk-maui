@@ -48,6 +48,10 @@ public static class MauiProgram
             // {
             //     { "_dd.needsClearTextHttp", true }
             // },
+            // FirstPartyHosts = new List<DdFirstPartyHost>
+            // {
+            //     new() { Match = "datadoghq.com", HeaderTypes = new List<TracingHeaderType> { TracingHeaderType.Datadog, TracingHeaderType.TraceContext } }
+            // }
         });
 
         return builder.Build();
