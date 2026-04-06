@@ -255,12 +255,10 @@ cp bin/Release/*.nupkg ../../local-packages/
 ```bash
 # After rebuilding bindings
 cd example
-
-# Clean to force NuGet refresh
-./build.sh --clean --ios --run
+./build.sh --ios --run
 
 # Or for Android
-./build.sh --clean --android --run
+./build.sh --android --run
 ```
 
 ## Critical Implementation Details
@@ -459,7 +457,6 @@ DatadogWrapper.Initialize(
 **Options:**
 - `--ios` / `--android`: Target platform
 - `--run`: Launch on simulator/emulator after building
-- `--clean`: Clean before building (forces NuGet refresh)
 
 ## Common Issues and Solutions
 
@@ -485,8 +482,8 @@ DatadogWrapper.Initialize(
 **Solution**:
 ```bash
 cd example
-./build.sh --clean --ios
-# Clean forces dotnet restore --force --no-cache
+./build.sh --ios
+# The build script always cleans and refreshes the NuGet cache
 ```
 
 ### Issue: Gradle build fails with "SDK location not found"
@@ -525,13 +522,13 @@ Before committing changes:
 
 4. **Test iOS**
    ```bash
-   cd example && ./build.sh --clean --ios --run
+   cd example && ./build.sh --ios --run
    # Verify logs in Datadog UI
    ```
 
 5. **Test Android**
    ```bash
-   ./build.sh --clean --android --run
+   ./build.sh --android --run
    # Verify logs in Datadog UI
    ```
 
