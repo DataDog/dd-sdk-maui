@@ -114,7 +114,7 @@ public partial class MainPage : ContentPage
         var platform = DeviceInfo.Platform.ToString();
         var timestampMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
         var id = ++_nextSpanId;
-        var context = new Dictionary<string, string>
+        var context = new Dictionary<string, object>
         {
             { "platform", platform },
             { "action", "manual_trace" },
@@ -132,7 +132,7 @@ public partial class MainPage : ContentPage
 
         var (id, spanId) = _activeSpans.Pop();
         var timestampMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
-        var context = new Dictionary<string, string>
+        var context = new Dictionary<string, object>
         {
             { "status", "completed" },
             { "span_number", id.ToString() }

@@ -65,9 +65,9 @@ class DdLogs {
         }
 
         @JvmStatic
-        fun logWithAttributes(level: String, message: String, attributes: Map<String, String>) {
+        fun logWithAttributes(level: String, message: String, attributes: Map<String, Any?>) {
             ensureLogger()
-            val logAttributes = attributes.mapValues<String, String, Any?> { it.value }
+            val logAttributes = attributes.mapValues<String, Any?, Any?> { it.value }
             when (level.lowercase()) {
                 "debug" -> logger?.d(message, attributes = logAttributes)
                 "info" -> logger?.i(message, attributes = logAttributes)

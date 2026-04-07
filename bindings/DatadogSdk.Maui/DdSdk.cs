@@ -327,6 +327,7 @@ namespace DatadogSdk.Maui
                 long l => Java.Lang.Long.ValueOf(l),
                 double d => Java.Lang.Double.ValueOf(d),
                 IDictionary<string, object> dict => ToJavaHashMap(dict),
+                System.Collections.IDictionary dict => ToJavaHashMapFromNonGeneric(dict),
                 System.Collections.IEnumerable list => ToJavaList(list),
                 _ => new Java.Lang.String(value?.ToString() ?? "")
             };
@@ -338,6 +339,16 @@ namespace DatadogSdk.Maui
             foreach (var kvp in dict)
             {
                 map.Put(kvp.Key, ToJavaObject(kvp.Value));
+            }
+            return map;
+        }
+
+        private static Java.Util.HashMap ToJavaHashMapFromNonGeneric(System.Collections.IDictionary dict)
+        {
+            var map = new Java.Util.HashMap();
+            foreach (System.Collections.DictionaryEntry entry in dict)
+            {
+                map.Put(entry.Key?.ToString() ?? "", ToJavaObject(entry.Value));
             }
             return map;
         }
@@ -376,6 +387,7 @@ namespace DatadogSdk.Maui
                 double d => NSNumber.FromDouble(d),
                 float f => NSNumber.FromFloat(f),
                 IDictionary<string, object> dict => ToNSDictionary(dict),
+                System.Collections.IDictionary dict => ToNSDictionaryFromNonGeneric(dict),
                 System.Collections.IEnumerable list => ToNSArray(list),
                 _ => new NSString(value.ToString() ?? "")
             };
@@ -386,6 +398,18 @@ namespace DatadogSdk.Maui
             var keys = dict.Keys.Select(k => (NSObject)new NSString(k)).ToArray();
             var values = dict.Values.Select(v => ToNSObject(v)).ToArray();
             return NSDictionary.FromObjectsAndKeys(values, keys);
+        }
+
+        private static NSDictionary ToNSDictionaryFromNonGeneric(System.Collections.IDictionary dict)
+        {
+            var keys = new System.Collections.Generic.List<NSObject>();
+            var values = new System.Collections.Generic.List<NSObject>();
+            foreach (System.Collections.DictionaryEntry entry in dict)
+            {
+                keys.Add(new NSString(entry.Key?.ToString() ?? ""));
+                values.Add(ToNSObject(entry.Value));
+            }
+            return NSDictionary.FromObjectsAndKeys(values.ToArray(), keys.ToArray());
         }
 
         private static NSArray ToNSArray(System.Collections.IEnumerable list)

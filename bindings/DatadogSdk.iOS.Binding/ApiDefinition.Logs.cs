@@ -30,6 +30,6 @@ namespace DatadogSdk.iOS.Binding
 
         [Static]
         [Export("logWithAttributesWithLevel:message:attributes:")]
-        void LogWithAttributes(string level, string message, NSDictionary<NSString, NSString> attributes);
+        void LogWithAttributes(string level, string message, NSDictionary attributes);
     }
 }

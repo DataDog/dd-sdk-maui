@@ -58,7 +58,7 @@ class DdTrace {
         @JvmStatic
         fun startSpan(
             operation: String,
-            context: Map<String, String>,
+            context: Map<String, Any?>,
             timestampMs: Long
         ): String = synchronized(lock) {
             ensureTracer()
@@ -93,7 +93,7 @@ class DdTrace {
         @JvmStatic
         fun finishSpan(
             spanId: String,
-            context: Map<String, String>,
+            context: Map<String, Any?>,
             timestampMs: Long
         ): Unit = synchronized(lock) {
             ensureTracer()

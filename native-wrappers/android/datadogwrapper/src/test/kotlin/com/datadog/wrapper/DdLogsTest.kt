@@ -145,7 +145,7 @@ class DdLogsTest {
     @Test
     fun `logWithAttributes debug level calls logger d with attributes`() {
         DdLogs.enableLogs(customEndpoint = null)
-        val attributes = mapOf("user_id" to "123", "action" to "test")
+        val attributes = mapOf<String, Any?>("user_id" to "123", "action" to "test")
         val messageSlot = slot<String>()
         val attributesSlot = slot<Map<String, Any?>>()
 
@@ -161,7 +161,7 @@ class DdLogsTest {
     fun `logWithAttributes info level calls logger i with attributes`() {
         DdLogs.enableLogs(customEndpoint = null)
 
-        DdLogs.logWithAttributes(level = "info", message = "Info with attrs", attributes = mapOf("key" to "value"))
+        DdLogs.logWithAttributes(level = "info", message = "Info with attrs", attributes = mapOf<String, Any?>("key" to "value"))
 
         verify { mockLogger.i(eq("Info with attrs"), attributes = any()) }
     }
@@ -170,7 +170,7 @@ class DdLogsTest {
     fun `logWithAttributes warn level calls logger w with attributes`() {
         DdLogs.enableLogs(customEndpoint = null)
 
-        DdLogs.logWithAttributes(level = "warn", message = "Warn with attrs", attributes = mapOf("warning" to "true"))
+        DdLogs.logWithAttributes(level = "warn", message = "Warn with attrs", attributes = mapOf<String, Any?>("warning" to "true"))
 
         verify { mockLogger.w(eq("Warn with attrs"), attributes = any()) }
     }
