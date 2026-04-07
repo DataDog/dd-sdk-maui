@@ -3,6 +3,7 @@ using Xunit;
 
 namespace DatadogSdk.Maui.Tests;
 
+[Collection("InternalLog")]
 public class DdSdkConfigurationTests : IDisposable
 {
     private readonly MockNativeSdkBridge bridge = new();

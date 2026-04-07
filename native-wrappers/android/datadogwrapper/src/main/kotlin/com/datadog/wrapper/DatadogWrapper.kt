@@ -10,6 +10,7 @@ import com.datadog.android.core.configuration.BatchSize
 import com.datadog.android.core.configuration.Configuration
 import com.datadog.android.core.configuration.UploadFrequency
 import com.datadog.android.privacy.TrackingConsent
+import com.datadog.android.rum.GlobalRumMonitor
 
 class DatadogWrapper {
     companion object {
@@ -125,6 +126,34 @@ class DatadogWrapper {
         @JvmStatic
         fun setTrackingConsent(consent: String) {
             Datadog.setTrackingConsent(mapTrackingConsent(consent))
+        }
+
+        // -- Global Attributes --
+
+        @JvmStatic
+        fun addAttribute(key: String, value: Any?) {
+            GlobalRumMonitor.get().addAttribute(key, value)
+        }
+
+        @JvmStatic
+        fun addAttributes(attributes: Map<String, Any?>) {
+            val monitor = GlobalRumMonitor.get()
+            for ((key, value) in attributes) {
+                monitor.addAttribute(key, value)
+            }
+        }
+
+        @JvmStatic
+        fun removeAttribute(key: String) {
+            GlobalRumMonitor.get().removeAttribute(key)
+        }
+
+        @JvmStatic
+        fun removeAttributes(keys: List<String>) {
+            val monitor = GlobalRumMonitor.get()
+            for (key in keys) {
+                monitor.removeAttribute(key)
+            }
         }
     }
 }

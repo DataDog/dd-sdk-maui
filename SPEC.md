@@ -917,6 +917,23 @@ DdSdk.SetTrackingConsent(TrackingConsent.NotGranted);
 DdSdk.SetTrackingConsent(TrackingConsent.Pending);
 ```
 
+### Global Attributes
+
+Global attributes are attached to all events sent by the SDK. They are stored both locally in a thread-safe `ConcurrentDictionary` and on the native SDK.
+
+- `AddAttribute(string key, object value)` — Adds a global attribute. Overwrites if key exists. Supported value types: `string`, `int`, `long`, `double`, `bool`.
+- `AddAttributes(Dictionary<string, object> attributes)` — Adds multiple global attributes at once.
+- `RemoveAttribute(string key)` — Removes a global attribute by key. No-op if key doesn't exist.
+- `RemoveAttributes(List<string> keys)` — Removes multiple global attributes at once.
+- `GetAttributes()` — Returns a snapshot copy of all current global attributes.
+
+**Native SDK mapping:**
+
+| Platform | AddAttribute calls | RemoveAttribute calls |
+|----------|---|---|
+| Android | `NativeDatadogWrapper.addAttribute(key, value)` | `NativeDatadogWrapper.removeAttribute(key)` |
+| iOS | `NativeDatadogWrapper.addAttribute(key, value)` | `NativeDatadogWrapper.removeAttribute(key)` |
+
 ### Logging
 
 ```csharp

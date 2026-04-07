@@ -49,6 +49,31 @@ public partial class MainPage : ContentPage
         };
 
         DdRum.Enable(rumConfiguration);
+
+        // Set global attributes
+        DdSdk.AddAttribute("StringAttribute", "AttributeValue");
+        DdSdk.AddAttribute("ArrayAttribute", new string[] { "AttributeValue", "AttributeValue" });
+        DdSdk.AddAttribute("DictionaryAttribute", new Dictionary<string, object>
+        {
+            { "string", "test" },
+            { "int", 123 },
+            { "boolean", true },
+            { "nested", new Dictionary<string, object>
+                {
+                    { "value", "test" }
+                }
+            }
+        });
+
+        DdSdk.AddAttribute("DeleteAttribute", "DeleteMe");
+        DdSdk.RemoveAttribute("DeleteAttribute");
+        DdSdk.AddAttributes(new Dictionary<string, object>
+        {
+            { "BatchAttribute1", "string" },
+            { "BatchAttribute2", 123 },
+            { "BatchDeleteMe", false }
+        });
+        DdSdk.RemoveAttributes(new List<string> { "BatchDeleteMe" });
     }
 
     private void OnSendLogsClicked(object? sender, EventArgs e)

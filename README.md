@@ -4,7 +4,7 @@
 
 ## Current Features
 
-- **Core SDK**: Initialize Datadog with full configuration support, including runtime tracking consent updates.
+- **Core SDK**: Initialize Datadog with full configuration support, including runtime tracking consent updates and global attributes.
 - **Logs**: Send logs from your .NET MAUI application to Datadog with support for debug, info, warn, and error levels, plus custom attributes.
 - **Traces**: Manual span tracking with support for nested parent-child relationships, custom context attributes, and configurable endpoints.
 - **RUM (Real User Monitoring)**: Enable RUM to track user sessions, views, actions, and crashes. Configure session sampling, vitals monitoring, native view/interaction tracking, crash reporting, and first-party hosts for distributed tracing.
@@ -88,6 +88,31 @@ You can update the tracking consent at any time after initialization:
 ```csharp
 // Update tracking consent at runtime (e.g., after user accepts a consent dialog)
 DdSdk.SetTrackingConsent(TrackingConsent.Granted);
+```
+
+### Attributes
+
+Set global attributes that are attached to all future events (RUM, Logs, Traces):
+
+```csharp
+// Add a global attribute
+DdSdk.AddAttribute("user.plan", "premium");
+
+// Add multiple attributes at once
+DdSdk.AddAttributes(new Dictionary<string, object>
+{
+    { "user.plan", "premium" },
+    { "app.experiment", "new-checkout-flow" }
+});
+
+// Remove a global attribute
+DdSdk.RemoveAttribute("app.experiment");
+
+// Remove multiple attributes at once
+DdSdk.RemoveAttributes(new List<string> { "user.plan", "app.experiment" });
+
+// Read current attributes (returns a snapshot copy)
+var attributes = DdSdk.GetAttributes();
 ```
 
 ### Logs
