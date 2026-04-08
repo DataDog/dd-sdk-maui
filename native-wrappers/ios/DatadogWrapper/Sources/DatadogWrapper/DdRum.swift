@@ -54,6 +54,55 @@ public class DdRum: NSObject {
         }
     }
 
+    static func mapActionType(_ type: String) -> RUMActionType {
+        switch type.lowercased() {
+        case "tap", "click": return .tap
+        case "scroll": return .scroll
+        case "swipe": return .swipe
+        default: return .custom
+        }
+    }
+
+    static func mapResourceMethod(_ method: String) -> RUMMethod {
+        switch method.lowercased() {
+        case "post": return .post
+        case "put": return .put
+        case "delete": return .delete
+        case "head": return .head
+        case "patch": return .patch
+        default: return .get
+        }
+    }
+
+    static func mapResourceKind(_ kind: String) -> RUMResourceType {
+        switch kind.lowercased() {
+        case "xhr": return .xhr
+        case "native": return .native
+        case "fetch": return .fetch
+        case "document": return .document
+        case "beacon": return .beacon
+        case "image": return .image
+        case "font": return .font
+        case "css": return .css
+        case "media": return .media
+        case "js": return .js
+        default: return .other
+        }
+    }
+
+    private static func buildAttributes(from context: NSDictionary, timestampMs: Int64) -> [AttributeKey: AttributeValue] {
+        var attributes: [AttributeKey: AttributeValue] = [:]
+        if let contextDict = context as? [String: Any] {
+            for (key, value) in contextDict {
+                attributes[key] = AnyEncodable(value)
+            }
+        }
+        if timestampMs > 0 {
+            attributes["_dd.timestamp"] = timestampMs
+        }
+        return attributes
+    }
+
     // MARK: - Enable
 
     /// Enable the RUM module with configuration dictionary
@@ -205,5 +254,102 @@ public class DdRum: NSObject {
             stacktrace: stacktrace,
             attributes: attributes
         )
+    }
+
+    // MARK: - Views
+
+    @objc(startView:name:context:timestampMs:)
+    public static func startView(_ key: String, name: String, context: NSDictionary, timestampMs: Int64) {
+        let attributes = buildAttributes(from: context, timestampMs: timestampMs)
+        rumModule.startView(key: key, name: name, attributes: attributes)
+    }
+
+    @objc(stopView:context:timestampMs:)
+    public static func stopView(_ key: String, context: NSDictionary, timestampMs: Int64) {
+        let attributes = buildAttributes(from: context, timestampMs: timestampMs)
+        rumModule.stopView(key: key, attributes: attributes)
+    }
+
+    // MARK: - Actions
+
+    @objc(startAction:name:context:timestampMs:)
+    public static func startAction(_ type: String, name: String, context: NSDictionary, timestampMs: Int64) {
+        let attributes = buildAttributes(from: context, timestampMs: timestampMs)
+        rumModule.startAction(type: mapActionType(type), name: name, attributes: attributes)
+    }
+
+    @objc(stopAction:name:context:timestampMs:)
+    public static func stopAction(_ type: String, name: String, context: NSDictionary, timestampMs: Int64) {
+        let attributes = buildAttributes(from: context, timestampMs: timestampMs)
+        rumModule.stopAction(type: mapActionType(type), name: name, attributes: attributes)
+    }
+
+    @objc(addAction:name:context:timestampMs:)
+    public static func addAction(_ type: String, name: String, context: NSDictionary, timestampMs: Int64) {
+        let attributes = buildAttributes(from: context, timestampMs: timestampMs)
+        rumModule.addAction(type: mapActionType(type), name: name, attributes: attributes)
+    }
+
+    // MARK: - Resources
+
+    @objc(startResource:method:url:context:timestampMs:)
+    public static func startResource(_ key: String, method: String, url: String, context: NSDictionary, timestampMs: Int64) {
+        let attributes = buildAttributes(from: context, timestampMs: timestampMs)
+        rumModule.startResource(resourceKey: key, httpMethod: mapResourceMethod(method), urlString: url, attributes: attributes)
+    }
+
+    @objc(stopResource:statusCode:kind:size:context:timestampMs:)
+    public static func stopResource(_ key: String, statusCode: Int, kind: String, size: Int64, context: NSDictionary, timestampMs: Int64) {
+        let attributes = buildAttributes(from: context, timestampMs: timestampMs)
+        let resourceSize: Int64? = size >= 0 ? size : nil
+        rumModule.stopResource(resourceKey: key, statusCode: statusCode, kind: mapResourceKind(kind), size: resourceSize, attributes: attributes)
+    }
+
+    // MARK: - Timing
+
+    @objc(addTiming:)
+    public static func addTiming(_ name: String) {
+        rumModule.addTiming(name: name)
+    }
+
+    @objc(addViewLoadingTime:)
+    public static func addViewLoadingTime(_ overwrite: Bool) {
+        rumModule.addViewLoadingTime(overwrite: overwrite)
+    }
+
+    // MARK: - Session
+
+    @objc
+    public static func stopSession() {
+        rumModule.stopSession()
+    }
+
+    // MARK: - View Attributes
+
+    @objc(addViewAttribute:value:)
+    public static func addViewAttribute(_ key: String, value: Any) {
+        rumModule.addViewAttribute(forKey: key, value: AnyEncodable(value))
+    }
+
+    @objc(removeViewAttribute:)
+    public static func removeViewAttribute(_ key: String) {
+        rumModule.removeViewAttribute(forKey: key)
+    }
+
+    @objc(addViewAttributes:)
+    public static func addViewAttributes(_ attributes: NSDictionary) {
+        var encodable: [AttributeKey: AttributeValue] = [:]
+        if let dict = attributes as? [String: Any] {
+            for (key, value) in dict {
+                encodable[key] = AnyEncodable(value)
+            }
+        }
+        rumModule.addViewAttributes(encodable)
+    }
+
+    @objc(removeViewAttributes:)
+    public static func removeViewAttributes(_ keys: NSArray) {
+        guard let keyList = keys as? [String] else { return }
+        rumModule.removeViewAttributes(forKeys: keyList)
     }
 }

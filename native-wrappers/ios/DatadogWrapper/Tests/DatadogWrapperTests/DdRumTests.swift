@@ -459,4 +459,198 @@ final class DdRumTests: XCTestCase {
         // Unknown defaults to datadog
         XCTAssertEqual(DdRum.mapTracingHeaderType("unknown"), .datadog)
     }
+
+    func testMapActionType_allValues() {
+        XCTAssertEqual(DdRum.mapActionType("tap"), .tap)
+        XCTAssertEqual(DdRum.mapActionType("click"), .tap)  // iOS has no .click, maps to .tap
+        XCTAssertEqual(DdRum.mapActionType("scroll"), .scroll)
+        XCTAssertEqual(DdRum.mapActionType("swipe"), .swipe)
+        XCTAssertEqual(DdRum.mapActionType("custom"), .custom)
+        // Unknown defaults to custom
+        XCTAssertEqual(DdRum.mapActionType("unknown"), .custom)
+    }
+
+    func testMapResourceMethod_allValues() {
+        XCTAssertEqual(DdRum.mapResourceMethod("get"), .get)
+        XCTAssertEqual(DdRum.mapResourceMethod("post"), .post)
+        XCTAssertEqual(DdRum.mapResourceMethod("put"), .put)
+        XCTAssertEqual(DdRum.mapResourceMethod("delete"), .delete)
+        XCTAssertEqual(DdRum.mapResourceMethod("head"), .head)
+        XCTAssertEqual(DdRum.mapResourceMethod("patch"), .patch)
+        // Unknown defaults to get
+        XCTAssertEqual(DdRum.mapResourceMethod("unknown"), .get)
+    }
+
+    func testMapResourceKind_allValues() {
+        XCTAssertEqual(DdRum.mapResourceKind("xhr"), .xhr)
+        XCTAssertEqual(DdRum.mapResourceKind("native"), .native)
+        XCTAssertEqual(DdRum.mapResourceKind("fetch"), .fetch)
+        XCTAssertEqual(DdRum.mapResourceKind("document"), .document)
+        XCTAssertEqual(DdRum.mapResourceKind("beacon"), .beacon)
+        XCTAssertEqual(DdRum.mapResourceKind("image"), .image)
+        XCTAssertEqual(DdRum.mapResourceKind("font"), .font)
+        XCTAssertEqual(DdRum.mapResourceKind("css"), .css)
+        XCTAssertEqual(DdRum.mapResourceKind("media"), .media)
+        XCTAssertEqual(DdRum.mapResourceKind("js"), .js)
+        // Unknown defaults to other
+        XCTAssertEqual(DdRum.mapResourceKind("unknown"), .other)
+    }
+
+    // MARK: - startView
+
+    func testStartView_callsRumModuleWithKeyAndName() {
+        DdRum.startView("view-key", name: "ViewName", context: [:], timestampMs: 0)
+
+        XCTAssertTrue(mockRumModule.startViewCalled)
+        XCTAssertEqual(mockRumModule.capturedStartViewKey, "view-key")
+        XCTAssertEqual(mockRumModule.capturedStartViewName, "ViewName")
+    }
+
+    func testStartView_mergesContextAndTimestamp() {
+        let context: NSDictionary = ["custom_key": "custom_value"]
+        DdRum.startView("view-key", name: "ViewName", context: context, timestampMs: 1234567890)
+
+        let attrs = mockRumModule.capturedStartViewAttributes!
+        XCTAssertEqual(attrs["_dd.timestamp"] as? Int64, 1234567890)
+    }
+
+    // MARK: - stopView
+
+    func testStopView_callsRumModuleWithKey() {
+        DdRum.stopView("view-key", context: [:], timestampMs: 0)
+
+        XCTAssertTrue(mockRumModule.stopViewCalled)
+        XCTAssertEqual(mockRumModule.capturedStopViewKey, "view-key")
+    }
+
+    // MARK: - startAction
+
+    func testStartAction_callsRumModuleWithTypeAndName() {
+        DdRum.startAction("tap", name: "Button Tap", context: [:], timestampMs: 0)
+
+        XCTAssertTrue(mockRumModule.startActionCalled)
+        XCTAssertEqual(mockRumModule.capturedStartActionType, .tap)
+        XCTAssertEqual(mockRumModule.capturedStartActionName, "Button Tap")
+    }
+
+    // MARK: - stopAction
+
+    func testStopAction_callsRumModuleWithTypeAndName() {
+        DdRum.stopAction("scroll", name: "List Scroll", context: [:], timestampMs: 0)
+
+        XCTAssertTrue(mockRumModule.stopActionCalled)
+        XCTAssertEqual(mockRumModule.capturedStopActionType, .scroll)
+        XCTAssertEqual(mockRumModule.capturedStopActionName, "List Scroll")
+    }
+
+    // MARK: - addAction
+
+    func testAddAction_callsRumModuleWithTypeAndName() {
+        DdRum.addAction("swipe", name: "Swipe Left", context: [:], timestampMs: 0)
+
+        XCTAssertTrue(mockRumModule.addActionCalled)
+        XCTAssertEqual(mockRumModule.capturedAddActionType, .swipe)
+        XCTAssertEqual(mockRumModule.capturedAddActionName, "Swipe Left")
+    }
+
+    // MARK: - startResource
+
+    func testStartResource_callsRumModuleWithParams() {
+        DdRum.startResource("res-key", method: "post", url: "https://api.example.com/data", context: [:], timestampMs: 0)
+
+        XCTAssertTrue(mockRumModule.startResourceCalled)
+        XCTAssertEqual(mockRumModule.capturedStartResourceKey, "res-key")
+        XCTAssertEqual(mockRumModule.capturedStartResourceMethod, .post)
+        XCTAssertEqual(mockRumModule.capturedStartResourceUrl, "https://api.example.com/data")
+    }
+
+    // MARK: - stopResource
+
+    func testStopResource_callsRumModuleWithParams() {
+        DdRum.stopResource("res-key", statusCode: 200, kind: "xhr", size: 1024, context: [:], timestampMs: 0)
+
+        XCTAssertTrue(mockRumModule.stopResourceCalled)
+        XCTAssertEqual(mockRumModule.capturedStopResourceKey, "res-key")
+        XCTAssertEqual(mockRumModule.capturedStopResourceStatusCode, 200)
+        XCTAssertEqual(mockRumModule.capturedStopResourceKind, .xhr)
+        XCTAssertEqual(mockRumModule.capturedStopResourceSize, 1024)
+    }
+
+    func testStopResource_withNegativeSize_passesNil() {
+        DdRum.stopResource("res-key", statusCode: 200, kind: "fetch", size: -1, context: [:], timestampMs: 0)
+
+        XCTAssertNil(mockRumModule.capturedStopResourceSize)
+    }
+
+    // MARK: - addTiming
+
+    func testAddTiming_callsRumModuleWithName() {
+        DdRum.addTiming("hero_ready")
+
+        XCTAssertTrue(mockRumModule.addTimingCalled)
+        XCTAssertEqual(mockRumModule.capturedTimingName, "hero_ready")
+    }
+
+    // MARK: - addViewLoadingTime
+
+    func testAddViewLoadingTime_callsRumModuleWithOverwrite() {
+        DdRum.addViewLoadingTime(true)
+
+        XCTAssertTrue(mockRumModule.addViewLoadingTimeCalled)
+        XCTAssertEqual(mockRumModule.capturedViewLoadingTimeOverwrite, true)
+    }
+
+    func testAddViewLoadingTime_withFalse_callsRumModule() {
+        DdRum.addViewLoadingTime(false)
+
+        XCTAssertTrue(mockRumModule.addViewLoadingTimeCalled)
+        XCTAssertEqual(mockRumModule.capturedViewLoadingTimeOverwrite, false)
+    }
+
+    // MARK: - stopSession
+
+    func testStopSession_callsRumModule() {
+        DdRum.stopSession()
+
+        XCTAssertTrue(mockRumModule.stopSessionCalled)
+    }
+
+    // MARK: - addViewAttribute
+
+    func testAddViewAttribute_callsRumModuleWithKeyAndValue() {
+        DdRum.addViewAttribute("theme", value: "dark")
+
+        XCTAssertTrue(mockRumModule.addViewAttributeCalled)
+        XCTAssertEqual(mockRumModule.capturedAddViewAttributeKey, "theme")
+    }
+
+    // MARK: - removeViewAttribute
+
+    func testRemoveViewAttribute_callsRumModuleWithKey() {
+        DdRum.removeViewAttribute("theme")
+
+        XCTAssertTrue(mockRumModule.removeViewAttributeCalled)
+        XCTAssertEqual(mockRumModule.capturedRemoveViewAttributeKey, "theme")
+    }
+
+    // MARK: - addViewAttributes
+
+    func testAddViewAttributes_callsRumModuleWithDict() {
+        let attrs: NSDictionary = ["key1": "val1", "key2": 42]
+        DdRum.addViewAttributes(attrs)
+
+        XCTAssertTrue(mockRumModule.addViewAttributesCalled)
+        XCTAssertNotNil(mockRumModule.capturedAddViewAttributesDict)
+        XCTAssertEqual(mockRumModule.capturedAddViewAttributesDict?.count, 2)
+    }
+
+    // MARK: - removeViewAttributes
+
+    func testRemoveViewAttributes_callsRumModuleWithKeys() {
+        let keys: NSArray = ["key1", "key2"]
+        DdRum.removeViewAttributes(keys)
+
+        XCTAssertTrue(mockRumModule.removeViewAttributesCalled)
+        XCTAssertEqual(mockRumModule.capturedRemoveViewAttributesKeys, ["key1", "key2"])
+    }
 }

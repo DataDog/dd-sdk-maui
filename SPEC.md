@@ -1077,6 +1077,48 @@ DdRum.Enable(new DdRumConfiguration
 });
 ```
 
+### RUM Tracking API
+
+The following methods are available on `DdRum` for manual RUM event tracking:
+
+**Views:**
+- `StartView(string key, string name, Dictionary<string, object>? context, long timestampMs)` — Start tracking a view
+- `StopView(string key, Dictionary<string, object>? context, long timestampMs)` — Stop tracking a view
+
+**Actions:**
+- `AddAction(RumActionType type, string name, Dictionary<string, object>? context, long timestampMs)` — Add an instant action
+- `StartAction(RumActionType type, string name, Dictionary<string, object>? context, long timestampMs)` — Start a continuous action
+- `StopAction(RumActionType type, string name, Dictionary<string, object>? context, long timestampMs)` — Stop a continuous action
+
+`RumActionType` enum: `Tap`, `Scroll`, `Swipe`, `Click`, `Back`, `Custom`
+
+**Resources:**
+- `StartResource(string key, RumResourceMethod method, string url, Dictionary<string, object>? context, long timestampMs)` — Start tracking a resource
+- `StopResource(string key, int statusCode, RumResourceKind kind, long size, Dictionary<string, object>? context, long timestampMs)` — Stop tracking a resource. Size of -1 means unknown.
+
+`RumResourceMethod` enum: `Get`, `Post`, `Put`, `Delete`, `Head`, `Patch`, `Connect`, `Trace`, `Options`
+`RumResourceKind` enum: `Xhr`, `Native`, `Fetch`, `Document`, `Beacon`, `Image`, `Font`, `Css`, `Media`, `Js`, `Other`
+
+**Timing:**
+- `AddTiming(string name)` — Add a custom timing to the current view
+- `AddViewLoadingTime(bool overwrite)` — Add view loading time
+
+**View Attributes:**
+- `AddViewAttribute(string key, object value)` — Add an attribute to the current view
+- `RemoveViewAttribute(string key)` — Remove a view attribute
+- `AddViewAttributes(Dictionary<string, object> attributes)` — Add multiple view attributes
+- `RemoveViewAttributes(List<string> keys)` — Remove multiple view attributes
+
+**Session:**
+- `StopSession()` — Stop the current RUM session
+
+**Errors:**
+- `AddError(string message, RumErrorSource source, string stacktrace, Dictionary<string, object>? context, long timestampMs)` — Report an error
+
+`RumErrorSource` enum: `Network`, `Source`, `Console`, `Webview`, `Custom`
+
+All methods that accept `context` and `timestampMs` use defaults of empty dictionary and 0 (current time) respectively.
+
 ## Known Limitations
 
 ### Current Limitations

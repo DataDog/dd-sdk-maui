@@ -23,7 +23,7 @@ public class DdRumAddErrorTests : IDisposable
     [Fact]
     public void AddError_PassesMessageToNative()
     {
-        DdRum.AddError("Test error", "source", "at Test.Method()");
+        DdRum.AddError("Test error", RumErrorSource.Source, "at Test.Method()");
 
         Assert.Equal(1, rumBridge.AddErrorCallCount);
         Assert.Equal("Test error", rumBridge.LastMessage);
@@ -32,16 +32,16 @@ public class DdRumAddErrorTests : IDisposable
     [Fact]
     public void AddError_PassesSourceToNative()
     {
-        DdRum.AddError("Error", "network", "stacktrace");
+        DdRum.AddError("Error", RumErrorSource.Network, "stacktrace");
 
-        Assert.Equal("network", rumBridge.LastSource);
+        Assert.Equal(RumErrorSource.Network, rumBridge.LastSource);
     }
 
     [Fact]
     public void AddError_PassesStacktraceToNative()
     {
         var stacktrace = "System.Exception: test\n   at Foo.Bar() in /src/Foo.cs:line 42";
-        DdRum.AddError("Error", "source", stacktrace);
+        DdRum.AddError("Error", RumErrorSource.Source, stacktrace);
 
         Assert.Equal(stacktrace, rumBridge.LastStacktrace);
     }
@@ -55,7 +55,7 @@ public class DdRumAddErrorTests : IDisposable
             { "key2", 42 }
         };
 
-        DdRum.AddError("Error", "source", "stacktrace", context);
+        DdRum.AddError("Error", RumErrorSource.Source, "stacktrace", context);
 
         Assert.NotNull(rumBridge.LastContext);
         Assert.Equal("value1", rumBridge.LastContext["key1"]);
@@ -65,7 +65,7 @@ public class DdRumAddErrorTests : IDisposable
     [Fact]
     public void AddError_WithoutContext_PassesEmptyDictionary()
     {
-        DdRum.AddError("Error", "source", "stacktrace");
+        DdRum.AddError("Error", RumErrorSource.Source, "stacktrace");
 
         Assert.NotNull(rumBridge.LastContext);
         Assert.Empty(rumBridge.LastContext);
@@ -74,7 +74,7 @@ public class DdRumAddErrorTests : IDisposable
     [Fact]
     public void AddError_WithTimestamp_PassesTimestampToNative()
     {
-        DdRum.AddError("Error", "source", "stacktrace", timestampMs: 1234567890L);
+        DdRum.AddError("Error", RumErrorSource.Source, "stacktrace", timestampMs: 1234567890L);
 
         Assert.Equal(1234567890L, rumBridge.LastTimestampMs);
     }
@@ -82,7 +82,7 @@ public class DdRumAddErrorTests : IDisposable
     [Fact]
     public void AddError_WithoutTimestamp_DefaultsToZero()
     {
-        DdRum.AddError("Error", "source", "stacktrace");
+        DdRum.AddError("Error", RumErrorSource.Source, "stacktrace");
 
         Assert.Equal(0L, rumBridge.LastTimestampMs);
     }
@@ -90,12 +90,12 @@ public class DdRumAddErrorTests : IDisposable
     [Fact]
     public void AddError_CalledMultipleTimes_IncrementsCallCount()
     {
-        DdRum.AddError("Error 1", "source", "stack1");
-        DdRum.AddError("Error 2", "network", "stack2");
+        DdRum.AddError("Error 1", RumErrorSource.Source, "stack1");
+        DdRum.AddError("Error 2", RumErrorSource.Network, "stack2");
 
         Assert.Equal(2, rumBridge.AddErrorCallCount);
         Assert.Equal("Error 2", rumBridge.LastMessage);
-        Assert.Equal("network", rumBridge.LastSource);
+        Assert.Equal(RumErrorSource.Network, rumBridge.LastSource);
     }
 
     // ── Fingerprint ────────────────────────────────────────────
@@ -103,7 +103,7 @@ public class DdRumAddErrorTests : IDisposable
     [Fact]
     public void AddError_WithFingerprint_InjectsIntoContext()
     {
-        DdRum.AddError("Error", "source", "stacktrace", fingerprint: "custom-group");
+        DdRum.AddError("Error", RumErrorSource.Source, "stacktrace", fingerprint: "custom-group");
 
         Assert.NotNull(rumBridge.LastContext);
         Assert.Equal("custom-group", rumBridge.LastContext["_dd.error.fingerprint"]);
@@ -112,7 +112,7 @@ public class DdRumAddErrorTests : IDisposable
     [Fact]
     public void AddError_WithEmptyFingerprint_DoesNotInjectIntoContext()
     {
-        DdRum.AddError("Error", "source", "stacktrace", fingerprint: "");
+        DdRum.AddError("Error", RumErrorSource.Source, "stacktrace", fingerprint: "");
 
         Assert.NotNull(rumBridge.LastContext);
         Assert.False(rumBridge.LastContext.ContainsKey("_dd.error.fingerprint"));
@@ -121,7 +121,7 @@ public class DdRumAddErrorTests : IDisposable
     [Fact]
     public void AddError_WithNullFingerprint_DoesNotInjectIntoContext()
     {
-        DdRum.AddError("Error", "source", "stacktrace", fingerprint: null);
+        DdRum.AddError("Error", RumErrorSource.Source, "stacktrace", fingerprint: null);
 
         Assert.NotNull(rumBridge.LastContext);
         Assert.False(rumBridge.LastContext.ContainsKey("_dd.error.fingerprint"));
@@ -132,7 +132,7 @@ public class DdRumAddErrorTests : IDisposable
     {
         var context = new Dictionary<string, object> { { "key", "value" } };
 
-        DdRum.AddError("Error", "source", "stacktrace", context, fingerprint: "my-fingerprint");
+        DdRum.AddError("Error", RumErrorSource.Source, "stacktrace", context, fingerprint: "my-fingerprint");
 
         Assert.NotNull(rumBridge.LastContext);
         Assert.Equal("value", rumBridge.LastContext["key"]);
@@ -150,7 +150,7 @@ public class DdRumAddErrorTests : IDisposable
             return e;
         };
 
-        DdRum.AddError("Original error", "source", "stacktrace");
+        DdRum.AddError("Original error", RumErrorSource.Source, "stacktrace");
 
         Assert.Equal("Modified: Original error", rumBridge.LastMessage);
     }
@@ -160,7 +160,7 @@ public class DdRumAddErrorTests : IDisposable
     {
         DdRum.errorEventMapper = _ => null;
 
-        DdRum.AddError("Should be dropped", "source", "stacktrace");
+        DdRum.AddError("Should be dropped", RumErrorSource.Source, "stacktrace");
 
         Assert.Equal(0, rumBridge.AddErrorCallCount);
     }
@@ -171,17 +171,17 @@ public class DdRumAddErrorTests : IDisposable
         DdRum.errorEventMapper = e =>
         {
             e.Message = "new message";
-            e.Source = "network";
+            e.Source = RumErrorSource.Network;
             e.Stacktrace = "new stack";
             e.Context["custom"] = "value";
             e.TimestampMs = 999L;
             return e;
         };
 
-        DdRum.AddError("old", "source", "old stack", timestampMs: 0);
+        DdRum.AddError("old", RumErrorSource.Source, "old stack", timestampMs: 0);
 
         Assert.Equal("new message", rumBridge.LastMessage);
-        Assert.Equal("network", rumBridge.LastSource);
+        Assert.Equal(RumErrorSource.Network, rumBridge.LastSource);
         Assert.Equal("new stack", rumBridge.LastStacktrace);
         Assert.Equal("value", rumBridge.LastContext!["custom"]);
         Assert.Equal(999L, rumBridge.LastTimestampMs);
@@ -192,7 +192,7 @@ public class DdRumAddErrorTests : IDisposable
     {
         DdRum.errorEventMapper = null;
 
-        DdRum.AddError("Original", "source", "stack");
+        DdRum.AddError("Original", RumErrorSource.Source, "stack");
 
         Assert.Equal(1, rumBridge.AddErrorCallCount);
         Assert.Equal("Original", rumBridge.LastMessage);

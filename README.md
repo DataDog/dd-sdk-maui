@@ -7,7 +7,7 @@
 - **Core SDK**: Initialize Datadog with full configuration support, including runtime tracking consent updates, global attributes, user info, and account info.
 - **Logs**: Send logs from your .NET MAUI application to Datadog with support for debug, info, warn, and error levels, plus custom attributes.
 - **Traces**: Manual span tracking with support for nested parent-child relationships, custom context attributes, and configurable endpoints.
-- **RUM (Real User Monitoring)**: Enable RUM to track user sessions, views, actions, and crashes. Configure session sampling, vitals monitoring, native view/interaction tracking, and first-party hosts for distributed tracing.
+- **RUM (Real User Monitoring)**: Full RUM tracking API including views, actions, resources, timings, and session management. Configure session sampling, vitals monitoring, native view/interaction tracking, crash reporting, and first-party hosts for distributed tracing.
 - **Error Tracking**: Automatic C# error and crash tracking. When RUM is enabled, unhandled exceptions and unobserved task exceptions are automatically captured and reported to Datadog. You can also manually report errors using `DdRum.AddError()`.
 
 ## Setup
@@ -280,20 +280,39 @@ DdRum.Enable(new DdRumConfiguration
     NativeInteractionTracking = true,
     VitalsUpdateFrequency = VitalsUpdateFrequency.Average
 });
+
+// Track views
+DdRum.StartView("home_screen", "Home");
+DdRum.StopView("home_screen");
+
+// Track actions
+DdRum.AddAction(RumActionType.Tap, "Login Button");
+// Or for long-running actions:
+DdRum.StartAction(RumActionType.Scroll, "Feed Scroll");
+DdRum.StopAction(RumActionType.Scroll, "Feed Scroll");
+
+// Track resources
+DdRum.StartResource("api-call-1", RumResourceMethod.Get, "https://api.example.com/users");
+DdRum.StopResource("api-call-1", 200, RumResourceKind.Xhr, 2048);
+
+// Add custom timing
+DdRum.AddTiming("time_to_interactive");
+
+// Add view loading time
+DdRum.AddViewLoadingTime(overwrite: false);
+
+// Manage view attributes
+DdRum.AddViewAttribute("screen_variant", "A");
+DdRum.RemoveViewAttribute("screen_variant");
+
+// Report errors
+DdRum.AddError("Something went wrong", RumErrorSource.Source, "stacktrace here");
+
+// Stop session
+DdRum.StopSession();
 ```
 
 When RUM is enabled, C# error tracking is automatically started. Unhandled exceptions (`AppDomain.UnhandledException`) and unobserved task exceptions (`TaskScheduler.UnobservedTaskException`) are captured and reported as RUM errors.
-
-You can also manually report errors:
-
-```csharp
-DdRum.AddError(
-    "Something went wrong",
-    "source",
-    exception.ToString(),
-    new Dictionary<string, object> { { "custom_key", "custom_value" } }
-);
-```
 
 #### Error Event Mapper
 
