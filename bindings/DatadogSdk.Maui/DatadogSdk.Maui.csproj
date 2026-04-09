@@ -26,6 +26,11 @@
           PackagePath="buildTransitive\DatadogSdk.Maui.targets" />
   </ItemGroup>
 
+  <!-- MAUI Controls (provides Page, VisualElement, etc. for auto-tracking predicates) -->
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Maui.Controls" Version="10.0.1" />
+  </ItemGroup>
+
   <!-- iOS platform dependencies -->
   <ItemGroup Condition="$(TargetFramework.Contains('-ios'))">
     <PackageReference Include="DatadogSdk.iOS.Binding" Version="0.1.0" />

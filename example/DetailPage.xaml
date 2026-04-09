@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="example.DetailPage"
+             Title="Detail Page">
+
+    <VerticalStackLayout
+        Padding="30"
+        Spacing="25"
+        VerticalOptions="Center">
+
+        <Label
+            Text="Detail Page"
+            FontSize="24"
+            FontAttributes="Bold"
+            HorizontalOptions="Center" />
+
+        <Label
+            Text="This page tests automatic view tracking via Shell navigation."
+            HorizontalOptions="Center"
+            HorizontalTextAlignment="Center" />
+
+        <Button
+            Text="Go Back"
+            Clicked="OnGoBackClicked"
+            HorizontalOptions="Center" />
+
+    </VerticalStackLayout>
+
+</ContentPage>

@@ -107,6 +107,16 @@
                 HorizontalOptions="Fill" />
 
             <Button
+                x:Name="NavigateBtn"
+                Text="Navigate to Detail"
+                AutomationId="navigate_detail"
+                SemanticProperties.Hint="Navigate to a detail page to test view tracking"
+                Clicked="OnNavigateClicked"
+                BackgroundColor="Indigo"
+                TextColor="White"
+                HorizontalOptions="Fill" />
+
+            <Button
                 x:Name="ManagedCrashBtn"
                 Text="Trigger C# Crash"
                 SemanticProperties.Hint="Throws an unhandled C# exception"

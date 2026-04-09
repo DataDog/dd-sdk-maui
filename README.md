@@ -341,6 +341,47 @@ DdRum.Enable(new DdRumConfiguration
 
 The mapper receives a `DdRumErrorEvent` with `Message`, `Source`, `Stacktrace`, `Context`, and `TimestampMs` properties. It applies to all C# errors — both automatic (crash tracking) and manual (`DdRum.AddError`).
 
+### Automatic Tracking
+
+By default, the SDK automatically tracks:
+- **Views**: MAUI page navigations via Shell.Navigated and Page.Appearing
+- **Actions**: User interactions with buttons, switches, checkboxes, pickers, and gesture recognizers
+
+Automatic tracking is enabled by default. To customize or disable:
+
+```csharp
+DdRum.Enable(new DdRumConfiguration
+{
+    ApplicationId = "your-rum-application-id",
+
+    // Disable automatic tracking
+    AutomaticViewTracking = false,
+    AutomaticActionTracking = false,
+
+    // Or customize view names
+    ViewNamePredicate = (page) => page switch
+    {
+        MainPage => "Home",
+        _ => null  // use default name
+    },
+
+    // Skip specific pages
+    ViewTrackingPredicate = (page) => page is not SplashPage,
+
+    // Filter/modify auto-tracked actions
+    ActionEventMapper = (action) =>
+    {
+        // Drop actions on debug buttons
+        if (action.Name.Contains("Debug")) return null;
+        return action;
+    }
+});
+```
+
+**View naming priority:** Custom `ViewNamePredicate` → Shell route URI → Page class name
+
+**Action target naming priority:** `AutomationId` → `StyleId` (x:Name) → control type name. Use `ActionEventMapper` to customize names further.
+
 ## Troubleshooting
 
 If you encounter issues while using the SDK, check the existing [GitHub Issues](https://github.com/DataDog/dd-sdk-maui/issues) for known problems and solutions.

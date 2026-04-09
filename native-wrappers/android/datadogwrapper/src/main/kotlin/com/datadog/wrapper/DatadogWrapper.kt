@@ -183,10 +183,10 @@ class DatadogWrapper {
             batchSize: String? = null,
             uploadFrequency: String? = null,
             batchProcessingLevel: String? = null,
-            proxyConfiguration: Map<String, Any> = emptyMap(),
-            firstPartyHosts: Map<String, Any?> = emptyMap(),
+            proxyConfiguration: Map<String, Any>? = null,
+            firstPartyHosts: Map<String, Any?>? = null,
             nativeCrashReportEnabled: Boolean = false,
-            additionalConfiguration: Map<String, Any> = emptyMap()
+            additionalConfiguration: Map<String, Any>? = null
         ): Boolean {
             return try {
                 val builder = Configuration.Builder(
@@ -208,24 +208,26 @@ class DatadogWrapper {
                     builder.setBatchProcessingLevel(mapBatchProcessingLevel(it))
                 }
 
-                if (additionalConfiguration.isNotEmpty()) {
-                    builder.setAdditionalConfiguration(additionalConfiguration)
+                additionalConfiguration?.let {
+                    builder.setAdditionalConfiguration(it)
                 }
 
-                if (proxyConfiguration.isNotEmpty()) {
-                    mapProxyConfiguration(proxyConfiguration)?.let { (proxy, authenticator) ->
+                proxyConfiguration?.let { proxyConfig ->
+                    mapProxyConfiguration(proxyConfig)?.let { (proxy, authenticator) ->
                         builder.setProxy(proxy, authenticator)
                     }
                 }
 
-                if (additionalConfiguration["_dd.needsClearTextHttp"] == true) {
+                if (additionalConfiguration?.get("_dd.needsClearTextHttp") == true) {
                     _InternalProxy.allowClearTextHttp(builder)
                 }
 
                 // Configure first-party hosts for distributed tracing
-                val hosts = parseFirstPartyHosts(firstPartyHosts)
-                if (hosts.isNotEmpty()) {
-                    builder.setFirstPartyHostsWithHeaderType(hosts)
+                if (firstPartyHosts != null) {
+                    val hosts = parseFirstPartyHosts(firstPartyHosts)
+                    if (hosts.isNotEmpty()) {
+                        builder.setFirstPartyHostsWithHeaderType(hosts)
+                    }
                 }
 
                 builder.setCrashReportsEnabled(nativeCrashReportEnabled)
