@@ -107,6 +107,16 @@
                 HorizontalOptions="Fill" />
 
             <Button
+                x:Name="FetchRequestsBtn"
+                Text="Send HTTP Requests"
+                AutomationId="send_http_requests"
+                SemanticProperties.Hint="Sends real HTTP requests to test automatic resource tracking"
+                Clicked="OnSendHttpRequestsClicked"
+                BackgroundColor="DarkCyan"
+                TextColor="White"
+                HorizontalOptions="Fill" />
+
+            <Button
                 x:Name="NavigateBtn"
                 Text="Navigate to Detail"
                 AutomationId="navigate_detail"

@@ -49,8 +49,14 @@ namespace DatadogSdk.Maui
         // Stored from Enable() for use in AddError()
         internal static Func<DdRumErrorEvent, DdRumErrorEvent?>? errorEventMapper;
         internal static Func<DdRumActionEvent, DdRumActionEvent?>? actionEventMapper;
+        internal static Func<DdRumResourceEvent, DdRumResourceEvent?>? resourceEventMapper;
         private static DdAutoViewTracker? viewTracker;
         private static DdAutoActionTracker? actionTracker;
+        private static DdAutoResourceTracker? resourceTracker;
+
+        // Stores (method, url) per active resource key so StopResource can pass them to the mapper
+        private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, (RumResourceMethod Method, string Url)>
+            activeResources = new();
 
         /// <summary>
         /// Resets mapper fields for testing purposes.
@@ -59,6 +65,7 @@ namespace DatadogSdk.Maui
         {
             errorEventMapper = null;
             actionEventMapper = null;
+            resourceEventMapper = null;
         }
 
         /// <summary>
@@ -76,9 +83,8 @@ namespace DatadogSdk.Maui
             // Store the action event mapper for use in AddAction
             actionEventMapper = configuration.ActionEventMapper;
 
-            // Warn about stub event mappers
-            if (configuration.ResourceEventMapper != null)
-                InternalLog.Log("DdRum: ResourceEventMapper is not yet supported and will be ignored.", SdkVerbosity.WARN);
+            // Store the resource event mapper for use in auto-tracked resources
+            resourceEventMapper = configuration.ResourceEventMapper;
 
             var dict = configuration.ToDictionary();
 
@@ -107,6 +113,14 @@ namespace DatadogSdk.Maui
                 actionTracker = new DdAutoActionTracker();
                 actionTracker.Start(Application.Current);
                 InternalLog.Log("DdRum: Automatic action tracking enabled", SdkVerbosity.INFO);
+            }
+
+            // Start automatic resource tracking
+            if (configuration.AutomaticResourceTracking)
+            {
+                resourceTracker = new DdAutoResourceTracker();
+                resourceTracker.Start();
+                InternalLog.Log("DdRum: Automatic resource tracking enabled", SdkVerbosity.INFO);
             }
 
             InternalLog.Log("DdRum.Enable completed", SdkVerbosity.DEBUG);
@@ -291,6 +305,11 @@ namespace DatadogSdk.Maui
             InternalLog.Log($"DdRum.StartResource: key={key}, method={method}, url={url}", SdkVerbosity.DEBUG);
             var ctx = context ?? new Dictionary<string, object>();
 
+            if (resourceEventMapper != null)
+            {
+                activeResources[key] = (method, url);
+            }
+
             if (testBridge is not null) { testBridge.StartResource(key, method, url, ctx, timestampMs); return; }
 
             var methodStr = ConvertResourceMethod(method);
@@ -307,6 +326,33 @@ namespace DatadogSdk.Maui
         {
             InternalLog.Log($"DdRum.StopResource: key={key}, statusCode={statusCode}, kind={kind}", SdkVerbosity.DEBUG);
             var ctx = context ?? new Dictionary<string, object>();
+
+            // Apply resource event mapper if configured
+            if (resourceEventMapper != null)
+            {
+                try
+                {
+                    activeResources.TryGetValue(key, out (RumResourceMethod Method, string Url) resourceInfo);
+                    var resourceEvent = new DdRumResourceEvent(key, resourceInfo.Method, resourceInfo.Url, statusCode, kind, size, ctx);
+                    var mapped = resourceEventMapper(resourceEvent);
+                    if (mapped == null)
+                    {
+                        InternalLog.Log("DdRum.StopResource: Resource dropped by ResourceEventMapper", SdkVerbosity.DEBUG);
+                        activeResources.TryRemove(key, out _);
+                        return;
+                    }
+                    statusCode = mapped.StatusCode;
+                    kind = mapped.Kind;
+                    size = mapped.Size;
+                    ctx = mapped.Context;
+                }
+                catch (Exception ex)
+                {
+                    InternalLog.Log($"DdRum.StopResource: ResourceEventMapper threw: {ex.Message}", SdkVerbosity.ERROR);
+                }
+            }
+
+            activeResources.TryRemove(key, out _);
 
             if (testBridge is not null) { testBridge.StopResource(key, statusCode, kind, size, ctx, timestampMs); return; }
 

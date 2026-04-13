@@ -346,6 +346,7 @@ The mapper receives a `DdRumErrorEvent` with `Message`, `Source`, `Stacktrace`, 
 By default, the SDK automatically tracks:
 - **Views**: MAUI page navigations via Shell.Navigated and Page.Appearing
 - **Actions**: User interactions with buttons, switches, checkboxes, pickers, and gesture recognizers
+- **Resources**: HTTP requests via DiagnosticListener (all HttpClient requests, including third-party libraries)
 
 Automatic tracking is enabled by default. To customize or disable:
 
@@ -357,6 +358,7 @@ DdRum.Enable(new DdRumConfiguration
     // Disable automatic tracking
     AutomaticViewTracking = false,
     AutomaticActionTracking = false,
+    AutomaticResourceTracking = false,
 
     // Or customize view names
     ViewNamePredicate = (page) => page switch
@@ -374,6 +376,14 @@ DdRum.Enable(new DdRumConfiguration
         // Drop actions on debug buttons
         if (action.Name.Contains("Debug")) return null;
         return action;
+    },
+
+    // Filter/modify auto-tracked resources
+    ResourceEventMapper = (resource) =>
+    {
+        // Drop analytics requests
+        if (resource.Url.Contains("analytics")) return null;
+        return resource;
     }
 });
 ```

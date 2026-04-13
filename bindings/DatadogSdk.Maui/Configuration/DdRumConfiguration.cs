@@ -109,9 +109,10 @@ namespace DatadogSdk.Maui.Configuration
         public Func<DdRumErrorEvent, DdRumErrorEvent?>? ErrorEventMapper { get; set; }
 
         /// <summary>
-        /// Mapper for RUM resource events. Not yet implemented - setting this will log a warning.
+        /// Mapper for RUM resource events. Return the modified event to send it, or null to drop it.
+        /// Applies to auto-tracked resources and can be used to filter or modify network requests.
         /// </summary>
-        public Func<object, object?>? ResourceEventMapper { get; set; }
+        public Func<DdRumResourceEvent, DdRumResourceEvent?>? ResourceEventMapper { get; set; }
 
         /// <summary>
         /// Mapper for RUM action events. Return the modified event to send it, or null to drop it.
@@ -133,6 +134,12 @@ namespace DatadogSdk.Maui.Configuration
         /// TapGestureRecognizer.Tapped, SwipeGestureRecognizer.Swiped, etc.
         /// </summary>
         public bool AutomaticActionTracking { get; set; } = true;
+
+        /// <summary>
+        /// Enable automatic HTTP request tracking as RUM resources. Default: true.
+        /// Intercepts all HttpClient requests via DiagnosticListener.
+        /// </summary>
+        public bool AutomaticResourceTracking { get; set; } = true;
 
         /// <summary>
         /// Custom predicate to determine the view name for a page.
@@ -161,6 +168,7 @@ namespace DatadogSdk.Maui.Configuration
                 ["trackBackgroundEvents"] = TrackBackgroundEvents,
                 ["nativeViewTracking"] = NativeViewTracking,
                 ["nativeInteractionTracking"] = NativeInteractionTracking,
+                ["automaticResourceTracking"] = AutomaticResourceTracking,
                 ["trackMemoryWarnings"] = TrackMemoryWarnings,
                 ["nativeLongTaskThresholdMs"] = NativeLongTaskThresholdMs,
                 ["vitalsUpdateFrequency"] = ConvertVitalsUpdateFrequency(VitalsUpdateFrequency),
