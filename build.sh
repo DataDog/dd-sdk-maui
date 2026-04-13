@@ -86,8 +86,10 @@ if [ "$CHECK_FORMAT" = true ]; then
     exit 0
 fi
 
-# Ensure local-packages directory exists
+# Clean stale local packages and NuGet cache so multi-target rebuilds are picked up
+rm -rf local-packages
 mkdir -p local-packages
+rm -rf ~/.nuget/packages/datadogsdk.*
 
 # ============================================================================
 # iOS Native Wrapper
@@ -173,7 +175,11 @@ for BINDING in "${ANDROID_DEPS[@]}"; do
     cd "$SCRIPT_DIR/bindings/$BINDING"
 
     rm -rf bin obj
-    dotnet build -c Release
+    # Build each TFM sequentially to avoid Maven cache file-lock contention
+    # when both net9.0-android and net10.0-android download the same AAR.
+    for TFM in net9.0-android net10.0-android; do
+        dotnet build -c Release -f "$TFM"
+    done
     dotnet pack -c Release
     cp bin/Release/*.nupkg "$SCRIPT_DIR/local-packages/"
 
@@ -232,7 +238,9 @@ log_info "Building DatadogSdk.Android.Binding..."
 cd "$SCRIPT_DIR/bindings/DatadogSdk.Android.Binding"
 
 rm -rf bin obj
-dotnet build -c Release
+for TFM in net9.0-android net10.0-android; do
+    dotnet build -c Release -f "$TFM"
+done
 dotnet pack -c Release
 cp bin/Release/*.nupkg "$SCRIPT_DIR/local-packages/"
 
@@ -248,8 +256,6 @@ cd "$SCRIPT_DIR/bindings/DatadogSdk.Maui"
 # Clean
 log_info "Cleaning meta-package..."
 rm -rf bin obj
-log_info "Clearing NuGet global cache for DatadogSdk packages..."
-rm -rf ~/.nuget/packages/datadogsdk.*
 
 # Build
 log_info "Building meta-package..."

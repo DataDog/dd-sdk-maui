@@ -11,6 +11,7 @@ public partial class MainPage : ContentPage
     public MainPage()
     {
         InitializeComponent();
+        RuntimeLabel.Text = $".NET {Environment.Version.ToString(2)} · {DeviceInfo.Platform}";
 
         // Enable Logs
         var logsConfiguration = new DdLogsConfiguration
@@ -143,7 +144,11 @@ public partial class MainPage : ContentPage
 
     private async void OnSetTrackingConsentClicked(object? sender, EventArgs e)
     {
+#if NET10_0_OR_GREATER
         string? choice = await DisplayActionSheetAsync(
+#else
+        string? choice = await DisplayActionSheet(
+#endif
             "Set Tracking Consent",
             "Cancel",
             null,

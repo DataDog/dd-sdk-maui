@@ -36,11 +36,7 @@ public static class MauiProgram
             TrackingConsent = TrackingConsent.Granted,
             Verbosity = SdkVerbosity.DEBUG,
             UploadFrequency = UploadFrequency.Frequent,
-            NativeCrashReportEnabled = true,
-            // AdditionalConfiguration = new Dictionary<string, object>
-            // {
-            //     { "_dd.needsClearTextHttp", true }
-            // },
+            NativeCrashReportEnabled = true
         });
 
         return builder.Build();

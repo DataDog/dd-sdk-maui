@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>net10.0</TargetFramework>
+    <TargetFrameworks>net9.0;net10.0</TargetFrameworks>
     <RootNamespace>DatadogSdk.Maui.Tests</RootNamespace>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
@@ -11,7 +11,8 @@
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.*" />
     <PackageReference Include="xunit" Version="2.*" />
     <PackageReference Include="xunit.runner.visualstudio" Version="2.*" />
-    <PackageReference Include="Microsoft.Maui.Controls" Version="10.0.0" />
+    <PackageReference Include="Microsoft.Maui.Controls" Version="9.0.0" Condition="$(TargetFramework.StartsWith('net9.0'))" />
+    <PackageReference Include="Microsoft.Maui.Controls" Version="10.0.0" Condition="$(TargetFramework.StartsWith('net10.0'))" />
   </ItemGroup>
 
   <!-- Link source files from DatadogSdk.Maui for testing -->

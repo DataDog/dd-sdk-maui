@@ -85,6 +85,32 @@ build:example-android:
     - cd example
     - ./build.sh --android
 
+build:example-ios-net9:
+  stage: test
+  needs: [build:sdk]
+  timeout: 15m
+  script:
+    - cd example
+    - ./build.sh --ios --net9
+
+build:example-android-net9:
+  stage: test
+  needs: [build:sdk]
+  timeout: 15m
+  script:
+    - cd example
+    - ./build.sh --android --net9
+
+# ============================================================================
+# .NET 9 TESTS: Run C# unit tests against .NET 9
+# ============================================================================
+test:maui-net9:
+  stage: test
+  needs: [build:sdk]
+  timeout: 15m
+  script:
+    - ./check.sh --maui --net9
+
 # ============================================================================
 # E2E: Build Shopist MAUI app with SDK and upload to Synthetics
 # Runs on merges to the integration branch, or manually via BUILD_E2E=true
