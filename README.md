@@ -96,20 +96,20 @@ Set global attributes that are attached to all future events (RUM, Logs, Traces)
 
 ```csharp
 // Add a global attribute
-DdSdk.AddAttribute("user.plan", "premium");
+DdSdk.AddAttribute("plan", "premium");
 
 // Add multiple attributes at once
 DdSdk.AddAttributes(new Dictionary<string, object>
 {
-    { "user.plan", "premium" },
-    { "app.experiment", "new-checkout-flow" }
+    { "plan", "premium" },
+    { "experiment", "new-checkout-flow" }
 });
 
 // Remove a global attribute
-DdSdk.RemoveAttribute("app.experiment");
+DdSdk.RemoveAttribute("experiment");
 
 // Remove multiple attributes at once
-DdSdk.RemoveAttributes(new List<string> { "user.plan", "app.experiment" });
+DdSdk.RemoveAttributes(new List<string> { "plan", "experiment" });
 
 // Read current attributes (returns a snapshot copy)
 var attributes = DdSdk.GetAttributes();

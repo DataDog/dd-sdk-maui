@@ -239,10 +239,10 @@ final class DatadogWrapperTests: XCTestCase {
         DdSdkNativeWrapper.setDatadogCore(mockCore)
         defer { DdSdkNativeWrapper.resetDependencies() }
 
-        DdSdkNativeWrapper.addAttribute("user.plan", value: "premium")
+        DdSdkNativeWrapper.addAttribute("plan", value: "premium")
 
         XCTAssertEqual(mockCore.addAttributeCalls.count, 1)
-        XCTAssertEqual(mockCore.addAttributeCalls[0].key, "user.plan")
+        XCTAssertEqual(mockCore.addAttributeCalls[0].key, "plan")
         XCTAssertEqual(mockCore.addAttributeCalls[0].value as? String, "premium")
     }
 
@@ -251,12 +251,12 @@ final class DatadogWrapperTests: XCTestCase {
         DdSdkNativeWrapper.setDatadogCore(mockCore)
         defer { DdSdkNativeWrapper.resetDependencies() }
 
-        let attrs: NSDictionary = ["user.plan": "premium", "app.version": "2.0"]
+        let attrs: NSDictionary = ["plan": "premium", "version": "2.0"]
         DdSdkNativeWrapper.addAttributes(attrs)
 
         XCTAssertEqual(mockCore.addAttributesCalls.count, 1)
-        XCTAssertEqual(mockCore.addAttributesCalls[0]["user.plan"] as? String, "premium")
-        XCTAssertEqual(mockCore.addAttributesCalls[0]["app.version"] as? String, "2.0")
+        XCTAssertEqual(mockCore.addAttributesCalls[0]["plan"] as? String, "premium")
+        XCTAssertEqual(mockCore.addAttributesCalls[0]["version"] as? String, "2.0")
     }
 
     func test_removeAttribute_callsDatadogCoreRemoveAttribute() {
@@ -264,10 +264,10 @@ final class DatadogWrapperTests: XCTestCase {
         DdSdkNativeWrapper.setDatadogCore(mockCore)
         defer { DdSdkNativeWrapper.resetDependencies() }
 
-        DdSdkNativeWrapper.removeAttribute("user.plan")
+        DdSdkNativeWrapper.removeAttribute("plan")
 
         XCTAssertEqual(mockCore.removeAttributeCalls.count, 1)
-        XCTAssertEqual(mockCore.removeAttributeCalls[0], "user.plan")
+        XCTAssertEqual(mockCore.removeAttributeCalls[0], "plan")
     }
 
     func test_removeAttributes_callsDatadogCoreRemoveAttributes() {
@@ -275,10 +275,10 @@ final class DatadogWrapperTests: XCTestCase {
         DdSdkNativeWrapper.setDatadogCore(mockCore)
         defer { DdSdkNativeWrapper.resetDependencies() }
 
-        let keys: NSArray = ["user.plan", "app.version"]
+        let keys: NSArray = ["plan", "version"]
         DdSdkNativeWrapper.removeAttributes(keys)
 
         XCTAssertEqual(mockCore.removeAttributesCalls.count, 1)
-        XCTAssertEqual(mockCore.removeAttributesCalls[0], ["user.plan", "app.version"])
+        XCTAssertEqual(mockCore.removeAttributesCalls[0], ["plan", "version"])
     }
 }

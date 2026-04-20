@@ -4,6 +4,7 @@ using NativeDatadogWrapper = DatadogSdk.Android.Binding.DatadogWrapper;
 using Foundation;
 using NativeDatadogWrapper = DatadogSdk.iOS.Binding.DatadogWrapper;
 #endif
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using DatadogSdk.Maui.Configuration;
@@ -35,7 +36,7 @@ namespace DatadogSdk.Maui
 
         internal static DdSdkConfiguration? Configuration { get; private set; }
         internal static INativeBridge? testBridge;
-        private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, object> _globalAttributes = new();
+        private static readonly ConcurrentDictionary<string, object> _globalAttributes = new();
 
         public static bool Initialize(DdSdkConfiguration config)
         {
@@ -315,8 +316,10 @@ namespace DatadogSdk.Maui
         }
 
 #if ANDROID
+        /// <summary>
         /// Recursively converts a C# object to its Java equivalent.
         /// Supports primitives, strings, Dictionary → HashMap, and List → ArrayList.
+        /// </summary>
         internal static Java.Lang.Object ToJavaObject(object? value)
         {
             return value switch
@@ -373,8 +376,10 @@ namespace DatadogSdk.Maui
             return arrayList;
         }
 #elif IOS
+        /// <summary>
         /// Recursively converts a C# object to its NSObject equivalent.
         /// Supports primitives, strings, Dictionary → NSDictionary, and List → NSArray.
+        /// </summary>
         internal static NSObject ToNSObject(object? value)
         {
             return value switch

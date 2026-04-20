@@ -27,63 +27,63 @@ public class DdSdkAttributesTests : IDisposable
     [Fact]
     public void AddAttribute_PassesKeyAndValueToNative()
     {
-        DdSdk.AddAttribute("user.plan", "premium");
+        DdSdk.AddAttribute("plan", "premium");
 
         Assert.Single(bridge.AddAttributeCalls);
-        Assert.Equal("user.plan", bridge.AddAttributeCalls[0].Key);
+        Assert.Equal("plan", bridge.AddAttributeCalls[0].Key);
         Assert.Equal("premium", bridge.AddAttributeCalls[0].Value);
     }
 
     [Fact]
     public void AddAttribute_StoresValueInLocalDictionary()
     {
-        DdSdk.AddAttribute("user.plan", "premium");
+        DdSdk.AddAttribute("plan", "premium");
 
         var attrs = DdSdk.GetAttributes();
-        Assert.Equal("premium", attrs["user.plan"]);
+        Assert.Equal("premium", attrs["plan"]);
     }
 
     [Fact]
     public void AddAttribute_OverwritesExistingKey()
     {
-        DdSdk.AddAttribute("user.plan", "free");
-        DdSdk.AddAttribute("user.plan", "premium");
+        DdSdk.AddAttribute("plan", "free");
+        DdSdk.AddAttribute("plan", "premium");
 
         var attrs = DdSdk.GetAttributes();
-        Assert.Equal("premium", attrs["user.plan"]);
+        Assert.Equal("premium", attrs["plan"]);
         Assert.Equal(2, bridge.AddAttributeCalls.Count);
     }
 
     [Fact]
     public void AddAttribute_SupportsMultipleKeys()
     {
-        DdSdk.AddAttribute("user.plan", "premium");
-        DdSdk.AddAttribute("app.version", "2.0");
+        DdSdk.AddAttribute("plan", "premium");
+        DdSdk.AddAttribute("version", "2.0");
 
         var attrs = DdSdk.GetAttributes();
         Assert.Equal(2, attrs.Count);
-        Assert.Equal("premium", attrs["user.plan"]);
-        Assert.Equal("2.0", attrs["app.version"]);
+        Assert.Equal("premium", attrs["plan"]);
+        Assert.Equal("2.0", attrs["version"]);
     }
 
     [Fact]
     public void AddAttribute_SupportsNumericValues()
     {
-        DdSdk.AddAttribute("item.count", 42);
+        DdSdk.AddAttribute("item_count", 42);
         DdSdk.AddAttribute("price", 9.99);
 
         var attrs = DdSdk.GetAttributes();
-        Assert.Equal(42, attrs["item.count"]);
+        Assert.Equal(42, attrs["item_count"]);
         Assert.Equal(9.99, attrs["price"]);
     }
 
     [Fact]
     public void AddAttribute_SupportsBooleanValues()
     {
-        DdSdk.AddAttribute("is.premium", true);
+        DdSdk.AddAttribute("is_premium", true);
 
         var attrs = DdSdk.GetAttributes();
-        Assert.Equal(true, attrs["is.premium"]);
+        Assert.Equal(true, attrs["is_premium"]);
     }
 
     // --- AddAttributes (plural) -------------------------------------------------
@@ -93,15 +93,15 @@ public class DdSdkAttributesTests : IDisposable
     {
         var attrs = new Dictionary<string, object>
         {
-            { "user.plan", "premium" },
-            { "app.version", "2.0" }
+            { "plan", "premium" },
+            { "version", "2.0" }
         };
 
         DdSdk.AddAttributes(attrs);
 
         Assert.Single(bridge.AddAttributesCalls);
-        Assert.Equal("premium", bridge.AddAttributesCalls[0]["user.plan"]);
-        Assert.Equal("2.0", bridge.AddAttributesCalls[0]["app.version"]);
+        Assert.Equal("premium", bridge.AddAttributesCalls[0]["plan"]);
+        Assert.Equal("2.0", bridge.AddAttributesCalls[0]["version"]);
     }
 
     [Fact]
@@ -109,14 +109,14 @@ public class DdSdkAttributesTests : IDisposable
     {
         DdSdk.AddAttributes(new Dictionary<string, object>
         {
-            { "user.plan", "premium" },
-            { "app.version", "2.0" }
+            { "plan", "premium" },
+            { "version", "2.0" }
         });
 
         var attrs = DdSdk.GetAttributes();
         Assert.Equal(2, attrs.Count);
-        Assert.Equal("premium", attrs["user.plan"]);
-        Assert.Equal("2.0", attrs["app.version"]);
+        Assert.Equal("premium", attrs["plan"]);
+        Assert.Equal("2.0", attrs["version"]);
     }
 
     // --- RemoveAttribute -----------------------------------------------------
@@ -124,20 +124,20 @@ public class DdSdkAttributesTests : IDisposable
     [Fact]
     public void RemoveAttribute_PassesKeyToNative()
     {
-        DdSdk.RemoveAttribute("user.plan");
+        DdSdk.RemoveAttribute("plan");
 
         Assert.Single(bridge.RemoveAttributeCalls);
-        Assert.Equal("user.plan", bridge.RemoveAttributeCalls[0]);
+        Assert.Equal("plan", bridge.RemoveAttributeCalls[0]);
     }
 
     [Fact]
     public void RemoveAttribute_RemovesFromLocalDictionary()
     {
-        DdSdk.AddAttribute("user.plan", "premium");
-        DdSdk.RemoveAttribute("user.plan");
+        DdSdk.AddAttribute("plan", "premium");
+        DdSdk.RemoveAttribute("plan");
 
         var attrs = DdSdk.GetAttributes();
-        Assert.False(attrs.ContainsKey("user.plan"));
+        Assert.False(attrs.ContainsKey("plan"));
     }
 
     [Fact]
