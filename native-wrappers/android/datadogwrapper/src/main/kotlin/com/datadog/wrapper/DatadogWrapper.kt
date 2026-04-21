@@ -155,5 +155,39 @@ class DatadogWrapper {
                 monitor.removeAttribute(key)
             }
         }
+
+        // -- User Info --
+
+        @JvmStatic
+        fun setUserInfo(id: String, name: String?, email: String?, extraInfo: Map<String, Any?>) {
+            Datadog.setUserInfo(id, name, email, extraInfo)
+        }
+
+        @JvmStatic
+        fun addUserExtraInfo(extraInfo: Map<String, Any?>) {
+            Datadog.addUserProperties(extraInfo)
+        }
+
+        @JvmStatic
+        fun clearUserInfo() {
+            Datadog.clearUserInfo()
+        }
+
+        // -- Account Info --
+
+        @JvmStatic
+        fun setAccountInfo(id: String, name: String?, extraInfo: Map<String, Any?>) {
+            Datadog.setAccountInfo(id, name, extraInfo)
+        }
+
+        @JvmStatic
+        fun addAccountExtraInfo(extraInfo: Map<String, Any?>) {
+            Datadog.addAccountExtraInfo(extraInfo)
+        }
+
+        @JvmStatic
+        fun clearAccountInfo() {
+            Datadog.clearAccountInfo()
+        }
     }
 }

@@ -27,4 +27,38 @@ class MockDatadogCore: DatadogSdkProtocol {
     func removeAttributes(forKeys keys: [String]) {
         removeAttributesCalls.append(keys)
     }
+
+    // User Info
+    var setUserInfoCalls: [(id: String, name: String?, email: String?, extraInfo: [String: Any])] = []
+    var addUserExtraInfoCalls: [[String: Any]] = []
+    var clearUserInfoCallCount = 0
+
+    func setUserInfo(id: String, name: String?, email: String?, extraInfo: [String: Any]) {
+        setUserInfoCalls.append((id: id, name: name, email: email, extraInfo: extraInfo))
+    }
+
+    func addUserExtraInfo(_ extraInfo: [String: Any]) {
+        addUserExtraInfoCalls.append(extraInfo)
+    }
+
+    func clearUserInfo() {
+        clearUserInfoCallCount += 1
+    }
+
+    // Account Info
+    var setAccountInfoCalls: [(id: String, name: String?, extraInfo: [String: Any])] = []
+    var addAccountExtraInfoCalls: [[String: Any]] = []
+    var clearAccountInfoCallCount = 0
+
+    func setAccountInfo(id: String, name: String?, extraInfo: [String: Any]) {
+        setAccountInfoCalls.append((id: id, name: name, extraInfo: extraInfo))
+    }
+
+    func addAccountExtraInfo(_ extraInfo: [String: Any]) {
+        addAccountExtraInfoCalls.append(extraInfo)
+    }
+
+    func clearAccountInfo() {
+        clearAccountInfoCallCount += 1
+    }
 }

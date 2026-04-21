@@ -934,6 +934,31 @@ Global attributes are attached to all events sent by the SDK. They are stored bo
 | Android | `NativeDatadogWrapper.addAttribute(key, value)` | `NativeDatadogWrapper.removeAttribute(key)` |
 | iOS | `NativeDatadogWrapper.addAttribute(key, value)` | `NativeDatadogWrapper.removeAttribute(key)` |
 
+### User Info
+
+User information is attached to all events sent by the SDK. Stored locally and on the native SDK.
+
+- `SetUserInfo(string id, string? name, string? email, Dictionary<string, object>? extraInfo)` — Sets user info. `id` is required.
+- `AddUserExtraInfo(Dictionary<string, object> extraInfo)` — Merges extra attributes into the current user. No-op with warning if no user is set.
+- `ClearUserInfo()` — Clears all user information.
+- `GetUserInfo()` — Returns a snapshot copy of current user info, or null.
+
+### Account Info
+
+Account information is attached to all events sent by the SDK. Stored locally and on the native SDK.
+
+- `SetAccountInfo(string id, string? name, Dictionary<string, object>? extraInfo)` — Sets account info. `id` is required. No `email` field (unlike UserInfo).
+- `AddAccountExtraInfo(Dictionary<string, object> extraInfo)` — Merges extra attributes into the current account. No-op with warning if no account is set.
+- `ClearAccountInfo()` — Clears all account information.
+- `GetAccountInfo()` — Returns a snapshot copy of current account info, or null.
+
+**Native SDK mapping:**
+
+| Platform | SetUserInfo | AddUserExtraInfo | SetAccountInfo | AddAccountExtraInfo |
+|----------|---|---|---|---|
+| Android | `Datadog.setUserInfo(id, name, email, extraInfo)` | `Datadog.addUserProperties(extraInfo)` | `Datadog.setAccountInfo(id, name, extraInfo)` | `Datadog.addAccountExtraInfo(extraInfo)` |
+| iOS | `Datadog.setUserInfo(id:name:email:extraInfo:)` | `Datadog.addUserExtraInfo(extraInfo)` | `Datadog.setAccountInfo(id:name:extraInfo:)` | `Datadog.addAccountExtraInfo(extraInfo)` |
+
 ### Logging
 
 ```csharp

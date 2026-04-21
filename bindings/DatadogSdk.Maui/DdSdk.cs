@@ -32,11 +32,21 @@ namespace DatadogSdk.Maui
             void AddAttributes(Dictionary<string, object> attributes);
             void RemoveAttribute(string key);
             void RemoveAttributes(List<string> keys);
+            void SetUserInfo(string id, string? name, string? email, Dictionary<string, object> extraInfo);
+            void AddUserExtraInfo(Dictionary<string, object> extraInfo);
+            void ClearUserInfo();
+            void SetAccountInfo(string id, string? name, Dictionary<string, object> extraInfo);
+            void AddAccountExtraInfo(Dictionary<string, object> extraInfo);
+            void ClearAccountInfo();
         }
 
         internal static DdSdkConfiguration? Configuration { get; private set; }
         internal static INativeBridge? testBridge;
         private static readonly ConcurrentDictionary<string, object> _globalAttributes = new();
+        private static readonly object _userInfoLock = new();
+        private static DdUserInfo? _userInfo;
+        private static readonly object _accountInfoLock = new();
+        private static DdAccountInfo? _accountInfo;
 
         public static bool Initialize(DdSdkConfiguration config)
         {
@@ -264,6 +274,218 @@ namespace DatadogSdk.Maui
         internal static void ClearAttributesForTesting()
         {
             _globalAttributes.Clear();
+        }
+
+        // ── User Info ────────────────────────────────────────
+
+        public static void SetUserInfo(string id, string? name = null, string? email = null,
+                                        Dictionary<string, object>? extraInfo = null)
+        {
+            InternalLog.Log($"DdSdk.SetUserInfo: id={id}", SdkVerbosity.DEBUG);
+
+            var extra = extraInfo ?? new Dictionary<string, object>();
+
+            lock (_userInfoLock)
+            {
+                _userInfo = new DdUserInfo
+                {
+                    Id = id,
+                    Name = name,
+                    Email = email,
+                    ExtraInfo = extra.Count > 0 ? new Dictionary<string, object>(extra) : null
+                };
+            }
+
+            if (testBridge is not null)
+            {
+                testBridge.SetUserInfo(id, name, email, extra);
+                return;
+            }
+
+#if ANDROID
+            NativeDatadogWrapper.SetUserInfo(id, name, email, ToJavaDictionary(extra));
+#elif IOS
+            NativeDatadogWrapper.SetUserInfo(id, name, email, ToNSDictionary(extra));
+#endif
+        }
+
+        public static void AddUserExtraInfo(Dictionary<string, object> extraInfo)
+        {
+            InternalLog.Log($"DdSdk.AddUserExtraInfo: {extraInfo.Count} attributes", SdkVerbosity.DEBUG);
+
+            lock (_userInfoLock)
+            {
+                if (_userInfo == null)
+                {
+                    InternalLog.Log("DdSdk.AddUserExtraInfo: No user set. Call SetUserInfo first.", SdkVerbosity.WARN);
+                    return;
+                }
+
+                _userInfo.ExtraInfo ??= new Dictionary<string, object>();
+                foreach (var kvp in extraInfo)
+                {
+                    _userInfo.ExtraInfo[kvp.Key] = kvp.Value;
+                }
+            }
+
+            if (testBridge is not null)
+            {
+                testBridge.AddUserExtraInfo(extraInfo);
+                return;
+            }
+
+#if ANDROID
+            NativeDatadogWrapper.AddUserExtraInfo(ToJavaDictionary(extraInfo));
+#elif IOS
+            NativeDatadogWrapper.AddUserExtraInfo(ToNSDictionary(extraInfo));
+#endif
+        }
+
+        public static void ClearUserInfo()
+        {
+            InternalLog.Log("DdSdk.ClearUserInfo", SdkVerbosity.DEBUG);
+
+            lock (_userInfoLock)
+            {
+                _userInfo = null;
+            }
+
+            if (testBridge is not null)
+            {
+                testBridge.ClearUserInfo();
+                return;
+            }
+
+#if ANDROID
+            NativeDatadogWrapper.ClearUserInfo();
+#elif IOS
+            NativeDatadogWrapper.ClearUserInfo();
+#endif
+        }
+
+        public static DdUserInfo? GetUserInfo()
+        {
+            lock (_userInfoLock)
+            {
+                if (_userInfo == null) return null;
+                return new DdUserInfo
+                {
+                    Id = _userInfo.Id,
+                    Name = _userInfo.Name,
+                    Email = _userInfo.Email,
+                    ExtraInfo = _userInfo.ExtraInfo != null
+                        ? new Dictionary<string, object>(_userInfo.ExtraInfo)
+                        : null
+                };
+            }
+        }
+
+        // ── Account Info ─────────────────────────────────────
+
+        public static void SetAccountInfo(string id, string? name = null,
+                                           Dictionary<string, object>? extraInfo = null)
+        {
+            InternalLog.Log($"DdSdk.SetAccountInfo: id={id}", SdkVerbosity.DEBUG);
+
+            var extra = extraInfo ?? new Dictionary<string, object>();
+
+            lock (_accountInfoLock)
+            {
+                _accountInfo = new DdAccountInfo
+                {
+                    Id = id,
+                    Name = name,
+                    ExtraInfo = extra.Count > 0 ? new Dictionary<string, object>(extra) : null
+                };
+            }
+
+            if (testBridge is not null)
+            {
+                testBridge.SetAccountInfo(id, name, extra);
+                return;
+            }
+
+#if ANDROID
+            NativeDatadogWrapper.SetAccountInfo(id, name, ToJavaDictionary(extra));
+#elif IOS
+            NativeDatadogWrapper.SetAccountInfo(id, name, ToNSDictionary(extra));
+#endif
+        }
+
+        public static void AddAccountExtraInfo(Dictionary<string, object> extraInfo)
+        {
+            InternalLog.Log($"DdSdk.AddAccountExtraInfo: {extraInfo.Count} attributes", SdkVerbosity.DEBUG);
+
+            lock (_accountInfoLock)
+            {
+                if (_accountInfo == null)
+                {
+                    InternalLog.Log("DdSdk.AddAccountExtraInfo: No account set. Call SetAccountInfo first.", SdkVerbosity.WARN);
+                    return;
+                }
+
+                _accountInfo.ExtraInfo ??= new Dictionary<string, object>();
+                foreach (var kvp in extraInfo)
+                {
+                    _accountInfo.ExtraInfo[kvp.Key] = kvp.Value;
+                }
+            }
+
+            if (testBridge is not null)
+            {
+                testBridge.AddAccountExtraInfo(extraInfo);
+                return;
+            }
+
+#if ANDROID
+            NativeDatadogWrapper.AddAccountExtraInfo(ToJavaDictionary(extraInfo));
+#elif IOS
+            NativeDatadogWrapper.AddAccountExtraInfo(ToNSDictionary(extraInfo));
+#endif
+        }
+
+        public static void ClearAccountInfo()
+        {
+            InternalLog.Log("DdSdk.ClearAccountInfo", SdkVerbosity.DEBUG);
+
+            lock (_accountInfoLock)
+            {
+                _accountInfo = null;
+            }
+
+            if (testBridge is not null)
+            {
+                testBridge.ClearAccountInfo();
+                return;
+            }
+
+#if ANDROID
+            NativeDatadogWrapper.ClearAccountInfo();
+#elif IOS
+            NativeDatadogWrapper.ClearAccountInfo();
+#endif
+        }
+
+        public static DdAccountInfo? GetAccountInfo()
+        {
+            lock (_accountInfoLock)
+            {
+                if (_accountInfo == null) return null;
+                return new DdAccountInfo
+                {
+                    Id = _accountInfo.Id,
+                    Name = _accountInfo.Name,
+                    ExtraInfo = _accountInfo.ExtraInfo != null
+                        ? new Dictionary<string, object>(_accountInfo.ExtraInfo)
+                        : null
+                };
+            }
+        }
+
+        internal static void ClearUserAndAccountInfoForTesting()
+        {
+            lock (_userInfoLock) { _userInfo = null; }
+            lock (_accountInfoLock) { _accountInfo = null; }
         }
 
         internal static string ConvertSite(DatadogSite site) => site switch

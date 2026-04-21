@@ -363,4 +363,74 @@ class DatadogWrapperTest {
             }
         }
     }
+
+    // -- User Info --
+
+    @Test
+    fun `setUserInfo calls Datadog setUserInfo`() {
+        withMockedDatadog {
+            every { Datadog.setUserInfo(any(), any(), any(), any()) } returns Unit
+
+            DatadogWrapper.setUserInfo("user-123", "John", "john@example.com", mapOf("plan" to "premium"))
+
+            verify { Datadog.setUserInfo("user-123", "John", "john@example.com", mapOf("plan" to "premium")) }
+        }
+    }
+
+    @Test
+    fun `addUserExtraInfo calls Datadog addUserProperties`() {
+        withMockedDatadog {
+            every { Datadog.addUserProperties(any()) } returns Unit
+
+            DatadogWrapper.addUserExtraInfo(mapOf("plan" to "premium"))
+
+            verify { Datadog.addUserProperties(mapOf("plan" to "premium")) }
+        }
+    }
+
+    @Test
+    fun `clearUserInfo calls Datadog clearUserInfo`() {
+        withMockedDatadog {
+            every { Datadog.clearUserInfo() } returns Unit
+
+            DatadogWrapper.clearUserInfo()
+
+            verify { Datadog.clearUserInfo() }
+        }
+    }
+
+    // -- Account Info --
+
+    @Test
+    fun `setAccountInfo calls Datadog setAccountInfo`() {
+        withMockedDatadog {
+            every { Datadog.setAccountInfo(any(), any(), any()) } returns Unit
+
+            DatadogWrapper.setAccountInfo("acct-456", "Acme Corp", mapOf("tier" to "enterprise"))
+
+            verify { Datadog.setAccountInfo("acct-456", "Acme Corp", mapOf("tier" to "enterprise")) }
+        }
+    }
+
+    @Test
+    fun `addAccountExtraInfo calls Datadog addAccountExtraInfo`() {
+        withMockedDatadog {
+            every { Datadog.addAccountExtraInfo(any()) } returns Unit
+
+            DatadogWrapper.addAccountExtraInfo(mapOf("tier" to "enterprise"))
+
+            verify { Datadog.addAccountExtraInfo(mapOf("tier" to "enterprise")) }
+        }
+    }
+
+    @Test
+    fun `clearAccountInfo calls Datadog clearAccountInfo`() {
+        withMockedDatadog {
+            every { Datadog.clearAccountInfo() } returns Unit
+
+            DatadogWrapper.clearAccountInfo()
+
+            verify { Datadog.clearAccountInfo() }
+        }
+    }
 }

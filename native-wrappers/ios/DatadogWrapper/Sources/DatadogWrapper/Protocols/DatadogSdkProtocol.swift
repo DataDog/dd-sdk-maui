@@ -21,6 +21,16 @@ protocol DatadogSdkProtocol {
 
     /// Remove multiple global attributes from the RUM monitor
     func removeAttributes(forKeys keys: [String])
+
+    // User Info
+    func setUserInfo(id: String, name: String?, email: String?, extraInfo: [String: Any])
+    func addUserExtraInfo(_ extraInfo: [String: Any])
+    func clearUserInfo()
+
+    // Account Info
+    func setAccountInfo(id: String, name: String?, extraInfo: [String: Any])
+    func addAccountExtraInfo(_ extraInfo: [String: Any])
+    func clearAccountInfo()
 }
 
 /// Production implementation that wraps the real Datadog SDK
@@ -49,5 +59,33 @@ class RealDatadogSdk: DatadogSdkProtocol {
         for key in keys {
             monitor.removeAttribute(forKey: key)
         }
+    }
+
+    func setUserInfo(id: String, name: String?, email: String?, extraInfo: [String: Any]) {
+        let encodableExtra = extraInfo.mapValues { AnyEncodable($0) }
+        Datadog.setUserInfo(id: id, name: name, email: email, extraInfo: encodableExtra)
+    }
+
+    func addUserExtraInfo(_ extraInfo: [String: Any]) {
+        let encodableExtra: [String: Encodable?] = extraInfo.mapValues { AnyEncodable($0) }
+        Datadog.addUserExtraInfo(encodableExtra)
+    }
+
+    func clearUserInfo() {
+        Datadog.clearUserInfo()
+    }
+
+    func setAccountInfo(id: String, name: String?, extraInfo: [String: Any]) {
+        let encodableExtra = extraInfo.mapValues { AnyEncodable($0) }
+        Datadog.setAccountInfo(id: id, name: name, extraInfo: encodableExtra)
+    }
+
+    func addAccountExtraInfo(_ extraInfo: [String: Any]) {
+        let encodableExtra: [String: Encodable?] = extraInfo.mapValues { AnyEncodable($0) }
+        Datadog.addAccountExtraInfo(encodableExtra)
+    }
+
+    func clearAccountInfo() {
+        Datadog.clearAccountInfo()
     }
 }
