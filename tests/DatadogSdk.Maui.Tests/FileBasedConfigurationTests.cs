@@ -31,6 +31,12 @@ public class FileBasedConfigurationTests
         Assert.Equal(BatchProcessingLevel.High, config.BatchProcessingLevel);
         Assert.Equal("2.1.0", config.Version);
         Assert.Equal("-rc1", config.VersionSuffix);
+        Assert.NotNull(config.ProxyConfiguration);
+        Assert.Equal(ProxyType.Http, config.ProxyConfiguration.Type);
+        Assert.Equal("proxy.example.com", config.ProxyConfiguration.Address);
+        Assert.Equal(8080, config.ProxyConfiguration.Port);
+        Assert.Equal("user", config.ProxyConfiguration.Username);
+        Assert.Equal("pass", config.ProxyConfiguration.Password);
     }
 
     [Fact]
@@ -72,6 +78,7 @@ public class FileBasedConfigurationTests
         Assert.Null(config.Version);
         Assert.Null(config.VersionSuffix);
         Assert.Null(config.AdditionalConfiguration);
+        Assert.Null(config.ProxyConfiguration);
     }
 
     // --- Malformed JSON ------------------------------------------------------
@@ -139,6 +146,145 @@ public class FileBasedConfigurationTests
         ArgumentException ex = Assert.Throws<ArgumentException>(
             () => FileBasedConfiguration.ParseJsonConfig(json));
         Assert.Contains("Verbosity", ex.Message);
+    }
+
+    // --- Proxy configuration -------------------------------------------------
+
+    [Fact]
+    public void ParseJsonConfig_WithProxyConfiguration_ParsesAllFields()
+    {
+        string json = """
+        {
+            "ClientToken": "pub-xxx",
+            "Environment": "prod",
+            "ProxyConfiguration": {
+                "Type": "Http",
+                "Address": "proxy.example.com",
+                "Port": 8080,
+                "Username": "user",
+                "Password": "pass"
+            }
+        }
+        """;
+        DdSdkConfiguration config = FileBasedConfiguration.ParseJsonConfig(json);
+
+        Assert.NotNull(config.ProxyConfiguration);
+        Assert.Equal(ProxyType.Http, config.ProxyConfiguration.Type);
+        Assert.Equal("proxy.example.com", config.ProxyConfiguration.Address);
+        Assert.Equal(8080, config.ProxyConfiguration.Port);
+        Assert.Equal("user", config.ProxyConfiguration.Username);
+        Assert.Equal("pass", config.ProxyConfiguration.Password);
+    }
+
+    [Fact]
+    public void ParseJsonConfig_WithProxyNoAuth_ParsesWithoutCredentials()
+    {
+        string json = """
+        {
+            "ClientToken": "pub-xxx",
+            "Environment": "prod",
+            "ProxyConfiguration": {
+                "Type": "Socks",
+                "Address": "socks.example.com",
+                "Port": 1080
+            }
+        }
+        """;
+        DdSdkConfiguration config = FileBasedConfiguration.ParseJsonConfig(json);
+
+        Assert.NotNull(config.ProxyConfiguration);
+        Assert.Equal(ProxyType.Socks, config.ProxyConfiguration.Type);
+        Assert.Equal("socks.example.com", config.ProxyConfiguration.Address);
+        Assert.Equal(1080, config.ProxyConfiguration.Port);
+        Assert.Null(config.ProxyConfiguration.Username);
+        Assert.Null(config.ProxyConfiguration.Password);
+    }
+
+    [Fact]
+    public void ParseJsonConfig_WithoutProxy_LeavesProxyNull()
+    {
+        string json = """{ "ClientToken": "pub-xxx", "Environment": "prod" }""";
+        DdSdkConfiguration config = FileBasedConfiguration.ParseJsonConfig(json);
+
+        Assert.Null(config.ProxyConfiguration);
+    }
+
+    [Fact]
+    public void ParseJsonConfig_WithInvalidProxyType_ThrowsArgumentException()
+    {
+        string json = """
+        {
+            "ClientToken": "pub-xxx",
+            "Environment": "prod",
+            "ProxyConfiguration": {
+                "Type": "FTP",
+                "Address": "proxy.example.com",
+                "Port": 8080
+            }
+        }
+        """;
+        ArgumentException ex = Assert.Throws<ArgumentException>(
+            () => FileBasedConfiguration.ParseJsonConfig(json));
+        Assert.Contains("Type", ex.Message);
+    }
+
+    [Fact]
+    public void ParseJsonConfig_WithProxyMissingAddress_ThrowsArgumentException()
+    {
+        string json = """
+        {
+            "ClientToken": "pub-xxx",
+            "Environment": "prod",
+            "ProxyConfiguration": {
+                "Type": "Http",
+                "Port": 8080
+            }
+        }
+        """;
+        ArgumentException ex = Assert.Throws<ArgumentException>(
+            () => FileBasedConfiguration.ParseJsonConfig(json));
+        Assert.Contains("Address", ex.Message);
+    }
+
+    [Fact]
+    public void ParseJsonConfig_WithProxyMissingPort_ThrowsArgumentException()
+    {
+        string json = """
+        {
+            "ClientToken": "pub-xxx",
+            "Environment": "prod",
+            "ProxyConfiguration": {
+                "Type": "Http",
+                "Address": "proxy.example.com"
+            }
+        }
+        """;
+        ArgumentException ex = Assert.Throws<ArgumentException>(
+            () => FileBasedConfiguration.ParseJsonConfig(json));
+        Assert.Contains("Port", ex.Message);
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-1)]
+    [InlineData(65536)]
+    [InlineData(70000)]
+    public void ParseJsonConfig_WithProxyPortOutOfRange_ThrowsArgumentException(int port)
+    {
+        string json = $$"""
+        {
+            "ClientToken": "pub-xxx",
+            "Environment": "prod",
+            "ProxyConfiguration": {
+                "Type": "Http",
+                "Address": "proxy.example.com",
+                "Port": {{port}}
+            }
+        }
+        """;
+        ArgumentException exception = Assert.Throws<ArgumentException>(
+            () => FileBasedConfiguration.ParseJsonConfig(json));
+        Assert.Contains("Port", exception.Message);
     }
 
 }

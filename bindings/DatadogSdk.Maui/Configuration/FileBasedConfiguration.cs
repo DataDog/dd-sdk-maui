@@ -56,6 +56,13 @@ namespace DatadogSdk.Maui.Configuration
                 config.AdditionalConfiguration = ParseAdditionalConfiguration(additionalElement);
             }
 
+            // Optional proxy configuration
+            if (root.TryGetProperty("ProxyConfiguration", out JsonElement proxyElement)
+                && proxyElement.ValueKind == JsonValueKind.Object)
+            {
+                config.ProxyConfiguration = ParseProxyConfiguration(proxyElement);
+            }
+
             return config;
         }
 
@@ -119,6 +126,71 @@ namespace DatadogSdk.Maui.Configuration
                 };
             }
             return dict;
+        }
+
+        private static ProxyConfiguration ParseProxyConfiguration(JsonElement element)
+        {
+            // Required: Type
+            if (!element.TryGetProperty("Type", out JsonElement typeElement)
+                || typeElement.ValueKind != JsonValueKind.String)
+            {
+                throw new ArgumentException("Required property 'Type' is missing or empty in ProxyConfiguration.");
+            }
+
+            string? typeRaw = typeElement.GetString();
+            if (typeRaw == null
+                || !Enum.TryParse<ProxyType>(typeRaw, ignoreCase: true, out ProxyType proxyType)
+                || !Enum.IsDefined(proxyType))
+            {
+                throw new ArgumentException(
+                    $"Invalid value '{typeRaw}' for property 'Type' in ProxyConfiguration. " +
+                    $"Valid values are: {string.Join(", ", Enum.GetNames(typeof(ProxyType)))}.");
+            }
+
+            // Required: Address
+            if (!element.TryGetProperty("Address", out JsonElement addressElement)
+                || addressElement.ValueKind != JsonValueKind.String
+                || string.IsNullOrWhiteSpace(addressElement.GetString()))
+            {
+                throw new ArgumentException("Required property 'Address' is missing or empty in ProxyConfiguration.");
+            }
+
+            // Required: Port
+            if (!element.TryGetProperty("Port", out JsonElement portElement)
+                || portElement.ValueKind != JsonValueKind.Number
+                || !portElement.TryGetInt32(out int port))
+            {
+                throw new ArgumentException("Required property 'Port' is missing or invalid in ProxyConfiguration.");
+            }
+
+            if (port < 1 || port > 65535)
+            {
+                throw new ArgumentException(
+                    $"Invalid value '{port}' for property 'Port' in ProxyConfiguration. Must be between 1 and 65535.");
+            }
+
+            var proxy = new ProxyConfiguration
+            {
+                Type = proxyType,
+                Address = addressElement.GetString()!,
+                Port = port
+            };
+
+            // Optional: Username
+            if (element.TryGetProperty("Username", out JsonElement usernameElement)
+                && usernameElement.ValueKind == JsonValueKind.String)
+            {
+                proxy.Username = usernameElement.GetString();
+            }
+
+            // Optional: Password
+            if (element.TryGetProperty("Password", out JsonElement passwordElement)
+                && passwordElement.ValueKind == JsonValueKind.String)
+            {
+                proxy.Password = passwordElement.GetString();
+            }
+
+            return proxy;
         }
     }
 }

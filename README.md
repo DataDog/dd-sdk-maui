@@ -80,6 +80,7 @@ DdSdk.Initialize(config);
 - `VersionSuffix` - Version suffix
 - `Verbosity` - SDK logging level
 - `AdditionalConfiguration` - Additional configuration dictionary
+- `ProxyConfiguration` - Proxy configuration object (see Proxy Configuration section)
 
 ### Tracking Consent
 
@@ -88,6 +89,48 @@ You can update the tracking consent at any time after initialization:
 ```csharp
 // Update tracking consent at runtime (e.g., after user accepts a consent dialog)
 DdSdk.SetTrackingConsent(TrackingConsent.Granted);
+```
+
+### Proxy Configuration
+
+Route all SDK traffic through a proxy:
+
+```csharp
+using DatadogSdk.Maui;
+using DatadogSdk.Maui.Configuration;
+
+DdSdk.Initialize(new DdSdkConfiguration
+{
+    ClientToken = "your-client-token",
+    Environment = "prod",
+    TrackingConsent = TrackingConsent.Granted,
+    ProxyConfiguration = new ProxyConfiguration
+    {
+        Type = ProxyType.Http,
+        Address = "proxy.example.com",
+        Port = 8080,
+        Username = "user",       // optional
+        Password = "password"    // optional
+    }
+});
+```
+
+Supported proxy types: `Http`, `Https`, `Socks`. Authentication (username/password) is supported for HTTP and HTTPS proxies only.
+
+File-based configuration:
+
+```json
+{
+  "ClientToken": "your-client-token",
+  "Environment": "prod",
+  "ProxyConfiguration": {
+    "Type": "Http",
+    "Address": "proxy.example.com",
+    "Port": 8080,
+    "Username": "user",
+    "Password": "password"
+  }
+}
 ```
 
 ### Attributes

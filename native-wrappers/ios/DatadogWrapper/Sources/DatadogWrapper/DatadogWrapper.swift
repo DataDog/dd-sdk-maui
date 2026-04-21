@@ -61,6 +61,42 @@ public class DdSdkNativeWrapper: NSObject {
         }
     }
 
+    static func mapProxyConfiguration(_ dict: NSDictionary?) -> [AnyHashable: Any]? {
+        guard let dict = dict as? [String: Any],
+              let type = dict["type"] as? String,
+              let address = dict["address"] as? String,
+              let port = dict["port"] as? Int else {
+            return nil
+        }
+
+        var proxyDict: [AnyHashable: Any] = [:]
+
+        switch type.lowercased() {
+        case "http", "https":
+            proxyDict["HTTPEnable"] = 1
+            proxyDict["HTTPProxy"] = address
+            proxyDict["HTTPPort"] = port
+            proxyDict["HTTPSEnable"] = 1
+            proxyDict["HTTPSProxy"] = address
+            proxyDict["HTTPSPort"] = port
+        case "socks":
+            proxyDict["SOCKSEnable"] = 1
+            proxyDict["SOCKSProxy"] = address
+            proxyDict["SOCKSPort"] = port
+        default:
+            return nil
+        }
+
+        if let username = dict["username"] as? String {
+            proxyDict[kCFProxyUsernameKey as String] = username
+        }
+        if let password = dict["password"] as? String {
+            proxyDict[kCFProxyPasswordKey as String] = password
+        }
+
+        return proxyDict
+    }
+
     // MARK: - Initialization
 
     /// Initialize the Datadog SDK with configuration
@@ -86,7 +122,8 @@ public class DdSdkNativeWrapper: NSObject {
         batchSize: String?,
         uploadFrequency: String?,
         batchProcessingLevel: String?,
-        additionalConfiguration: NSDictionary?
+        additionalConfiguration: NSDictionary?,
+        proxyConfiguration: NSDictionary?
     ) -> Bool {
         var configuration = DatadogCore.Datadog.Configuration(
             clientToken: clientToken,
@@ -114,6 +151,10 @@ public class DdSdkNativeWrapper: NSObject {
             configuration._internal_mutation {
                 $0.additionalConfiguration = additionalConfig
             }
+        }
+
+        if let proxyConfig = mapProxyConfiguration(proxyConfiguration) {
+            configuration.proxyConfiguration = proxyConfig
         }
 
         // Initialize Datadog SDK
