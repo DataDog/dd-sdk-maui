@@ -161,4 +161,36 @@ public class DdSdkNativeWrapper: NSObject {
         datadogCore.removeAttributes(forKeys: keyList)
     }
 
+    // MARK: - User Info
+
+    @objc public static func setUserInfo(_ id: String, name: String?, email: String?, extraInfo: NSDictionary) {
+        let extra = (extraInfo as? [String: Any]) ?? [:]
+        datadogCore.setUserInfo(id: id, name: name, email: email, extraInfo: extra)
+    }
+
+    @objc public static func addUserExtraInfo(_ extraInfo: NSDictionary) {
+        let extra = (extraInfo as? [String: Any]) ?? [:]
+        datadogCore.addUserExtraInfo(extra)
+    }
+
+    @objc public static func clearUserInfo() {
+        datadogCore.clearUserInfo()
+    }
+
+    // MARK: - Account Info
+
+    @objc public static func setAccountInfo(_ id: String, name: String?, extraInfo: NSDictionary) {
+        let extra = (extraInfo as? [String: Any]) ?? [:]
+        datadogCore.setAccountInfo(id: id, name: name, extraInfo: extra)
+    }
+
+    @objc public static func addAccountExtraInfo(_ extraInfo: NSDictionary) {
+        let extra = (extraInfo as? [String: Any]) ?? [:]
+        datadogCore.addAccountExtraInfo(extra)
+    }
+
+    @objc public static func clearAccountInfo() {
+        datadogCore.clearAccountInfo()
+    }
+
 }

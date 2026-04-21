@@ -281,4 +281,81 @@ final class DatadogWrapperTests: XCTestCase {
         XCTAssertEqual(mockCore.removeAttributesCalls.count, 1)
         XCTAssertEqual(mockCore.removeAttributesCalls[0], ["plan", "version"])
     }
+
+    // MARK: - User Info
+
+    func test_setUserInfo_callsDatadogCoreSetUserInfo() {
+        let mockCore = MockDatadogCore()
+        DdSdkNativeWrapper.setDatadogCore(mockCore)
+        defer { DdSdkNativeWrapper.resetDependencies() }
+
+        let extraInfo: NSDictionary = ["plan": "premium"]
+        DdSdkNativeWrapper.setUserInfo("user-123", name: "John", email: "john@example.com", extraInfo: extraInfo)
+
+        XCTAssertEqual(mockCore.setUserInfoCalls.count, 1)
+        XCTAssertEqual(mockCore.setUserInfoCalls[0].id, "user-123")
+        XCTAssertEqual(mockCore.setUserInfoCalls[0].name, "John")
+        XCTAssertEqual(mockCore.setUserInfoCalls[0].email, "john@example.com")
+        XCTAssertEqual(mockCore.setUserInfoCalls[0].extraInfo["plan"] as? String, "premium")
+    }
+
+    func test_addUserExtraInfo_callsDatadogCoreAddUserExtraInfo() {
+        let mockCore = MockDatadogCore()
+        DdSdkNativeWrapper.setDatadogCore(mockCore)
+        defer { DdSdkNativeWrapper.resetDependencies() }
+
+        let extraInfo: NSDictionary = ["plan": "premium"]
+        DdSdkNativeWrapper.addUserExtraInfo(extraInfo)
+
+        XCTAssertEqual(mockCore.addUserExtraInfoCalls.count, 1)
+        XCTAssertEqual(mockCore.addUserExtraInfoCalls[0]["plan"] as? String, "premium")
+    }
+
+    func test_clearUserInfo_callsDatadogCoreClearUserInfo() {
+        let mockCore = MockDatadogCore()
+        DdSdkNativeWrapper.setDatadogCore(mockCore)
+        defer { DdSdkNativeWrapper.resetDependencies() }
+
+        DdSdkNativeWrapper.clearUserInfo()
+
+        XCTAssertEqual(mockCore.clearUserInfoCallCount, 1)
+    }
+
+    // MARK: - Account Info
+
+    func test_setAccountInfo_callsDatadogCoreSetAccountInfo() {
+        let mockCore = MockDatadogCore()
+        DdSdkNativeWrapper.setDatadogCore(mockCore)
+        defer { DdSdkNativeWrapper.resetDependencies() }
+
+        let extraInfo: NSDictionary = ["tier": "enterprise"]
+        DdSdkNativeWrapper.setAccountInfo("acct-456", name: "Acme Corp", extraInfo: extraInfo)
+
+        XCTAssertEqual(mockCore.setAccountInfoCalls.count, 1)
+        XCTAssertEqual(mockCore.setAccountInfoCalls[0].id, "acct-456")
+        XCTAssertEqual(mockCore.setAccountInfoCalls[0].name, "Acme Corp")
+        XCTAssertEqual(mockCore.setAccountInfoCalls[0].extraInfo["tier"] as? String, "enterprise")
+    }
+
+    func test_addAccountExtraInfo_callsDatadogCoreAddAccountExtraInfo() {
+        let mockCore = MockDatadogCore()
+        DdSdkNativeWrapper.setDatadogCore(mockCore)
+        defer { DdSdkNativeWrapper.resetDependencies() }
+
+        let extraInfo: NSDictionary = ["tier": "enterprise"]
+        DdSdkNativeWrapper.addAccountExtraInfo(extraInfo)
+
+        XCTAssertEqual(mockCore.addAccountExtraInfoCalls.count, 1)
+        XCTAssertEqual(mockCore.addAccountExtraInfoCalls[0]["tier"] as? String, "enterprise")
+    }
+
+    func test_clearAccountInfo_callsDatadogCoreClearAccountInfo() {
+        let mockCore = MockDatadogCore()
+        DdSdkNativeWrapper.setDatadogCore(mockCore)
+        defer { DdSdkNativeWrapper.resetDependencies() }
+
+        DdSdkNativeWrapper.clearAccountInfo()
+
+        XCTAssertEqual(mockCore.clearAccountInfoCallCount, 1)
+    }
 }

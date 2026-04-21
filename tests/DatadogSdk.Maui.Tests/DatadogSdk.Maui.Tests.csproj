@@ -30,6 +30,8 @@
     <Compile Include="../../bindings/DatadogSdk.Maui/Configuration/UploadFrequency.cs" Link="Linked/Configuration/UploadFrequency.cs" />
     <Compile Include="../../bindings/DatadogSdk.Maui/Configuration/BatchProcessingLevel.cs" Link="Linked/Configuration/BatchProcessingLevel.cs" />
     <Compile Include="../../bindings/DatadogSdk.Maui/Configuration/FileBasedConfiguration.cs" Link="Linked/Configuration/FileBasedConfiguration.cs" />
+    <Compile Include="../../bindings/DatadogSdk.Maui/Configuration/DdUserInfo.cs" Link="Linked/Configuration/DdUserInfo.cs" />
+    <Compile Include="../../bindings/DatadogSdk.Maui/Configuration/DdAccountInfo.cs" Link="Linked/Configuration/DdAccountInfo.cs" />
   </ItemGroup>
 
   <!-- Test fixture files -->

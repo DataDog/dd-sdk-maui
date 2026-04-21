@@ -42,5 +42,31 @@ namespace DatadogSdk.iOS.Binding
         [Static]
         [Export("removeAttributes:")]
         void RemoveAttributes(NSArray keys);
+
+        // User Info
+        [Static]
+        [Export("setUserInfo:name:email:extraInfo:")]
+        void SetUserInfo(string id, [NullAllowed] string name, [NullAllowed] string email, NSDictionary extraInfo);
+
+        [Static]
+        [Export("addUserExtraInfo:")]
+        void AddUserExtraInfo(NSDictionary extraInfo);
+
+        [Static]
+        [Export("clearUserInfo")]
+        void ClearUserInfo();
+
+        // Account Info
+        [Static]
+        [Export("setAccountInfo:name:extraInfo:")]
+        void SetAccountInfo(string id, [NullAllowed] string name, NSDictionary extraInfo);
+
+        [Static]
+        [Export("addAccountExtraInfo:")]
+        void AddAccountExtraInfo(NSDictionary extraInfo);
+
+        [Static]
+        [Export("clearAccountInfo")]
+        void ClearAccountInfo();
     }
 }

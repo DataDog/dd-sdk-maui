@@ -4,7 +4,7 @@
 
 ## Current Features
 
-- **Core SDK**: Initialize Datadog with full configuration support, including runtime tracking consent updates and global attributes.
+- **Core SDK**: Initialize Datadog with full configuration support, including runtime tracking consent updates, global attributes, user info, and account info.
 - **Logs**: Send logs from your .NET MAUI application to Datadog with support for debug, info, warn, and error levels, plus custom attributes.
 - **Traces**: Manual span tracking with support for nested parent-child relationships, custom context attributes, and configurable endpoints.
 - **RUM (Real User Monitoring)**: Enable RUM to track user sessions, views, actions, and crashes. Configure session sampling, vitals monitoring, native view/interaction tracking, crash reporting, and first-party hosts for distributed tracing.
@@ -113,6 +113,44 @@ DdSdk.RemoveAttributes(new List<string> { "plan", "experiment" });
 
 // Read current attributes (returns a snapshot copy)
 var attributes = DdSdk.GetAttributes();
+```
+
+### User Info
+
+Set user information that is attached to all Datadog events:
+
+```csharp
+// Set user info (id is required, other fields optional)
+DdSdk.SetUserInfo("user-123", "Jane Doe", "jane@example.com",
+    new Dictionary<string, object> { { "plan", "premium" } });
+
+// Add extra info to the current user (merges with existing)
+DdSdk.AddUserExtraInfo(new Dictionary<string, object> { { "subscription", "annual" } });
+
+// Read current user info (returns null if not set)
+var user = DdSdk.GetUserInfo();
+
+// Clear user info
+DdSdk.ClearUserInfo();
+```
+
+### Account Info
+
+Set account information that is attached to all Datadog events:
+
+```csharp
+// Set account info (id is required, other fields optional)
+DdSdk.SetAccountInfo("acct-456", "Acme Corp",
+    new Dictionary<string, object> { { "tier", "enterprise" } });
+
+// Add extra info to the current account (merges with existing)
+DdSdk.AddAccountExtraInfo(new Dictionary<string, object> { { "region", "us-east" } });
+
+// Read current account info (returns null if not set)
+var account = DdSdk.GetAccountInfo();
+
+// Clear account info
+DdSdk.ClearAccountInfo();
 ```
 
 ### Logs

@@ -66,4 +66,44 @@ internal class MockNativeSdkBridge : DdSdk.INativeBridge
     {
         RemoveAttributesCalls.Add(keys);
     }
+
+    // User Info
+    public List<(string Id, string? Name, string? Email, Dictionary<string, object> ExtraInfo)> SetUserInfoCalls { get; } = new();
+    public List<Dictionary<string, object>> AddUserExtraInfoCalls { get; } = new();
+    public int ClearUserInfoCallCount { get; private set; }
+
+    public void SetUserInfo(string id, string? name, string? email, Dictionary<string, object> extraInfo)
+    {
+        SetUserInfoCalls.Add((id, name, email, extraInfo));
+    }
+
+    public void AddUserExtraInfo(Dictionary<string, object> extraInfo)
+    {
+        AddUserExtraInfoCalls.Add(extraInfo);
+    }
+
+    public void ClearUserInfo()
+    {
+        ClearUserInfoCallCount++;
+    }
+
+    // Account Info
+    public List<(string Id, string? Name, Dictionary<string, object> ExtraInfo)> SetAccountInfoCalls { get; } = new();
+    public List<Dictionary<string, object>> AddAccountExtraInfoCalls { get; } = new();
+    public int ClearAccountInfoCallCount { get; private set; }
+
+    public void SetAccountInfo(string id, string? name, Dictionary<string, object> extraInfo)
+    {
+        SetAccountInfoCalls.Add((id, name, extraInfo));
+    }
+
+    public void AddAccountExtraInfo(Dictionary<string, object> extraInfo)
+    {
+        AddAccountExtraInfoCalls.Add(extraInfo);
+    }
+
+    public void ClearAccountInfo()
+    {
+        ClearAccountInfoCallCount++;
+    }
 }

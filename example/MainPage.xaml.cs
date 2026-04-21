@@ -74,6 +74,18 @@ public partial class MainPage : ContentPage
             { "BatchDeleteMe", false }
         });
         DdSdk.RemoveAttributes(new List<string> { "BatchDeleteMe" });
+
+        // Set user info
+        DdSdk.SetUserInfo("UserId", "Username", "user@datadog.com",
+            new Dictionary<string, object> { { "plan", "premium" } });
+
+        DdSdk.AddUserExtraInfo(new Dictionary<string, object> { { "extra", 123 } });
+
+        // Set account info
+        DdSdk.SetAccountInfo("AccountId", "AccountName",
+            new Dictionary<string, object> { { "type", "subscription" } });
+
+        DdSdk.AddAccountExtraInfo(new Dictionary<string, object> { { "extra", "test" } });
     }
 
     private void OnSendLogsClicked(object? sender, EventArgs e)
