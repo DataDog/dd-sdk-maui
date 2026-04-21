@@ -33,17 +33,16 @@ namespace DatadogSdk.Maui
         /// <param name="context">Additional context attributes for the span.</param>
         /// <param name="timestampMs">The start timestamp in milliseconds since epoch.</param>
         /// <returns>A span ID string that can be used to finish the span later.</returns>
-        public static string StartSpan(string operation, Dictionary<string, string> context, long timestampMs)
+        public static string StartSpan(string operation, Dictionary<string, object> context, long timestampMs)
         {
             InternalLog.Log($"DdTrace.StartSpan called: operation={operation}, timestampMs={timestampMs}", SdkVerbosity.DEBUG);
 
+            var merged = MergeWithGlobalAttributes(context);
+
 #if ANDROID
-            return NativeDdTrace.StartSpan(operation, context, timestampMs);
+            return NativeDdTrace.StartSpan(operation, DdSdk.ToJavaDictionary(merged), timestampMs);
 #elif IOS
-            var keys = context.Keys.Select(k => new NSString(k)).ToArray();
-            var values = context.Values.Select(v => new NSString(v)).ToArray();
-            var nsDict = NSDictionary<NSString, NSString>.FromObjectsAndKeys(values, keys);
-            return NativeDdTrace.StartSpan(operation, nsDict, timestampMs);
+            return NativeDdTrace.StartSpan(operation, DdSdk.ToNSDictionary(merged), timestampMs);
 #endif
         }
 
@@ -53,18 +52,30 @@ namespace DatadogSdk.Maui
         /// <param name="spanId">The span ID returned by StartSpan.</param>
         /// <param name="context">Additional context attributes to add before finishing.</param>
         /// <param name="timestampMs">The finish timestamp in milliseconds since epoch.</param>
-        public static void FinishSpan(string spanId, Dictionary<string, string> context, long timestampMs)
+        public static void FinishSpan(string spanId, Dictionary<string, object> context, long timestampMs)
         {
             InternalLog.Log($"DdTrace.FinishSpan called: spanId={spanId}, timestampMs={timestampMs}", SdkVerbosity.DEBUG);
 
+            var merged = MergeWithGlobalAttributes(context);
+
 #if ANDROID
-            NativeDdTrace.FinishSpan(spanId, context, timestampMs);
+            NativeDdTrace.FinishSpan(spanId, DdSdk.ToJavaDictionary(merged), timestampMs);
 #elif IOS
-            var keys = context.Keys.Select(k => new NSString(k)).ToArray();
-            var values = context.Values.Select(v => new NSString(v)).ToArray();
-            var nsDict = NSDictionary<NSString, NSString>.FromObjectsAndKeys(values, keys);
-            NativeDdTrace.FinishSpan(spanId, nsDict, timestampMs);
+            NativeDdTrace.FinishSpan(spanId, DdSdk.ToNSDictionary(merged), timestampMs);
 #endif
+        }
+
+        private static Dictionary<string, object> MergeWithGlobalAttributes(Dictionary<string, object>? perCallAttributes)
+        {
+            var globalAttrs = DdSdk.GetAttributes();
+            if (perCallAttributes != null)
+            {
+                foreach (var kvp in perCallAttributes)
+                {
+                    globalAttrs[kvp.Key] = kvp.Value;
+                }
+            }
+            return globalAttrs;
         }
     }
 }

@@ -95,7 +95,7 @@ final class DdLogsTests: XCTestCase {
     }
 
     func testLogWithAttributes_debugLevel_callsLoggerDebugWithAttributes() {
-        let attributes = ["user_id": "123", "action": "test"]
+        let attributes: NSDictionary = ["user_id": "123", "action": "test"]
 
         DdLogs.logWithAttributes(level: "debug", message: "Debug with attrs", attributes: attributes)
 
@@ -108,7 +108,7 @@ final class DdLogsTests: XCTestCase {
     }
 
     func testLogWithAttributes_infoLevel_callsLoggerInfoWithAttributes() {
-        let attributes = ["key": "value"]
+        let attributes: NSDictionary = ["key": "value"]
 
         DdLogs.logWithAttributes(level: "info", message: "Info with attrs", attributes: attributes)
 
@@ -118,7 +118,7 @@ final class DdLogsTests: XCTestCase {
     }
 
     func testLogWithAttributes_warnLevel_callsLoggerWarnWithAttributes() {
-        let attributes = ["warning": "true"]
+        let attributes: NSDictionary = ["warning": "true"]
 
         DdLogs.logWithAttributes(level: "warn", message: "Warn with attrs", attributes: attributes)
 

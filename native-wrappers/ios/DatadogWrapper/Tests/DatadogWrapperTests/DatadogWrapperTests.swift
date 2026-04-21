@@ -231,4 +231,54 @@ final class DatadogWrapperTests: XCTestCase {
         XCTAssertEqual(mockCore.setTrackingConsentCalls.count, 1)
         XCTAssertEqual(mockCore.setTrackingConsentCalls[0], .pending)
     }
+
+    // MARK: - Global attributes
+
+    func test_addAttribute_callsDatadogCoreAddAttribute() {
+        let mockCore = MockDatadogCore()
+        DdSdkNativeWrapper.setDatadogCore(mockCore)
+        defer { DdSdkNativeWrapper.resetDependencies() }
+
+        DdSdkNativeWrapper.addAttribute("plan", value: "premium")
+
+        XCTAssertEqual(mockCore.addAttributeCalls.count, 1)
+        XCTAssertEqual(mockCore.addAttributeCalls[0].key, "plan")
+        XCTAssertEqual(mockCore.addAttributeCalls[0].value as? String, "premium")
+    }
+
+    func test_addAttributes_callsDatadogCoreAddAttributes() {
+        let mockCore = MockDatadogCore()
+        DdSdkNativeWrapper.setDatadogCore(mockCore)
+        defer { DdSdkNativeWrapper.resetDependencies() }
+
+        let attrs: NSDictionary = ["plan": "premium", "version": "2.0"]
+        DdSdkNativeWrapper.addAttributes(attrs)
+
+        XCTAssertEqual(mockCore.addAttributesCalls.count, 1)
+        XCTAssertEqual(mockCore.addAttributesCalls[0]["plan"] as? String, "premium")
+        XCTAssertEqual(mockCore.addAttributesCalls[0]["version"] as? String, "2.0")
+    }
+
+    func test_removeAttribute_callsDatadogCoreRemoveAttribute() {
+        let mockCore = MockDatadogCore()
+        DdSdkNativeWrapper.setDatadogCore(mockCore)
+        defer { DdSdkNativeWrapper.resetDependencies() }
+
+        DdSdkNativeWrapper.removeAttribute("plan")
+
+        XCTAssertEqual(mockCore.removeAttributeCalls.count, 1)
+        XCTAssertEqual(mockCore.removeAttributeCalls[0], "plan")
+    }
+
+    func test_removeAttributes_callsDatadogCoreRemoveAttributes() {
+        let mockCore = MockDatadogCore()
+        DdSdkNativeWrapper.setDatadogCore(mockCore)
+        defer { DdSdkNativeWrapper.resetDependencies() }
+
+        let keys: NSArray = ["plan", "version"]
+        DdSdkNativeWrapper.removeAttributes(keys)
+
+        XCTAssertEqual(mockCore.removeAttributesCalls.count, 1)
+        XCTAssertEqual(mockCore.removeAttributesCalls[0], ["plan", "version"])
+    }
 }

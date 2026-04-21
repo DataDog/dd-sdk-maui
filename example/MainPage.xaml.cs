@@ -49,6 +49,31 @@ public partial class MainPage : ContentPage
         };
 
         DdRum.Enable(rumConfiguration);
+
+        // Set global attributes
+        DdSdk.AddAttribute("StringAttribute", "AttributeValue");
+        DdSdk.AddAttribute("ArrayAttribute", new string[] { "AttributeValue", "AttributeValue" });
+        DdSdk.AddAttribute("DictionaryAttribute", new Dictionary<string, object>
+        {
+            { "string", "test" },
+            { "int", 123 },
+            { "boolean", true },
+            { "nested", new Dictionary<string, object>
+                {
+                    { "value", "test" }
+                }
+            }
+        });
+
+        DdSdk.AddAttribute("DeleteAttribute", "DeleteMe");
+        DdSdk.RemoveAttribute("DeleteAttribute");
+        DdSdk.AddAttributes(new Dictionary<string, object>
+        {
+            { "BatchAttribute1", "string" },
+            { "BatchAttribute2", 123 },
+            { "BatchDeleteMe", false }
+        });
+        DdSdk.RemoveAttributes(new List<string> { "BatchDeleteMe" });
     }
 
     private void OnSendLogsClicked(object? sender, EventArgs e)
@@ -89,7 +114,7 @@ public partial class MainPage : ContentPage
         var platform = DeviceInfo.Platform.ToString();
         var timestampMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
         var id = ++_nextSpanId;
-        var context = new Dictionary<string, string>
+        var context = new Dictionary<string, object>
         {
             { "platform", platform },
             { "action", "manual_trace" },
@@ -107,7 +132,7 @@ public partial class MainPage : ContentPage
 
         var (id, spanId) = _activeSpans.Pop();
         var timestampMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
-        var context = new Dictionary<string, string>
+        var context = new Dictionary<string, object>
         {
             { "status", "completed" },
             { "span_number", id.ToString() }

@@ -16,6 +16,10 @@ internal class MockNativeSdkBridge : DdSdk.INativeBridge
     public bool ReturnValue { get; set; } = true;
     public int SetTrackingConsentCallCount { get; private set; }
     public string? LastSetTrackingConsent { get; private set; }
+    public List<(string Key, object Value)> AddAttributeCalls { get; } = new();
+    public List<Dictionary<string, object>> AddAttributesCalls { get; } = new();
+    public List<string> RemoveAttributeCalls { get; } = new();
+    public List<List<string>> RemoveAttributesCalls { get; } = new();
 
     public bool Initialize(
         string clientToken, string environment, string? service,
@@ -41,5 +45,25 @@ internal class MockNativeSdkBridge : DdSdk.INativeBridge
     {
         SetTrackingConsentCallCount++;
         LastSetTrackingConsent = consent;
+    }
+
+    public void AddAttribute(string key, object value)
+    {
+        AddAttributeCalls.Add((key, value));
+    }
+
+    public void AddAttributes(Dictionary<string, object> attributes)
+    {
+        AddAttributesCalls.Add(attributes);
+    }
+
+    public void RemoveAttribute(string key)
+    {
+        RemoveAttributeCalls.Add(key);
+    }
+
+    public void RemoveAttributes(List<string> keys)
+    {
+        RemoveAttributesCalls.Add(keys);
     }
 }

@@ -66,7 +66,7 @@ public class DdTrace: NSObject {
     /// - Returns: A unique span ID string
     @objc public static func startSpan(
         _ operation: String,
-        context: [String: String],
+        context: NSDictionary,
         timestampMs: Int64
     ) -> String {
         objc_sync_enter(lock)
@@ -76,7 +76,25 @@ public class DdTrace: NSObject {
 
         let spanId = UUID().uuidString
         let startDate = Date(timeIntervalSince1970: TimeInterval(timestampMs) / 1_000)
-        let encodableContext: [String: Encodable] = context.mapValues { $0 as Encodable }
+        var encodableContext: [String: Encodable] = [:]
+        if let dict = context as? [String: Any] {
+            for (key, value) in dict {
+                switch value {
+                case let boolVal as Bool:
+                    encodableContext[key] = boolVal
+                case let intVal as Int:
+                    encodableContext[key] = intVal
+                case let doubleVal as Double:
+                    encodableContext[key] = doubleVal
+                case let stringVal as String:
+                    encodableContext[key] = stringVal
+                case let int64Val as Int64:
+                    encodableContext[key] = int64Val
+                default:
+                    encodableContext[key] = String(describing: value)
+                }
+            }
+        }
 
         if let span = tracer?.startSpan(
             operationName: operation,
@@ -99,7 +117,7 @@ public class DdTrace: NSObject {
     ///   - timestampMs: The finish timestamp in milliseconds since epoch
     @objc public static func finishSpan(
         _ spanId: String,
-        context: [String: String],
+        context: NSDictionary,
         timestampMs: Int64
     ) {
         objc_sync_enter(lock)
@@ -113,8 +131,10 @@ public class DdTrace: NSObject {
         }
 
         // Set additional context tags
-        for (key, value) in context {
-            span.setTag(key: key, value: value)
+        if let dict = context as? [String: Any] {
+            for (key, value) in dict {
+                span.setTag(key: key, value: String(describing: value))
+            }
         }
 
         let finishDate = Date(timeIntervalSince1970: TimeInterval(timestampMs) / 1_000)

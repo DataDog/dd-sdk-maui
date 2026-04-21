@@ -87,12 +87,30 @@ public class DdLogs: NSObject {
     @objc public static func logWithAttributes(
         level: String,
         message: String,
-        attributes: [String: String]
+        attributes: NSDictionary
     ) {
         ensureLogger()
 
-        // Convert String dictionary to [String: Encodable]
-        let encodableAttributes: [String: Encodable] = attributes.mapValues { $0 as Encodable }
+        // Convert NSDictionary to [String: Encodable]
+        var encodableAttributes: [String: Encodable] = [:]
+        if let dict = attributes as? [String: Any] {
+            for (key, value) in dict {
+                switch value {
+                case let boolVal as Bool:
+                    encodableAttributes[key] = boolVal
+                case let intVal as Int:
+                    encodableAttributes[key] = intVal
+                case let doubleVal as Double:
+                    encodableAttributes[key] = doubleVal
+                case let stringVal as String:
+                    encodableAttributes[key] = stringVal
+                case let int64Val as Int64:
+                    encodableAttributes[key] = int64Val
+                default:
+                    encodableAttributes[key] = String(describing: value)
+                }
+            }
+        }
 
         switch level.lowercased() {
         case "debug":

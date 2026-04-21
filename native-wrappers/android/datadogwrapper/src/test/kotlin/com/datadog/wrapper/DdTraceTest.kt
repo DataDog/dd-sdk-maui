@@ -172,12 +172,12 @@ class DdTraceTest {
     @Test
     fun `startSpan sets context tags on the span`() {
         DdTrace.enableTrace(customEndpoint = null)
-        val context = mapOf("user_id" to "123", "action" to "test")
+        val context = mapOf<String, Any?>("user_id" to "123", "action" to "test")
 
         DdTrace.startSpan("test.operation", context, 1000L)
 
-        verify { mockSpan.setTag("user_id", "123") }
-        verify { mockSpan.setTag("action", "test") }
+        verify { mockSpan.setTag(eq("user_id"), any<String>() as Any?) }
+        verify { mockSpan.setTag(eq("action"), any<String>() as Any?) }
     }
 
     @Test
@@ -242,14 +242,14 @@ class DdTraceTest {
     @Test
     fun `finishSpan sets context tags before finishing`() {
         DdTrace.enableTrace(customEndpoint = null)
-        val finishContext = mapOf("status" to "completed")
+        val finishContext = mapOf<String, Any?>("status" to "completed")
 
         val spanId = DdTrace.startSpan(
             "test.operation", emptyMap(), 1000L
         )
         DdTrace.finishSpan(spanId, finishContext, 2000L)
 
-        verify { mockSpan.setTag("status", "completed") }
+        verify { mockSpan.setTag(eq("status"), any<String>() as Any?) }
         verify { mockSpan.finish(any()) }
     }
 

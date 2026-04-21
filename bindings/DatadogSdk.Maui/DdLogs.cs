@@ -29,43 +29,52 @@ namespace DatadogSdk.Maui
         public static void Debug(string message)
         {
             InternalLog.Log($"DdLogs.Debug called: {message}", SdkVerbosity.DEBUG);
-
-            NativeDdLogs.LogDebug(message);
+            LogWithAttributes("debug", message, new Dictionary<string, object>());
         }
 
         public static void Info(string message)
         {
             InternalLog.Log($"DdLogs.Info called: {message}", SdkVerbosity.DEBUG);
-
-            NativeDdLogs.LogInfo(message);
+            LogWithAttributes("info", message, new Dictionary<string, object>());
         }
 
         public static void Warn(string message)
         {
             InternalLog.Log($"DdLogs.Warn called: {message}", SdkVerbosity.DEBUG);
-
-            NativeDdLogs.LogWarn(message);
+            LogWithAttributes("warn", message, new Dictionary<string, object>());
         }
 
         public static void Error(string message)
         {
             InternalLog.Log($"DdLogs.Error called: {message}", SdkVerbosity.DEBUG);
-
-            NativeDdLogs.LogError(message);
+            LogWithAttributes("error", message, new Dictionary<string, object>());
         }
 
-        public static void LogWithAttributes(string level, string message, Dictionary<string, string> attributes)
+        public static void LogWithAttributes(string level, string message, Dictionary<string, object> attributes)
         {
             InternalLog.Log($"DdLogs.LogWithAttributes called: level={level}, message={message}, attributes count={attributes.Count}", SdkVerbosity.DEBUG);
 
+            var merged = MergeWithGlobalAttributes(attributes);
+
 #if ANDROID
-            NativeDdLogs.LogWithAttributes(level, message, attributes);
+            NativeDdLogs.LogWithAttributes(level, message, DdSdk.ToJavaDictionary(merged));
 #elif IOS
-            var keys = attributes.Keys.Select(k => new NSString(k)).ToArray();
-            var values = attributes.Values.Select(v => new NSString(v)).ToArray();
-            var nsDict = NSDictionary<NSString, NSString>.FromObjectsAndKeys(values, keys);
-            NativeDdLogs.LogWithAttributes(level, message, nsDict);
+            NativeDdLogs.LogWithAttributes(level, message, DdSdk.ToNSDictionary(merged));
 #endif
+        }
+
+        private static Dictionary<string, object> MergeWithGlobalAttributes(Dictionary<string, object>? perCallAttributes)
+        {
+            var globalAttrs = DdSdk.GetAttributes();
+            if (perCallAttributes != null)
+            {
+                // Per-call attributes take precedence
+                foreach (var kvp in perCallAttributes)
+                {
+                    globalAttrs[kvp.Key] = kvp.Value;
+                }
+            }
+            return globalAttrs;
         }
     }
 }

@@ -81,7 +81,7 @@ final class DdTraceTests: XCTestCase {
     }
 
     func testStartSpan_passesContextAsTags() {
-        let context = ["user_id": "123", "action": "test"]
+        let context: NSDictionary = ["user_id": "123", "action": "test"]
 
         _ = DdTrace.startSpan("test.operation", context: context, timestampMs: 1000)
 
@@ -202,7 +202,7 @@ final class DdTraceTests: XCTestCase {
         mockTracer.spansToReturn = [mockSpan]
 
         let spanId = DdTrace.startSpan("test.operation", context: [:], timestampMs: 1000)
-        DdTrace.finishSpan(spanId, context: ["status": "completed"], timestampMs: 2000)
+        DdTrace.finishSpan(spanId, context: ["status": "completed"] as NSDictionary, timestampMs: 2000)
 
         XCTAssertEqual(mockSpan.tagCalls.count, 1)
         XCTAssertEqual(mockSpan.tagCalls[0].key, "status")

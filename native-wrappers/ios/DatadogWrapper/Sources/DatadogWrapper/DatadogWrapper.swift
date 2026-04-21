@@ -143,4 +143,22 @@ public class DdSdkNativeWrapper: NSObject {
         datadogCore.setTrackingConsent(mapTrackingConsent(consent))
     }
 
+    @objc public static func addAttribute(_ key: String, value: Any) {
+        datadogCore.addAttribute(forKey: key, value: value)
+    }
+
+    @objc public static func addAttributes(_ attributes: NSDictionary) {
+        guard let dict = attributes as? [String: Any] else { return }
+        datadogCore.addAttributes(dict)
+    }
+
+    @objc public static func removeAttribute(_ key: String) {
+        datadogCore.removeAttribute(forKey: key)
+    }
+
+    @objc public static func removeAttributes(_ keys: NSArray) {
+        guard let keyList = keys as? [String] else { return }
+        datadogCore.removeAttributes(forKeys: keyList)
+    }
+
 }

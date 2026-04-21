@@ -9,6 +9,8 @@ import com.datadog.android.core.configuration.BatchSize
 import com.datadog.android.core.configuration.Configuration
 import com.datadog.android.core.configuration.UploadFrequency
 import com.datadog.android.privacy.TrackingConsent
+import com.datadog.android.rum.GlobalRumMonitor
+import com.datadog.android.rum.RumMonitor
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkStatic
@@ -299,6 +301,66 @@ class DatadogWrapperTest {
         withMockedDatadogSetTrackingConsent {
             DatadogWrapper.setTrackingConsent("pending")
             verify { Datadog.setTrackingConsent(TrackingConsent.PENDING) }
+        }
+    }
+
+    // -- Global attributes --
+
+    @Test
+    fun `addAttribute calls GlobalRumMonitor addAttribute`() {
+        withMockedDatadog {
+            val mockRumMonitor = mockk<RumMonitor>(relaxed = true)
+            mockkStatic(GlobalRumMonitor::class) {
+                every { GlobalRumMonitor.get() } returns mockRumMonitor
+
+                DatadogWrapper.addAttribute("plan", "premium")
+
+                verify { mockRumMonitor.addAttribute("plan", "premium") }
+            }
+        }
+    }
+
+    @Test
+    fun `addAttributes calls GlobalRumMonitor addAttribute for each entry`() {
+        withMockedDatadog {
+            val mockRumMonitor = mockk<RumMonitor>(relaxed = true)
+            mockkStatic(GlobalRumMonitor::class) {
+                every { GlobalRumMonitor.get() } returns mockRumMonitor
+
+                DatadogWrapper.addAttributes(mapOf("plan" to "premium", "version" to "2.0"))
+
+                verify { mockRumMonitor.addAttribute("plan", "premium") }
+                verify { mockRumMonitor.addAttribute("version", "2.0") }
+            }
+        }
+    }
+
+    @Test
+    fun `removeAttribute calls GlobalRumMonitor removeAttribute`() {
+        withMockedDatadog {
+            val mockRumMonitor = mockk<RumMonitor>(relaxed = true)
+            mockkStatic(GlobalRumMonitor::class) {
+                every { GlobalRumMonitor.get() } returns mockRumMonitor
+
+                DatadogWrapper.removeAttribute("plan")
+
+                verify { mockRumMonitor.removeAttribute("plan") }
+            }
+        }
+    }
+
+    @Test
+    fun `removeAttributes calls GlobalRumMonitor removeAttribute for each key`() {
+        withMockedDatadog {
+            val mockRumMonitor = mockk<RumMonitor>(relaxed = true)
+            mockkStatic(GlobalRumMonitor::class) {
+                every { GlobalRumMonitor.get() } returns mockRumMonitor
+
+                DatadogWrapper.removeAttributes(listOf("plan", "version"))
+
+                verify { mockRumMonitor.removeAttribute("plan") }
+                verify { mockRumMonitor.removeAttribute("version") }
+            }
         }
     }
 }

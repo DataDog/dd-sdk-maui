@@ -26,5 +26,21 @@ namespace DatadogSdk.iOS.Binding
         [Static]
         [Export("setTrackingConsent:")]
         void SetTrackingConsent(string consent);
+
+        [Static]
+        [Export("addAttribute:value:")]
+        void AddAttribute(string key, NSObject value);
+
+        [Static]
+        [Export("addAttributes:")]
+        void AddAttributes(NSDictionary attributes);
+
+        [Static]
+        [Export("removeAttribute:")]
+        void RemoveAttribute(string key);
+
+        [Static]
+        [Export("removeAttributes:")]
+        void RemoveAttributes(NSArray keys);
     }
 }

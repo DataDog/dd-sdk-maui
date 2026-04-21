@@ -14,10 +14,10 @@ namespace DatadogSdk.iOS.Binding
 
         [Static]
         [Export("startSpan:context:timestampMs:")]
-        string StartSpan(string operation, NSDictionary<NSString, NSString> context, long timestampMs);
+        string StartSpan(string operation, NSDictionary context, long timestampMs);
 
         [Static]
         [Export("finishSpan:context:timestampMs:")]
-        void FinishSpan(string spanId, NSDictionary<NSString, NSString> context, long timestampMs);
+        void FinishSpan(string spanId, NSDictionary context, long timestampMs);
     }
 }
