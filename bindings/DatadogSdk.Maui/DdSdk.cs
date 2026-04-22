@@ -25,9 +25,9 @@ namespace DatadogSdk.Maui
                 string? batchSize,
                 string? uploadFrequency,
                 string? batchProcessingLevel,
-                Dictionary<string, object>? additionalConfiguration,
                 Dictionary<string, object>? proxyConfiguration,
-                Dictionary<string, object>? firstPartyHosts);
+                Dictionary<string, object>? firstPartyHosts,
+                Dictionary<string, object>? additionalConfiguration);
 
             void SetTrackingConsent(string consent);
             void AddAttribute(string key, object value);
@@ -97,9 +97,9 @@ namespace DatadogSdk.Maui
                     batchSize,
                     uploadFrequency,
                     batchProcessingLevel,
-                    mergedConfig,
                     proxyConfig,
-                    firstPartyHosts);
+                    firstPartyHosts,
+                    mergedConfig);
             }
             else
             {
@@ -151,9 +151,9 @@ namespace DatadogSdk.Maui
                 batchSize,
                 uploadFrequency,
                 batchProcessingLevel,
-                androidConfig,
                 androidProxyConfig,
-                androidHosts
+                androidHosts,
+                androidConfig
             );
 #elif IOS
                 NSDictionary? iosConfig = null;
@@ -190,9 +190,9 @@ namespace DatadogSdk.Maui
                     batchSize,
                     uploadFrequency,
                     batchProcessingLevel,
-                    iosConfig,
                     iosProxyConfig,
-                    iosHosts
+                    iosHosts,
+                    iosConfig
                 );
 #endif
             }
@@ -751,11 +751,11 @@ namespace DatadogSdk.Maui
         }
 #endif
 
-        /// Converts a list of DdFirstPartyHost into a flat dictionary
+        /// Converts a list of FirstPartyHost into a flat dictionary
         /// where keys are host matches and values are comma-separated header type strings.
         /// e.g. { "api.example.com": "datadog,tracecontext", "cdn.example.com": "b3" }
         internal static Dictionary<string, object> BuildFirstPartyHostsDictionary(
-            List<DdFirstPartyHost> hosts)
+            List<FirstPartyHost> hosts)
         {
             var dict = new Dictionary<string, object>();
             foreach (var host in hosts)

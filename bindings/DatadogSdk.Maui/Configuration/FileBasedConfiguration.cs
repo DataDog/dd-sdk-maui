@@ -117,9 +117,9 @@ namespace DatadogSdk.Maui.Configuration
             return false;
         }
 
-        private static List<DdFirstPartyHost> ParseFirstPartyHosts(JsonElement element)
+        private static List<FirstPartyHost> ParseFirstPartyHosts(JsonElement element)
         {
-            var hosts = new List<DdFirstPartyHost>();
+            var hosts = new List<FirstPartyHost>();
             foreach (JsonElement hostElement in element.EnumerateArray())
             {
                 if (hostElement.ValueKind != JsonValueKind.Object)
@@ -145,7 +145,7 @@ namespace DatadogSdk.Maui.Configuration
                     }
                 }
 
-                hosts.Add(new DdFirstPartyHost { Match = match!, HeaderTypes = headerTypes });
+                hosts.Add(new FirstPartyHost { Match = match!, HeaderTypes = headerTypes });
             }
             return hosts;
         }

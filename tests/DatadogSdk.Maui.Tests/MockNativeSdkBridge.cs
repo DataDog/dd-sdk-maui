@@ -27,9 +27,9 @@ internal class MockNativeSdkBridge : DdSdk.INativeBridge
         string clientToken, string environment, string? service,
         string site, string verbosity, string trackingConsent,
         string? batchSize, string? uploadFrequency, string? batchProcessingLevel,
-        Dictionary<string, object>? additionalConfiguration,
         Dictionary<string, object>? proxyConfiguration,
-        Dictionary<string, object>? firstPartyHosts)
+        Dictionary<string, object>? firstPartyHosts,
+        Dictionary<string, object>? additionalConfiguration)
     {
         CallCount++;
         ClientToken = clientToken;

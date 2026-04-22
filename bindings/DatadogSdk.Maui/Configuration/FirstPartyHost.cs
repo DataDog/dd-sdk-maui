@@ -4,7 +4,7 @@ namespace DatadogSdk.Maui.Configuration
     /// Defines a first-party host for distributed tracing.
     /// Requests to matching hosts will have tracing headers injected.
     /// </summary>
-    public class DdFirstPartyHost
+    public class FirstPartyHost
     {
         /// <summary>
         /// The host or domain to match (e.g., "api.example.com").

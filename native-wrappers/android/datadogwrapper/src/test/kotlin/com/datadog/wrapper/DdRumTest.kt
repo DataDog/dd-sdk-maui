@@ -7,9 +7,19 @@ import com.datadog.android.rum.Rum
 import com.datadog.android.rum.RumConfiguration
 import com.datadog.android.rum.configuration.VitalsUpdateFrequency
 import com.datadog.android.rum.tracking.ActivityViewTrackingStrategy
-import io.mockk.*
+import io.mockk.every
+import io.mockk.just
+import io.mockk.mockk
+import io.mockk.mockkConstructor
+import io.mockk.mockkStatic
+import io.mockk.runs
+import io.mockk.unmockkAll
+import io.mockk.verify
 import org.junit.After
-import org.junit.Assert.*
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 

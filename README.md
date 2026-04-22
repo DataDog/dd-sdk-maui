@@ -43,7 +43,7 @@ DdSdk.Initialize(new DdSdkConfiguration
     UploadFrequency = UploadFrequency.Average,
 
     // Distributed tracing (optional)
-    FirstPartyHosts = new List<DdFirstPartyHost>
+    FirstPartyHosts = new List<FirstPartyHost>
     {
         new() { Match = "api.example.com", HeaderTypes = new List<TracingHeaderType> { TracingHeaderType.Datadog, TracingHeaderType.TraceContext } }
     }

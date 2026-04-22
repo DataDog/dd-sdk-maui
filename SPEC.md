@@ -602,7 +602,7 @@ namespace DatadogSdk.Maui.Configuration
         public string? Version { get; set; }
         public string? VersionSuffix { get; set; }
         public SdkVerbosity? Verbosity { get; set; }
-        public List<DdFirstPartyHost>? FirstPartyHosts { get; set; }
+        public List<FirstPartyHost>? FirstPartyHosts { get; set; }
     }
 
     public enum TrackingConsent { Granted, NotGranted, Pending }

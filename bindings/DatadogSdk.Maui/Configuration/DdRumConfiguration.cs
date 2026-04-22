@@ -174,7 +174,7 @@ namespace DatadogSdk.Maui.Configuration
         };
 
         [RequiresUnreferencedCode("Calls System.Text.Json.JsonSerializer.Serialize<TValue>(TValue, JsonSerializerOptions)")]
-        internal static string SerializeFirstPartyHosts(List<DdFirstPartyHost> hosts)
+        internal static string SerializeFirstPartyHosts(List<FirstPartyHost> hosts)
         {
             var serializable = hosts.Select(h => new
             {

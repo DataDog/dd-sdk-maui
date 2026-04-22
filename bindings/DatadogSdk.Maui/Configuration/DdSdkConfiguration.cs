@@ -20,6 +20,6 @@ namespace DatadogSdk.Maui.Configuration
         public string? VersionSuffix { get; set; }
         public SdkVerbosity? Verbosity { get; set; }
         public ProxyConfiguration? ProxyConfiguration { get; set; }
-        public List<DdFirstPartyHost>? FirstPartyHosts { get; set; }
+        public List<FirstPartyHost>? FirstPartyHosts { get; set; }
     }
 }

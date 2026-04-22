@@ -147,9 +147,9 @@ public class DdSdkNativeWrapper: NSObject {
         batchSize: String?,
         uploadFrequency: String?,
         batchProcessingLevel: String?,
-        additionalConfiguration: NSDictionary?,
         proxyConfiguration: NSDictionary?,
-        firstPartyHosts firstPartyHostsDict: NSDictionary?
+        firstPartyHosts firstPartyHostsDict: NSDictionary?,
+        additionalConfiguration: NSDictionary?
     ) -> Bool {
         var configuration = DatadogCore.Datadog.Configuration(
             clientToken: clientToken,

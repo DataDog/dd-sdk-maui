@@ -280,7 +280,7 @@ public class DdSdkConfigurationTests : IDisposable
         {
             ClientToken = "pub-token",
             Environment = "test",
-            FirstPartyHosts = new List<DdFirstPartyHost>
+            FirstPartyHosts = new List<FirstPartyHost>
             {
                 new() { Match = "api.example.com", HeaderTypes = new List<TracingHeaderType> { TracingHeaderType.Datadog, TracingHeaderType.TraceContext } },
                 new() { Match = "cdn.example.com", HeaderTypes = new List<TracingHeaderType> { TracingHeaderType.B3 } }
@@ -312,7 +312,7 @@ public class DdSdkConfigurationTests : IDisposable
         {
             ClientToken = "pub-token",
             Environment = "test",
-            FirstPartyHosts = new List<DdFirstPartyHost>()
+            FirstPartyHosts = new List<FirstPartyHost>()
         });
 
         Assert.Null(bridge.FirstPartyHosts);

@@ -140,7 +140,7 @@ public class DdRumConfigurationTests
     [Fact]
     public void SerializeFirstPartyHosts_ProducesCorrectJson()
     {
-        var hosts = new List<DdFirstPartyHost>
+        var hosts = new List<FirstPartyHost>
         {
             new() { Match = "api.example.com", HeaderTypes = new List<TracingHeaderType> { TracingHeaderType.Datadog, TracingHeaderType.TraceContext } },
             new() { Match = "cdn.example.com", HeaderTypes = new List<TracingHeaderType> { TracingHeaderType.B3 } }

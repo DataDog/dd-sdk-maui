@@ -178,9 +178,9 @@ final class DatadogWrapperTests: XCTestCase {
             batchSize: nil,
             uploadFrequency: nil,
             batchProcessingLevel: nil,
-            additionalConfiguration: nil,
             proxyConfiguration: nil,
-            firstPartyHosts: nil
+            firstPartyHosts: nil,
+            additionalConfiguration: nil
         )
 
         XCTAssertTrue(result)
@@ -198,9 +198,9 @@ final class DatadogWrapperTests: XCTestCase {
             batchSize: nil,
             uploadFrequency: nil,
             batchProcessingLevel: nil,
-            additionalConfiguration: nil,
             proxyConfiguration: nil,
-            firstPartyHosts: nil
+            firstPartyHosts: nil,
+            additionalConfiguration: nil
         )
 
         XCTAssertEqual(Datadog.verbosityLevel, .warn)
@@ -217,9 +217,9 @@ final class DatadogWrapperTests: XCTestCase {
             batchSize: nil,
             uploadFrequency: nil,
             batchProcessingLevel: nil,
-            additionalConfiguration: nil,
             proxyConfiguration: nil,
-            firstPartyHosts: nil
+            firstPartyHosts: nil,
+            additionalConfiguration: nil
         )
 
         XCTAssertEqual(Datadog.verbosityLevel, .debug)
