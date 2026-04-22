@@ -36,8 +36,8 @@ public partial class MainPage : ContentPage
             ResourceTraceSampleRate = 100.0,
             TrackFrustrations = true,
             TrackBackgroundEvents = true,
-            NativeViewTracking = true,
-            NativeInteractionTracking = true,
+            NativeViewTracking = false,
+            NativeInteractionTracking = false,
             TrackMemoryWarnings = true,
             NativeLongTaskThresholdMs = 200.0,
             VitalsUpdateFrequency = VitalsUpdateFrequency.Average,
@@ -91,9 +91,8 @@ public partial class MainPage : ContentPage
 
         DdSdk.AddAccountExtraInfo(new Dictionary<string, object> { { "extra", "test" } });
 
-        DdRum.StartView("main_page", "MainPage");
         DdRum.AddViewLoadingTime(true);
-        DdRum.AddTiming("Custom Timing");
+        DdRum.AddTiming("CustomTiming");
     }
 
     private void OnSendLogsClicked(object? sender, EventArgs e)
@@ -180,6 +179,11 @@ public partial class MainPage : ContentPage
             ? $"Active spans: {string.Join(", ", _activeSpans.Select(s => $"#{s.id}"))}"
             : "No active spans";
     }
+    private async void OnNavigateClicked(object? sender, EventArgs e)
+    {
+        await Shell.Current.GoToAsync("DetailPage");
+    }
+
     private void OnManagedCrashClicked(object? sender, EventArgs e) =>
         throw new InvalidOperationException("C# crash example");
 

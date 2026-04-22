@@ -1119,6 +1119,27 @@ The following methods are available on `DdRum` for manual RUM event tracking:
 
 All methods that accept `context` and `timestampMs` use defaults of empty dictionary and 0 (current time) respectively.
 
+### Automatic View and Action Tracking
+
+The SDK automatically tracks MAUI page navigations and user interactions when enabled (default: on).
+
+**Architecture:**
+- Uses `Application.DescendantAdded` to hook into MAUI's visual tree at runtime
+- View tracking: `Shell.Navigated` for Shell apps, `Page.Appearing` for NavigationPage apps, `Window.Resumed`/`Stopped` for lifecycle
+- Action tracking: per-control event binders for Button, ImageButton, Switch, CheckBox, RadioButton, Picker, Stepper, DatePicker, TapGestureRecognizer, SwipeGestureRecognizer
+- Relies on implicit view stop (new `StartView` auto-stops previous on the native SDK)
+- 10ms debounce on action tracking to prevent duplicate events
+
+**Configuration:**
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `AutomaticViewTracking` | `bool` | `true` | Track MAUI page navigations as RUM views |
+| `AutomaticActionTracking` | `bool` | `true` | Track user interactions as RUM actions |
+| `ViewNamePredicate` | `Func<Page, string?>?` | `null` | Custom view name resolution |
+| `ViewTrackingPredicate` | `Func<Page, bool>?` | `null` | Filter which pages are tracked |
+| `ActionEventMapper` | `Func<DdRumActionEvent, DdRumActionEvent?>?` | `null` | Filter/modify/drop actions before sending |
+
 ## Known Limitations
 
 ### Current Limitations

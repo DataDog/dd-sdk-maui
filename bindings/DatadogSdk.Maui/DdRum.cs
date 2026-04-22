@@ -5,6 +5,7 @@ using Foundation;
 using NativeDdRum = DatadogSdk.iOS.Binding.DdRum;
 #endif
 
+using DatadogSdk.Maui.AutoTracking;
 using DatadogSdk.Maui.Configuration;
 
 namespace DatadogSdk.Maui
@@ -47,6 +48,18 @@ namespace DatadogSdk.Maui
 
         // Stored from Enable() for use in AddError()
         internal static Func<DdRumErrorEvent, DdRumErrorEvent?>? errorEventMapper;
+        internal static Func<DdRumActionEvent, DdRumActionEvent?>? actionEventMapper;
+        private static DdAutoViewTracker? viewTracker;
+        private static DdAutoActionTracker? actionTracker;
+
+        /// <summary>
+        /// Resets mapper fields for testing purposes.
+        /// </summary>
+        internal static void ResetForTesting()
+        {
+            errorEventMapper = null;
+            actionEventMapper = null;
+        }
 
         /// <summary>
         /// Enable the RUM module with the provided configuration.
@@ -60,11 +73,12 @@ namespace DatadogSdk.Maui
             // Store the error event mapper for use in AddError
             errorEventMapper = configuration.ErrorEventMapper;
 
+            // Store the action event mapper for use in AddAction
+            actionEventMapper = configuration.ActionEventMapper;
+
             // Warn about stub event mappers
             if (configuration.ResourceEventMapper != null)
                 InternalLog.Log("DdRum: ResourceEventMapper is not yet supported and will be ignored.", SdkVerbosity.WARN);
-            if (configuration.ActionEventMapper != null)
-                InternalLog.Log("DdRum: ActionEventMapper is not yet supported and will be ignored.", SdkVerbosity.WARN);
 
             var dict = configuration.ToDictionary();
 
@@ -76,6 +90,24 @@ namespace DatadogSdk.Maui
 
             // Start C# error tracking
             DdRumErrorTracking.StartTracking();
+
+            // Start automatic view tracking
+            if (configuration.AutomaticViewTracking && Application.Current != null)
+            {
+                viewTracker = new DdAutoViewTracker(
+                    configuration.ViewNamePredicate,
+                    configuration.ViewTrackingPredicate);
+                viewTracker.Start(Application.Current);
+                InternalLog.Log("DdRum: Automatic view tracking enabled", SdkVerbosity.INFO);
+            }
+
+            // Start automatic action tracking
+            if (configuration.AutomaticActionTracking && Application.Current != null)
+            {
+                actionTracker = new DdAutoActionTracker();
+                actionTracker.Start(Application.Current);
+                InternalLog.Log("DdRum: Automatic action tracking enabled", SdkVerbosity.INFO);
+            }
 
             InternalLog.Log("DdRum.Enable completed", SdkVerbosity.DEBUG);
         }
@@ -216,6 +248,29 @@ namespace DatadogSdk.Maui
         {
             InternalLog.Log($"DdRum.AddAction: type={type}, name={name}", SdkVerbosity.DEBUG);
             var ctx = context ?? new Dictionary<string, object>();
+
+            // Apply action event mapper if configured
+            if (actionEventMapper != null)
+            {
+                try
+                {
+                    DdRumActionEvent actionEvent = new DdRumActionEvent(type, name, ctx, timestampMs);
+                    DdRumActionEvent? mappedEvent = actionEventMapper(actionEvent);
+                    if (mappedEvent == null)
+                    {
+                        InternalLog.Log($"DdRum.AddAction: Action dropped by ActionEventMapper", SdkVerbosity.DEBUG);
+                        return;
+                    }
+                    type = mappedEvent.Type;
+                    name = mappedEvent.Name;
+                    ctx = mappedEvent.Context;
+                    timestampMs = mappedEvent.TimestampMs;
+                }
+                catch (Exception ex)
+                {
+                    InternalLog.Log($"DdRum.AddAction: ActionEventMapper threw an exception, sending original action. {ex.Message}", SdkVerbosity.ERROR);
+                }
+            }
 
             if (testBridge is not null) { testBridge.AddAction(type, name, ctx, timestampMs); return; }
 

@@ -140,13 +140,13 @@ class DdRumTest {
     }
 
     @Test
-    fun `enableRum nativeViewTracking false does not set view tracking`() {
+    fun `enableRum nativeViewTracking false explicitly disables native view tracking`() {
         DdRum.enableRum(mapOf(
             "applicationId" to "app-id",
             "nativeViewTracking" to false
         ))
 
-        verify(exactly = 0) { anyConstructed<RumConfiguration.Builder>().useViewTrackingStrategy(any()) }
+        verify { anyConstructed<RumConfiguration.Builder>().useViewTrackingStrategy(null) }
     }
 
     @Test

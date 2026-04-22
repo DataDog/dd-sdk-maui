@@ -118,11 +118,18 @@ class DdRum {
                 // Native view tracking
                 if (configuration["nativeViewTracking"] == true) {
                     builder.useViewTrackingStrategy(ActivityViewTrackingStrategy(false))
+                } else {
+                    // Explicitly disable native Activity view tracking.
+                    // The Android SDK defaults to ActivityViewTrackingStrategy if not set,
+                    // which would track MainActivity alongside MAUI's automatic view tracking.
+                    builder.useViewTrackingStrategy(null)
                 }
 
                 // Native interaction tracking
                 if (configuration["nativeInteractionTracking"] == true) {
                     builder.trackUserInteractions()
+                } else {
+                    builder.disableUserInteractionTracking()
                 }
 
                 // Long task threshold
@@ -175,7 +182,7 @@ class DdRum {
             try {
                 val attributes = context.toMutableMap()
                 if (timestampMs > 0) {
-                    attributes["_dd.timestamp"] = timestampMs
+                    attributes[RumAttributes.INTERNAL_TIMESTAMP] = timestampMs
                 }
                 attributes["_dd.error.source_type"] = "maui"
 

@@ -1,5 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
+using Microsoft.Maui.Controls;
 
 namespace DatadogSdk.Maui.Configuration
 {
@@ -113,9 +114,37 @@ namespace DatadogSdk.Maui.Configuration
         public Func<object, object?>? ResourceEventMapper { get; set; }
 
         /// <summary>
-        /// Mapper for RUM action events. Not yet implemented - setting this will log a warning.
+        /// Mapper for RUM action events. Return the modified event to send it, or null to drop it.
+        /// Applies to auto-tracked actions and manual AddAction calls.
         /// </summary>
-        public Func<object, object?>? ActionEventMapper { get; set; }
+        public Func<DdRumActionEvent, DdRumActionEvent?>? ActionEventMapper { get; set; }
+
+        // Auto-tracking
+
+        /// <summary>
+        /// Enable automatic MAUI page navigation tracking as RUM views. Default: true.
+        /// Tracks Shell navigation, Page.Appearing events, and modal push/pop.
+        /// </summary>
+        public bool AutomaticViewTracking { get; set; } = true;
+
+        /// <summary>
+        /// Enable automatic MAUI user interaction tracking as RUM actions. Default: true.
+        /// Tracks Button.Clicked, Switch.Toggled, CheckBox.CheckedChanged,
+        /// TapGestureRecognizer.Tapped, SwipeGestureRecognizer.Swiped, etc.
+        /// </summary>
+        public bool AutomaticActionTracking { get; set; } = true;
+
+        /// <summary>
+        /// Custom predicate to determine the view name for a page.
+        /// Return a string to override the default name, or null to use the default.
+        /// </summary>
+        public Func<Page, string?>? ViewNamePredicate { get; set; }
+
+        /// <summary>
+        /// Custom predicate to determine whether a page should be tracked as a view.
+        /// Return true to track, false to skip. Default: null (track all pages).
+        /// </summary>
+        public Func<Page, bool>? ViewTrackingPredicate { get; set; }
 
         /// <summary>
         /// Converts this configuration to a flat dictionary for passing to the native bridge.
