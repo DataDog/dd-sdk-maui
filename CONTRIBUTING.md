@@ -1,6 +1,17 @@
 # Contributing to Datadog SDK for .NET MAUI
 
-Thank you for your interest in contributing to the Datadog SDK for .NET MAUI! This guide will help you set up your development environment, understand the build process, and make your first contribution.
+The code is licensed under the Apache License 2.0 (see [LICENSE](LICENSE) for details).
+
+First of all, thanks for contributing! This document provides guidelines for contributing to this repository. To propose improvements, feel free to submit a PR.
+
+## Submitting Issues
+
+- If you think you've found an issue, search the issue list to see if there's an existing issue.
+- Then, if you find nothing, open a GitHub issue.
+
+## General Guidelines
+
+This guide will help you set up your development environment, understand the build process, and make your first contribution.
 
 ## Table of Contents
 
@@ -683,6 +694,20 @@ emulator -avd Pixel_7_API_36 &
 
 ## Pull Request Guidelines
 
+### Keep it small, focused
+
+Avoid changing too many things at once. For instance if you're fixing a bug and at the same time adding some code refactor, it makes reviewing harder and the time-to-release longer.
+
+### Commit messages
+
+Please don't be this person: `git commit -m "Fixed stuff"`. Take a moment to write meaningful commit messages.
+
+The commit message should describe the reason for the change and give extra details that will allow someone later on to understand in 5 seconds the thing you've been working on for a day.
+
+### Squash your commits
+
+Rebase your changes on `develop` and squash your commits whenever possible. This keeps history cleaner and easier to revert things. It also makes developers happier!
+
 ### Before Submitting
 
 1. **Build and test**:
@@ -782,10 +807,4 @@ Be respectful, inclusive, and constructive in all interactions.
 
 ## License
 
-[License information to be added]
-
----
-
-**Happy Contributing!** 🎉
-
-If you have questions or need help, don't hesitate to open an issue or discussion on GitHub.
+This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENSE) file for details.
