@@ -89,6 +89,24 @@
                 HorizontalOptions="Start" />
 
             <Button
+                x:Name="CustomActionBtn"
+                Text="Custom Action"
+                SemanticProperties.Hint="Adds a RUM Action"
+                Clicked="OnAddActionClicked"
+                BackgroundColor="Teal"
+                TextColor="White"
+                HorizontalOptions="Fill" />
+
+            <Button
+                x:Name="TrackResourceBtn"
+                Text="Track Resource"
+                SemanticProperties.Hint="Tracks a resource"
+                Clicked="OnTrackResourceClicked"
+                BackgroundColor="SteelBlue"
+                TextColor="White"
+                HorizontalOptions="Fill" />
+
+            <Button
                 x:Name="ManagedCrashBtn"
                 Text="Trigger C# Crash"
                 SemanticProperties.Hint="Throws an unhandled C# exception"

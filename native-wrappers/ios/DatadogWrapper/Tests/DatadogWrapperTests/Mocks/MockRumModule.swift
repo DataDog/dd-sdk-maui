@@ -13,6 +13,70 @@ class MockRumModule: RumModuleProtocol {
     var capturedErrorStacktrace: String?
     var capturedErrorAttributes: [AttributeKey: AttributeValue]?
 
+    // Views
+    var startViewCalled = false
+    var capturedStartViewKey: String?
+    var capturedStartViewName: String?
+    var capturedStartViewAttributes: [AttributeKey: AttributeValue]?
+
+    var stopViewCalled = false
+    var capturedStopViewKey: String?
+    var capturedStopViewAttributes: [AttributeKey: AttributeValue]?
+
+    // Actions
+    var startActionCalled = false
+    var capturedStartActionType: RUMActionType?
+    var capturedStartActionName: String?
+    var capturedStartActionAttributes: [AttributeKey: AttributeValue]?
+
+    var stopActionCalled = false
+    var capturedStopActionType: RUMActionType?
+    var capturedStopActionName: String?
+    var capturedStopActionAttributes: [AttributeKey: AttributeValue]?
+
+    var addActionCalled = false
+    var capturedAddActionType: RUMActionType?
+    var capturedAddActionName: String?
+    var capturedAddActionAttributes: [AttributeKey: AttributeValue]?
+
+    // Resources
+    var startResourceCalled = false
+    var capturedStartResourceKey: String?
+    var capturedStartResourceMethod: RUMMethod?
+    var capturedStartResourceUrl: String?
+    var capturedStartResourceAttributes: [AttributeKey: AttributeValue]?
+
+    var stopResourceCalled = false
+    var capturedStopResourceKey: String?
+    var capturedStopResourceStatusCode: Int?
+    var capturedStopResourceKind: RUMResourceType?
+    var capturedStopResourceSize: Int64?
+    var capturedStopResourceAttributes: [AttributeKey: AttributeValue]?
+
+    // Timing
+    var addTimingCalled = false
+    var capturedTimingName: String?
+
+    var addViewLoadingTimeCalled = false
+    var capturedViewLoadingTimeOverwrite: Bool?
+
+    // Session
+    var stopSessionCalled = false
+
+    // View Attributes
+    var addViewAttributeCalled = false
+    var capturedAddViewAttributeKey: AttributeKey?
+    var capturedAddViewAttributeValue: AttributeValue?
+
+    var removeViewAttributeCalled = false
+    var capturedRemoveViewAttributeKey: AttributeKey?
+
+    var addViewAttributesCalled = false
+    var capturedAddViewAttributesDict: [AttributeKey: AttributeValue]?
+
+    var removeViewAttributesCalled = false
+    var capturedRemoveViewAttributesKeys: [AttributeKey]?
+
     func enable(with configuration: RUM.Configuration) {
         enableCalled = true
         capturedConfig = configuration
@@ -26,6 +90,92 @@ class MockRumModule: RumModuleProtocol {
         capturedErrorAttributes = attributes
     }
 
+    func startView(key: String, name: String, attributes: [AttributeKey: AttributeValue]) {
+        startViewCalled = true
+        capturedStartViewKey = key
+        capturedStartViewName = name
+        capturedStartViewAttributes = attributes
+    }
+
+    func stopView(key: String, attributes: [AttributeKey: AttributeValue]) {
+        stopViewCalled = true
+        capturedStopViewKey = key
+        capturedStopViewAttributes = attributes
+    }
+
+    func startAction(type: RUMActionType, name: String, attributes: [AttributeKey: AttributeValue]) {
+        startActionCalled = true
+        capturedStartActionType = type
+        capturedStartActionName = name
+        capturedStartActionAttributes = attributes
+    }
+
+    func stopAction(type: RUMActionType, name: String, attributes: [AttributeKey: AttributeValue]) {
+        stopActionCalled = true
+        capturedStopActionType = type
+        capturedStopActionName = name
+        capturedStopActionAttributes = attributes
+    }
+
+    func addAction(type: RUMActionType, name: String, attributes: [AttributeKey: AttributeValue]) {
+        addActionCalled = true
+        capturedAddActionType = type
+        capturedAddActionName = name
+        capturedAddActionAttributes = attributes
+    }
+
+    func startResource(resourceKey: String, httpMethod: RUMMethod, urlString: String, attributes: [AttributeKey: AttributeValue]) {
+        startResourceCalled = true
+        capturedStartResourceKey = resourceKey
+        capturedStartResourceMethod = httpMethod
+        capturedStartResourceUrl = urlString
+        capturedStartResourceAttributes = attributes
+    }
+
+    func stopResource(resourceKey: String, statusCode: Int?, kind: RUMResourceType, size: Int64?, attributes: [AttributeKey: AttributeValue]) {
+        stopResourceCalled = true
+        capturedStopResourceKey = resourceKey
+        capturedStopResourceStatusCode = statusCode
+        capturedStopResourceKind = kind
+        capturedStopResourceSize = size
+        capturedStopResourceAttributes = attributes
+    }
+
+    func addTiming(name: String) {
+        addTimingCalled = true
+        capturedTimingName = name
+    }
+
+    func addViewLoadingTime(overwrite: Bool) {
+        addViewLoadingTimeCalled = true
+        capturedViewLoadingTimeOverwrite = overwrite
+    }
+
+    func stopSession() {
+        stopSessionCalled = true
+    }
+
+    func addViewAttribute(forKey key: AttributeKey, value: AttributeValue) {
+        addViewAttributeCalled = true
+        capturedAddViewAttributeKey = key
+        capturedAddViewAttributeValue = value
+    }
+
+    func removeViewAttribute(forKey key: AttributeKey) {
+        removeViewAttributeCalled = true
+        capturedRemoveViewAttributeKey = key
+    }
+
+    func addViewAttributes(_ attributes: [AttributeKey: AttributeValue]) {
+        addViewAttributesCalled = true
+        capturedAddViewAttributesDict = attributes
+    }
+
+    func removeViewAttributes(forKeys keys: [AttributeKey]) {
+        removeViewAttributesCalled = true
+        capturedRemoveViewAttributesKeys = keys
+    }
+
     func reset() {
         enableCalled = false
         capturedConfig = nil
@@ -34,5 +184,49 @@ class MockRumModule: RumModuleProtocol {
         capturedErrorSource = nil
         capturedErrorStacktrace = nil
         capturedErrorAttributes = nil
+        startViewCalled = false
+        capturedStartViewKey = nil
+        capturedStartViewName = nil
+        capturedStartViewAttributes = nil
+        stopViewCalled = false
+        capturedStopViewKey = nil
+        capturedStopViewAttributes = nil
+        startActionCalled = false
+        capturedStartActionType = nil
+        capturedStartActionName = nil
+        capturedStartActionAttributes = nil
+        stopActionCalled = false
+        capturedStopActionType = nil
+        capturedStopActionName = nil
+        capturedStopActionAttributes = nil
+        addActionCalled = false
+        capturedAddActionType = nil
+        capturedAddActionName = nil
+        capturedAddActionAttributes = nil
+        startResourceCalled = false
+        capturedStartResourceKey = nil
+        capturedStartResourceMethod = nil
+        capturedStartResourceUrl = nil
+        capturedStartResourceAttributes = nil
+        stopResourceCalled = false
+        capturedStopResourceKey = nil
+        capturedStopResourceStatusCode = nil
+        capturedStopResourceKind = nil
+        capturedStopResourceSize = nil
+        capturedStopResourceAttributes = nil
+        addTimingCalled = false
+        capturedTimingName = nil
+        addViewLoadingTimeCalled = false
+        capturedViewLoadingTimeOverwrite = nil
+        stopSessionCalled = false
+        addViewAttributeCalled = false
+        capturedAddViewAttributeKey = nil
+        capturedAddViewAttributeValue = nil
+        removeViewAttributeCalled = false
+        capturedRemoveViewAttributeKey = nil
+        addViewAttributesCalled = false
+        capturedAddViewAttributesDict = nil
+        removeViewAttributesCalled = false
+        capturedRemoveViewAttributesKeys = nil
     }
 }

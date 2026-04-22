@@ -36,6 +36,10 @@
     <Compile Include="../../bindings/DatadogSdk.Maui/Configuration/DdAccountInfo.cs" Link="Linked/Configuration/DdAccountInfo.cs" />
     <Compile Include="../../bindings/DatadogSdk.Maui/DdRum.cs" Link="Linked/DdRum.cs" />
     <Compile Include="../../bindings/DatadogSdk.Maui/Configuration/DdRumErrorEvent.cs" Link="Linked/Configuration/DdRumErrorEvent.cs" />
+    <Compile Include="../../bindings/DatadogSdk.Maui/Configuration/RumActionType.cs" Link="Linked/Configuration/RumActionType.cs" />
+    <Compile Include="../../bindings/DatadogSdk.Maui/Configuration/RumResourceMethod.cs" Link="Linked/Configuration/RumResourceMethod.cs" />
+    <Compile Include="../../bindings/DatadogSdk.Maui/Configuration/RumResourceKind.cs" Link="Linked/Configuration/RumResourceKind.cs" />
+    <Compile Include="../../bindings/DatadogSdk.Maui/Configuration/RumErrorSource.cs" Link="Linked/Configuration/RumErrorSource.cs" />
     <Compile Include="../../bindings/DatadogSdk.Maui/DdRumErrorTracking.cs" Link="Linked/DdRumErrorTracking.cs" />
   </ItemGroup>
 

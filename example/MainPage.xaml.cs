@@ -90,6 +90,10 @@ public partial class MainPage : ContentPage
             new Dictionary<string, object> { { "type", "subscription" } });
 
         DdSdk.AddAccountExtraInfo(new Dictionary<string, object> { { "extra", "test" } });
+
+        DdRum.StartView("main_page", "MainPage");
+        DdRum.AddViewLoadingTime(true);
+        DdRum.AddTiming("Custom Timing");
     }
 
     private void OnSendLogsClicked(object? sender, EventArgs e)
@@ -99,6 +103,18 @@ public partial class MainPage : ContentPage
         DdLogs.Debug($"DDLogs - {platform} - LogDebug");
         DdLogs.Warn($"DDLogs - {platform} - LogWarn");
         DdLogs.Error($"DDLogs - {platform} - LogError");
+    }
+
+    private void OnAddActionClicked(object? sender, EventArgs e)
+    {
+        DdRum.AddAction(RumActionType.Custom, "Custom Action");
+    }
+
+    private void OnTrackResourceClicked(object? sender, EventArgs e)
+    {
+        var resourceKey = $"api-call-{DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}";
+        DdRum.StartResource(resourceKey, RumResourceMethod.Get, "https://api.example.com/data");
+        DdRum.StopResource(resourceKey, 200, RumResourceKind.Xhr, 1024);
     }
 
     private async void OnSetTrackingConsentClicked(object? sender, EventArgs e)

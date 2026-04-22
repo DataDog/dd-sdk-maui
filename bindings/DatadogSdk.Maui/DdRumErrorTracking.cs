@@ -1,4 +1,5 @@
 using System;
+using DatadogSdk.Maui.Configuration;
 
 namespace DatadogSdk.Maui
 {
@@ -89,7 +90,7 @@ namespace DatadogSdk.Maui
 
             var timestampMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
 
-            DdRum.AddError(message, "source", stacktrace, context, timestampMs);
+            DdRum.AddError(message, RumErrorSource.Source, stacktrace, context, timestampMs);
 
             if (isCrash)
             {

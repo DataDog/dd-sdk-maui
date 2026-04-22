@@ -11,9 +11,9 @@ namespace DatadogSdk.Maui.Configuration
         public string Message { get; set; }
 
         /// <summary>
-        /// Error source (e.g., "source", "network", "console", "webview", "custom").
+        /// Error source.
         /// </summary>
-        public string Source { get; set; }
+        public RumErrorSource Source { get; set; }
 
         /// <summary>
         /// Error stacktrace string.
@@ -30,7 +30,7 @@ namespace DatadogSdk.Maui.Configuration
         /// </summary>
         public long TimestampMs { get; set; }
 
-        internal DdRumErrorEvent(string message, string source, string stacktrace,
+        internal DdRumErrorEvent(string message, RumErrorSource source, string stacktrace,
                                   Dictionary<string, object> context, long timestampMs)
         {
             Message = message;

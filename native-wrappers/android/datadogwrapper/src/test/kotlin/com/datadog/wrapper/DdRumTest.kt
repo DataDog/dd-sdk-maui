@@ -4,9 +4,13 @@ import android.util.Log
 import com.datadog.android.Datadog
 import com.datadog.android.rum.GlobalRumMonitor
 import com.datadog.android.rum.Rum
+import com.datadog.android.rum.RumActionType
+import com.datadog.android.rum.RumAttributes
 import com.datadog.android.rum.RumErrorSource
 import com.datadog.android.rum.RumMonitor
 import com.datadog.android.rum.RumConfiguration
+import com.datadog.android.rum.RumResourceKind
+import com.datadog.android.rum.RumResourceMethod
 import com.datadog.android.rum.configuration.VitalsUpdateFrequency
 import com.datadog.android.rum.tracking.ActivityViewTrackingStrategy
 import io.mockk.every
@@ -362,4 +366,325 @@ class DdRumTest {
         assertEquals(VitalsUpdateFrequency.AVERAGE, DdRum.mapVitalsUpdateFrequency("unknown"))
     }
 
+    @Test
+    fun `mapActionType maps all values`() {
+        assertEquals(RumActionType.TAP, DdRum.mapActionType("tap"))
+        assertEquals(RumActionType.SCROLL, DdRum.mapActionType("scroll"))
+        assertEquals(RumActionType.SWIPE, DdRum.mapActionType("swipe"))
+        assertEquals(RumActionType.CLICK, DdRum.mapActionType("click"))
+        assertEquals(RumActionType.BACK, DdRum.mapActionType("back"))
+        assertEquals(RumActionType.CUSTOM, DdRum.mapActionType("custom"))
+        // Unknown defaults to CUSTOM
+        assertEquals(RumActionType.CUSTOM, DdRum.mapActionType("unknown"))
+    }
+
+    @Test
+    fun `mapResourceMethod maps all values`() {
+        assertEquals(RumResourceMethod.POST, DdRum.mapResourceMethod("post"))
+        assertEquals(RumResourceMethod.PUT, DdRum.mapResourceMethod("put"))
+        assertEquals(RumResourceMethod.DELETE, DdRum.mapResourceMethod("delete"))
+        assertEquals(RumResourceMethod.HEAD, DdRum.mapResourceMethod("head"))
+        assertEquals(RumResourceMethod.PATCH, DdRum.mapResourceMethod("patch"))
+        assertEquals(RumResourceMethod.CONNECT, DdRum.mapResourceMethod("connect"))
+        assertEquals(RumResourceMethod.TRACE, DdRum.mapResourceMethod("trace"))
+        assertEquals(RumResourceMethod.OPTIONS, DdRum.mapResourceMethod("options"))
+        assertEquals(RumResourceMethod.GET, DdRum.mapResourceMethod("get"))
+        // Unknown defaults to GET
+        assertEquals(RumResourceMethod.GET, DdRum.mapResourceMethod("unknown"))
+    }
+
+    @Test
+    fun `mapResourceKind maps all values`() {
+        assertEquals(RumResourceKind.XHR, DdRum.mapResourceKind("xhr"))
+        assertEquals(RumResourceKind.NATIVE, DdRum.mapResourceKind("native"))
+        assertEquals(RumResourceKind.FETCH, DdRum.mapResourceKind("fetch"))
+        assertEquals(RumResourceKind.DOCUMENT, DdRum.mapResourceKind("document"))
+        assertEquals(RumResourceKind.BEACON, DdRum.mapResourceKind("beacon"))
+        assertEquals(RumResourceKind.IMAGE, DdRum.mapResourceKind("image"))
+        assertEquals(RumResourceKind.FONT, DdRum.mapResourceKind("font"))
+        assertEquals(RumResourceKind.CSS, DdRum.mapResourceKind("css"))
+        assertEquals(RumResourceKind.MEDIA, DdRum.mapResourceKind("media"))
+        assertEquals(RumResourceKind.JS, DdRum.mapResourceKind("js"))
+        assertEquals(RumResourceKind.OTHER, DdRum.mapResourceKind("other"))
+        // Unknown defaults to OTHER
+        assertEquals(RumResourceKind.OTHER, DdRum.mapResourceKind("unknown"))
+    }
+
+    // ── startView ─────────────────────────────────────────
+
+    @Test
+    fun `startView calls GlobalRumMonitor startView`() {
+        val mockRumMonitor = mockk<RumMonitor>(relaxed = true)
+        every { GlobalRumMonitor.get() } returns mockRumMonitor
+
+        DdRum.startView("view-key", "ViewName", mapOf("key" to "value"), 1234567890L)
+
+        verify {
+            mockRumMonitor.startView(
+                "view-key",
+                "ViewName",
+                match { attrs ->
+                    attrs["key"] == "value" &&
+                    attrs[RumAttributes.INTERNAL_TIMESTAMP] == 1234567890L
+                }
+            )
+        }
+    }
+
+    @Test
+    fun `startView with zero timestamp does not add timestamp attribute`() {
+        val mockRumMonitor = mockk<RumMonitor>(relaxed = true)
+        every { GlobalRumMonitor.get() } returns mockRumMonitor
+
+        DdRum.startView("view-key", "ViewName", emptyMap(), 0L)
+
+        verify {
+            mockRumMonitor.startView(
+                "view-key",
+                "ViewName",
+                match { attrs -> !attrs.containsKey(RumAttributes.INTERNAL_TIMESTAMP) }
+            )
+        }
+    }
+
+    // ── stopView ──────────────────────────────────────────
+
+    @Test
+    fun `stopView calls GlobalRumMonitor stopView`() {
+        val mockRumMonitor = mockk<RumMonitor>(relaxed = true)
+        every { GlobalRumMonitor.get() } returns mockRumMonitor
+
+        DdRum.stopView("view-key", mapOf("key" to "value"), 1234567890L)
+
+        verify {
+            mockRumMonitor.stopView(
+                "view-key",
+                match { attrs ->
+                    attrs["key"] == "value" &&
+                    attrs[RumAttributes.INTERNAL_TIMESTAMP] == 1234567890L
+                }
+            )
+        }
+    }
+
+    // ── startAction ───────────────────────────────────────
+
+    @Test
+    fun `startAction calls GlobalRumMonitor startAction`() {
+        val mockRumMonitor = mockk<RumMonitor>(relaxed = true)
+        every { GlobalRumMonitor.get() } returns mockRumMonitor
+
+        DdRum.startAction("tap", "ButtonTap", mapOf("key" to "value"), 1234567890L)
+
+        verify {
+            mockRumMonitor.startAction(
+                RumActionType.TAP,
+                "ButtonTap",
+                match { attrs ->
+                    attrs["key"] == "value" &&
+                    attrs[RumAttributes.INTERNAL_TIMESTAMP] == 1234567890L
+                }
+            )
+        }
+    }
+
+    // ── stopAction ────────────────────────────────────────
+
+    @Test
+    fun `stopAction calls GlobalRumMonitor stopAction`() {
+        val mockRumMonitor = mockk<RumMonitor>(relaxed = true)
+        every { GlobalRumMonitor.get() } returns mockRumMonitor
+
+        DdRum.stopAction("scroll", "ListScroll", mapOf("key" to "value"), 1234567890L)
+
+        verify {
+            mockRumMonitor.stopAction(
+                RumActionType.SCROLL,
+                "ListScroll",
+                match { attrs ->
+                    attrs["key"] == "value" &&
+                    attrs[RumAttributes.INTERNAL_TIMESTAMP] == 1234567890L
+                }
+            )
+        }
+    }
+
+    // ── addAction ─────────────────────────────────────────
+
+    @Test
+    fun `addAction calls GlobalRumMonitor addAction`() {
+        val mockRumMonitor = mockk<RumMonitor>(relaxed = true)
+        every { GlobalRumMonitor.get() } returns mockRumMonitor
+
+        DdRum.addAction("click", "ButtonClick", mapOf("key" to "value"), 1234567890L)
+
+        verify {
+            mockRumMonitor.addAction(
+                RumActionType.CLICK,
+                "ButtonClick",
+                match { attrs ->
+                    attrs["key"] == "value" &&
+                    attrs[RumAttributes.INTERNAL_TIMESTAMP] == 1234567890L
+                }
+            )
+        }
+    }
+
+    // ── startResource ─────────────────────────────────────
+
+    @Test
+    fun `startResource calls GlobalRumMonitor startResource`() {
+        val mockRumMonitor = mockk<RumMonitor>(relaxed = true)
+        every { GlobalRumMonitor.get() } returns mockRumMonitor
+
+        DdRum.startResource("res-key", "post", "https://example.com/api", mapOf("key" to "value"), 1234567890L)
+
+        verify {
+            mockRumMonitor.startResource(
+                "res-key",
+                RumResourceMethod.POST,
+                "https://example.com/api",
+                match { attrs ->
+                    attrs["key"] == "value" &&
+                    attrs[RumAttributes.INTERNAL_TIMESTAMP] == 1234567890L
+                }
+            )
+        }
+    }
+
+    // ── stopResource ──────────────────────────────────────
+
+    @Test
+    fun `stopResource calls GlobalRumMonitor stopResource with size`() {
+        val mockRumMonitor = mockk<RumMonitor>(relaxed = true)
+        every { GlobalRumMonitor.get() } returns mockRumMonitor
+
+        DdRum.stopResource("res-key", 200, "xhr", 1024L, mapOf("key" to "value"), 1234567890L)
+
+        verify {
+            mockRumMonitor.stopResource(
+                "res-key",
+                200,
+                1024L,
+                RumResourceKind.XHR,
+                match { attrs ->
+                    attrs["key"] == "value" &&
+                    attrs[RumAttributes.INTERNAL_TIMESTAMP] == 1234567890L
+                }
+            )
+        }
+    }
+
+    @Test
+    fun `stopResource with negative size passes null`() {
+        val mockRumMonitor = mockk<RumMonitor>(relaxed = true)
+        every { GlobalRumMonitor.get() } returns mockRumMonitor
+
+        DdRum.stopResource("res-key", 404, "fetch", -1L, emptyMap(), 0L)
+
+        verify {
+            mockRumMonitor.stopResource(
+                "res-key",
+                404,
+                null,
+                RumResourceKind.FETCH,
+                any()
+            )
+        }
+    }
+
+    // ── addTiming ─────────────────────────────────────────
+
+    @Test
+    fun `addTiming calls GlobalRumMonitor addTiming`() {
+        val mockRumMonitor = mockk<RumMonitor>(relaxed = true)
+        every { GlobalRumMonitor.get() } returns mockRumMonitor
+
+        DdRum.addTiming("page_load")
+
+        verify { mockRumMonitor.addTiming("page_load") }
+    }
+
+    // ── addViewLoadingTime ────────────────────────────────
+
+    @Test
+    fun `addViewLoadingTime calls GlobalRumMonitor addViewLoadingTime`() {
+        val mockRumMonitor = mockk<RumMonitor>(relaxed = true)
+        every { GlobalRumMonitor.get() } returns mockRumMonitor
+
+        DdRum.addViewLoadingTime(true)
+
+        verify { mockRumMonitor.addViewLoadingTime(true) }
+    }
+
+    @Test
+    fun `addViewLoadingTime with false calls GlobalRumMonitor addViewLoadingTime`() {
+        val mockRumMonitor = mockk<RumMonitor>(relaxed = true)
+        every { GlobalRumMonitor.get() } returns mockRumMonitor
+
+        DdRum.addViewLoadingTime(false)
+
+        verify { mockRumMonitor.addViewLoadingTime(false) }
+    }
+
+    // ── stopSession ───────────────────────────────────────
+
+    @Test
+    fun `stopSession calls GlobalRumMonitor stopSession`() {
+        val mockRumMonitor = mockk<RumMonitor>(relaxed = true)
+        every { GlobalRumMonitor.get() } returns mockRumMonitor
+
+        DdRum.stopSession()
+
+        verify { mockRumMonitor.stopSession() }
+    }
+
+    // ── addViewAttribute ──────────────────────────────────
+
+    @Test
+    fun `addViewAttribute calls GlobalRumMonitor addViewAttributes`() {
+        val mockRumMonitor = mockk<RumMonitor>(relaxed = true)
+        every { GlobalRumMonitor.get() } returns mockRumMonitor
+
+        DdRum.addViewAttribute("theme", "dark")
+
+        verify { mockRumMonitor.addViewAttributes(mapOf("theme" to "dark")) }
+    }
+
+    // ── removeViewAttribute ───────────────────────────────
+
+    @Test
+    fun `removeViewAttribute calls GlobalRumMonitor removeViewAttributes`() {
+        val mockRumMonitor = mockk<RumMonitor>(relaxed = true)
+        every { GlobalRumMonitor.get() } returns mockRumMonitor
+
+        DdRum.removeViewAttribute("theme")
+
+        verify { mockRumMonitor.removeViewAttributes(listOf("theme")) }
+    }
+
+    // ── addViewAttributes ─────────────────────────────────
+
+    @Test
+    fun `addViewAttributes calls GlobalRumMonitor addViewAttributes`() {
+        val mockRumMonitor = mockk<RumMonitor>(relaxed = true)
+        every { GlobalRumMonitor.get() } returns mockRumMonitor
+
+        val attrs = mapOf<String, Any?>("theme" to "dark", "locale" to "en")
+        DdRum.addViewAttributes(attrs)
+
+        verify { mockRumMonitor.addViewAttributes(attrs) }
+    }
+
+    // ── removeViewAttributes ──────────────────────────────
+
+    @Test
+    fun `removeViewAttributes calls GlobalRumMonitor removeViewAttributes`() {
+        val mockRumMonitor = mockk<RumMonitor>(relaxed = true)
+        every { GlobalRumMonitor.get() } returns mockRumMonitor
+
+        DdRum.removeViewAttributes(listOf("theme", "locale"))
+
+        verify { mockRumMonitor.removeViewAttributes(listOf("theme", "locale")) }
+    }
 }

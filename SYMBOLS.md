@@ -189,7 +189,7 @@ When `nativeCrashReportEnabled` is set to `true` in the RUM configuration, `dd-s
 
 In a MAUI app, native `.so` files come from:
 - **The .NET runtime** (`libmonosgen-2.0.so`, `libmonodroid.so`) — symbols are published by Microsoft on their symbol server, not generated during your build
-- **Datadog's NDK library** (`libdatadog-native-lib.so`) — Datadog resolves these server-side using their own published symbols
+- **Datadog's NDK library** (`libdatadog-ndk.so`) — Datadog resolves these server-side using their own published symbols
 - **Custom native C/C++ libraries** — rare in MAUI apps, but if present their symbols would need manual upload via `datadog-ci dsyms upload <path-to-so-directory>`
 
 The current automatic upload (mapping.txt + dSYM) covers the typical MAUI use case. If you see unsymbolicated native frames in NDK crash reports, the missing symbols likely belong to the .NET runtime and would need to be sourced from Microsoft's symbol server.
