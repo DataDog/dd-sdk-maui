@@ -13,5 +13,12 @@
   "AdditionalConfiguration": {
     "_dd.needsClearTextHttp": true,
     "_dd.custom_key": "custom_value"
+  },
+  "ProxyConfiguration": {
+    "Type": "Http",
+    "Address": "proxy.example.com",
+    "Port": 8080,
+    "Username": "user",
+    "Password": "pass"
   }
 }

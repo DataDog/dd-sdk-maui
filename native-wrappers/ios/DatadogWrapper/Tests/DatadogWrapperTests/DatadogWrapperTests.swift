@@ -156,7 +156,8 @@ final class DatadogWrapperTests: XCTestCase {
             batchSize: nil,
             uploadFrequency: nil,
             batchProcessingLevel: nil,
-            additionalConfiguration: nil
+            additionalConfiguration: nil,
+            proxyConfiguration: nil
         )
 
         XCTAssertTrue(result)
@@ -174,7 +175,8 @@ final class DatadogWrapperTests: XCTestCase {
             batchSize: nil,
             uploadFrequency: nil,
             batchProcessingLevel: nil,
-            additionalConfiguration: nil
+            additionalConfiguration: nil,
+            proxyConfiguration: nil
         )
 
         XCTAssertEqual(Datadog.verbosityLevel, .warn)
@@ -191,7 +193,8 @@ final class DatadogWrapperTests: XCTestCase {
             batchSize: nil,
             uploadFrequency: nil,
             batchProcessingLevel: nil,
-            additionalConfiguration: nil
+            additionalConfiguration: nil,
+            proxyConfiguration: nil
         )
 
         XCTAssertEqual(Datadog.verbosityLevel, .debug)
@@ -230,6 +233,71 @@ final class DatadogWrapperTests: XCTestCase {
 
         XCTAssertEqual(mockCore.setTrackingConsentCalls.count, 1)
         XCTAssertEqual(mockCore.setTrackingConsentCalls[0], .pending)
+    }
+
+    // MARK: - Proxy configuration mapping
+
+    func test_mapProxyConfiguration_nil_returnsNil() {
+        XCTAssertNil(DdSdkNativeWrapper.mapProxyConfiguration(nil))
+    }
+
+    func test_mapProxyConfiguration_http_setsBothHttpAndHttpsChannels() {
+        let dict: NSDictionary = ["type": "http", "address": "1.2.3.4", "port": 8080]
+        let result = DdSdkNativeWrapper.mapProxyConfiguration(dict)
+
+        XCTAssertNotNil(result)
+        XCTAssertEqual(result?["HTTPEnable"] as? Int, 1)
+        XCTAssertEqual(result?["HTTPProxy"] as? String, "1.2.3.4")
+        XCTAssertEqual(result?["HTTPPort"] as? Int, 8080)
+        XCTAssertEqual(result?["HTTPSEnable"] as? Int, 1)
+        XCTAssertEqual(result?["HTTPSProxy"] as? String, "1.2.3.4")
+        XCTAssertEqual(result?["HTTPSPort"] as? Int, 8080)
+        XCTAssertNil(result?["SOCKSEnable"])
+    }
+
+    func test_mapProxyConfiguration_https_setsBothHttpAndHttpsChannels() {
+        let dict: NSDictionary = ["type": "https", "address": "proxy.example.com", "port": 443]
+        let result = DdSdkNativeWrapper.mapProxyConfiguration(dict)
+
+        XCTAssertNotNil(result)
+        XCTAssertEqual(result?["HTTPEnable"] as? Int, 1)
+        XCTAssertEqual(result?["HTTPProxy"] as? String, "proxy.example.com")
+        XCTAssertEqual(result?["HTTPPort"] as? Int, 443)
+        XCTAssertEqual(result?["HTTPSEnable"] as? Int, 1)
+        XCTAssertEqual(result?["HTTPSProxy"] as? String, "proxy.example.com")
+        XCTAssertEqual(result?["HTTPSPort"] as? Int, 443)
+    }
+
+    func test_mapProxyConfiguration_socks_setsSocksChannel() {
+        let dict: NSDictionary = ["type": "socks", "address": "socks.example.com", "port": 1080]
+        let result = DdSdkNativeWrapper.mapProxyConfiguration(dict)
+
+        XCTAssertNotNil(result)
+        XCTAssertEqual(result?["SOCKSEnable"] as? Int, 1)
+        XCTAssertEqual(result?["SOCKSProxy"] as? String, "socks.example.com")
+        XCTAssertEqual(result?["SOCKSPort"] as? Int, 1080)
+        XCTAssertNil(result?["HTTPEnable"])
+    }
+
+    func test_mapProxyConfiguration_withAuth_setsCredentialKeys() {
+        let dict: NSDictionary = [
+            "type": "http", "address": "1.2.3.4", "port": 8080,
+            "username": "user", "password": "pass"
+        ]
+        let result = DdSdkNativeWrapper.mapProxyConfiguration(dict)
+
+        XCTAssertNotNil(result)
+        XCTAssertEqual(result?[kCFProxyUsernameKey as String] as? String, "user")
+        XCTAssertEqual(result?[kCFProxyPasswordKey as String] as? String, "pass")
+    }
+
+    func test_mapProxyConfiguration_withoutAuth_omitsCredentialKeys() {
+        let dict: NSDictionary = ["type": "http", "address": "1.2.3.4", "port": 8080]
+        let result = DdSdkNativeWrapper.mapProxyConfiguration(dict)
+
+        XCTAssertNotNil(result)
+        XCTAssertNil(result?[kCFProxyUsernameKey as String])
+        XCTAssertNil(result?[kCFProxyPasswordKey as String])
     }
 
     // MARK: - Global attributes

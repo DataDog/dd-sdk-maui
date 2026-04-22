@@ -91,4 +91,92 @@ public class DdSdkConversionTests
         Assert.NotNull(result);
         Assert.Equal(true, result["_dd.needsClearTextHttp"]);
     }
+
+    // --- ProxyConfiguration conversion ---
+
+    [Fact]
+    public void ConvertProxyConfiguration_Null_ReturnsNull()
+    {
+        Assert.Null(DdSdk.ConvertProxyConfiguration(null));
+    }
+
+    [Fact]
+    public void ConvertProxyConfiguration_Http_ReturnsDictWithHttpType()
+    {
+        var proxy = new ProxyConfiguration { Type = ProxyType.Http, Address = "1.2.3.4", Port = 8080 };
+        var result = DdSdk.ConvertProxyConfiguration(proxy);
+
+        Assert.NotNull(result);
+        Assert.Equal("http", result["type"]);
+        Assert.Equal("1.2.3.4", result["address"]);
+        Assert.Equal(8080, result["port"]);
+    }
+
+    [Fact]
+    public void ConvertProxyConfiguration_Https_ReturnsDictWithHttpsType()
+    {
+        var proxy = new ProxyConfiguration { Type = ProxyType.Https, Address = "proxy.example.com", Port = 443 };
+        var result = DdSdk.ConvertProxyConfiguration(proxy);
+
+        Assert.NotNull(result);
+        Assert.Equal("https", result["type"]);
+    }
+
+    [Fact]
+    public void ConvertProxyConfiguration_Socks_ReturnsDictWithSocksType()
+    {
+        var proxy = new ProxyConfiguration { Type = ProxyType.Socks, Address = "socks.example.com", Port = 1080 };
+        var result = DdSdk.ConvertProxyConfiguration(proxy);
+
+        Assert.NotNull(result);
+        Assert.Equal("socks", result["type"]);
+    }
+
+    [Fact]
+    public void ConvertProxyConfiguration_WithAuth_IncludesCredentials()
+    {
+        var proxy = new ProxyConfiguration
+        {
+            Type = ProxyType.Http,
+            Address = "1.2.3.4",
+            Port = 8080,
+            Username = "user",
+            Password = "pass"
+        };
+        var result = DdSdk.ConvertProxyConfiguration(proxy);
+
+        Assert.NotNull(result);
+        Assert.Equal("user", result["username"]);
+        Assert.Equal("pass", result["password"]);
+    }
+
+    [Fact]
+    public void ConvertProxyConfiguration_WithoutAuth_OmitsCredentials()
+    {
+        var proxy = new ProxyConfiguration { Type = ProxyType.Http, Address = "1.2.3.4", Port = 8080 };
+        var result = DdSdk.ConvertProxyConfiguration(proxy);
+
+        Assert.NotNull(result);
+        Assert.False(result.ContainsKey("username"));
+        Assert.False(result.ContainsKey("password"));
+    }
+
+    [Fact]
+    public void ConvertProxyConfiguration_SocksWithAuth_DropsCredentials()
+    {
+        var proxy = new ProxyConfiguration
+        {
+            Type = ProxyType.Socks,
+            Address = "socks.example.com",
+            Port = 1080,
+            Username = "user",
+            Password = "pass"
+        };
+        var result = DdSdk.ConvertProxyConfiguration(proxy);
+
+        Assert.NotNull(result);
+        Assert.Equal("socks", result["type"]);
+        Assert.False(result.ContainsKey("username"));
+        Assert.False(result.ContainsKey("password"));
+    }
 }

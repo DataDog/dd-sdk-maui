@@ -19,5 +19,6 @@ namespace DatadogSdk.Maui.Configuration
         public string? Version { get; set; }
         public string? VersionSuffix { get; set; }
         public SdkVerbosity? Verbosity { get; set; }
+        public ProxyConfiguration? ProxyConfiguration { get; set; }
     }
 }

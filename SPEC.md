@@ -179,6 +179,7 @@ public class DdSdkNativeWrapper: NSObject {
     static func mapBatchSize(_ batchSize: String) -> Datadog.Configuration.BatchSize { ... }
     static func mapUploadFrequency(_ freq: String) -> Datadog.Configuration.UploadFrequency { ... }
     static func mapBatchProcessingLevel(_ level: String) -> Datadog.Configuration.BatchProcessingLevel { ... }
+    static func mapProxyConfiguration(_ dict: NSDictionary?) -> [AnyHashable: Any]? { ... }
 
     @objc public static func initialize(
         clientToken: String,
@@ -190,6 +191,7 @@ public class DdSdkNativeWrapper: NSObject {
         batchSize: String?,         // "small", "medium", "large"
         uploadFrequency: String?,   // "frequent", "average", "rare"
         batchProcessingLevel: String?, // "low", "medium", "high"
+        proxyConfiguration: NSDictionary?,  // dictionary with "type", "address", "port", optional "username"/"password"
         additionalConfiguration: NSDictionary?
     ) -> Bool {
         var configuration = DatadogCore.Datadog.Configuration(
@@ -404,6 +406,7 @@ class DatadogWrapper {
         @JvmStatic fun mapBatchSize(batchSize: String): BatchSize = ...
         @JvmStatic fun mapUploadFrequency(uploadFrequency: String): UploadFrequency = ...
         @JvmStatic fun mapBatchProcessingLevel(level: String): BatchProcessingLevel = ...
+        @JvmStatic fun mapProxyConfiguration(config: Map<String, Any>?): Pair<Proxy, Authenticator?>? = ...
 
         @JvmStatic
         fun initialize(
@@ -417,7 +420,8 @@ class DatadogWrapper {
             batchSize: String? = null,      // "small", "medium", "large"
             uploadFrequency: String? = null,  // "frequent", "average", "rare"
             batchProcessingLevel: String? = null, // "low", "medium", "high"
-            additionalConfiguration: Map<String, Any>? = null
+            proxyConfiguration: Map<String, Any> = emptyMap(),  // map with "type", "address", "port", optional "username"/"password"
+            additionalConfiguration: Map<String, Any> = emptyMap()
         ): Boolean {
             return try {
                 val builder = Configuration.Builder(clientToken, environment, service)
@@ -564,7 +568,9 @@ DatadogSdk.Maui/
 │   ├── BatchProcessingLevel.cs # Processing level enum
 │   ├── UploadFrequency.cs      # Upload frequency enum
 │   ├── DatadogSite.cs          # Datadog site enum
-│   └── SdkVerbosity.cs         # SDK verbosity enum
+│   ├── SdkVerbosity.cs         # SDK verbosity enum
+│   ├── ProxyConfiguration.cs   # Proxy configuration class
+│   └── ProxyType.cs            # Proxy type enum (Http, Https, Socks)
 ├── DdSdk.cs                    # SDK initialization + SetTrackingConsent (wraps native DatadogWrapper)
 ├── DdLogs.cs                   # Logging API (wraps native DdLogs)
 ├── DdTrace.cs                  # Tracing API (wraps native DdTrace)
@@ -588,6 +594,7 @@ namespace DatadogSdk.Maui.Configuration
         // --- Optional ---
         public Dictionary<string, object>? AdditionalConfiguration { get; set; }
         public BatchSize? BatchSize { get; set; }
+        public ProxyConfiguration? ProxyConfiguration { get; set; }
         public BatchProcessingLevel? BatchProcessingLevel { get; set; }
         public string? Service { get; set; }
         public DatadogSite Site { get; set; } = DatadogSite.Us1;
@@ -621,6 +628,7 @@ namespace DatadogSdk.Maui.Configuration
 - `VersionSuffix` - Additional version identifier (injected as `_dd.version_suffix`)
 - `Verbosity` - SDK logging level for debugging
 - `AdditionalConfiguration` - Pass-through dictionary for platform-specific or internal keys
+- `ProxyConfiguration` - Proxy configuration object (type, address, port, optional username/password)
 
 **Reserved `AdditionalConfiguration` keys**:
 
@@ -904,7 +912,13 @@ DdSdk.Initialize(new DdSdkConfiguration
     Site = DatadogSite.Us1,                     // optional, defaults to Us1
     Verbosity = SdkVerbosity.DEBUG,             // optional: DEBUG enables Console.WriteLine logging + verbose native SDK
     BatchSize = BatchSize.Medium,               // optional
-    UploadFrequency = UploadFrequency.Average   // optional
+    UploadFrequency = UploadFrequency.Average,  // optional
+    ProxyConfiguration = new ProxyConfiguration // optional
+    {
+        Type = ProxyType.Http,
+        Address = "proxy.example.com",
+        Port = 8080
+    }
 });
 ```
 
@@ -1107,7 +1121,7 @@ DdRum.Enable(new DdRumConfiguration
 ## Roadmap
 
 ### Phase 2: Core SDK Configuration (Complete)
-- ✅ Full `DdSdkConfiguration` object (TrackingConsent, BatchSize, UploadFrequency, BatchProcessingLevel, Site, Service, Version, VersionSuffix, Verbosity, AdditionalConfiguration)
+- ✅ Full `DdSdkConfiguration` object (TrackingConsent, BatchSize, UploadFrequency, BatchProcessingLevel, Site, Service, Version, VersionSuffix, Verbosity, AdditionalConfiguration, ProxyConfiguration)
 - ✅ `_dd.needsClearTextHttp` internal key via `AdditionalConfiguration`
 - ✅ `BuildAdditionalConfiguration` helper with version/suffix injection
 - ✅ Unit tests at all three layers (iOS XCTest, Android JUnit/MockK, C# xUnit)

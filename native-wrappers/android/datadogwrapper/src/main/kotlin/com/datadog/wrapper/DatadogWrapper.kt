@@ -11,9 +11,19 @@ import com.datadog.android.core.configuration.Configuration
 import com.datadog.android.core.configuration.UploadFrequency
 import com.datadog.android.privacy.TrackingConsent
 import com.datadog.android.rum.GlobalRumMonitor
+import java.net.InetSocketAddress
+import java.net.Proxy
+import okhttp3.Authenticator
+import okhttp3.Credentials
+import okhttp3.Request
+import okhttp3.Response
+import okhttp3.Route
 
 class DatadogWrapper {
     companion object {
+
+        private const val TAG = "DatadogWrapper"
+        private const val PROXY_AUTHORIZATION_REQUIRED_STATUS_CODE = 407
 
         // -- Mapping helpers --
 
@@ -66,6 +76,69 @@ class DatadogWrapper {
             else -> BatchProcessingLevel.MEDIUM
         }
 
+        @JvmStatic
+        fun mapProxyConfiguration(config: Map<String, Any>?): Pair<Proxy, Authenticator?>? {
+            if (config == null) return null
+
+            val type = (config["type"] as? String)?.lowercase() ?: return null
+            val address = config["address"] as? String ?: return null
+            val port = (config["port"] as? Number)?.toInt() ?: return null
+
+            val proxyType = when (type) {
+                "http", "https" -> Proxy.Type.HTTP
+                "socks" -> Proxy.Type.SOCKS
+                else -> return null
+            }
+
+            val proxy = Proxy(proxyType, InetSocketAddress(address, port))
+
+            val username = config["username"] as? String
+            val password = config["password"] as? String
+
+            val authenticator: Authenticator? = if (username != null && password != null) {
+                @Suppress("DEPRECATION_ERROR")
+                Authenticator { _: Route?, response: Response ->
+                    val proxyAuthorization = response.code() == PROXY_AUTHORIZATION_REQUIRED_STATUS_CODE
+
+                    if (!proxyAuthorization) {
+                        Log.w(
+                            TAG,
+                            "Unexpected response code=${response.code()}" +
+                                " received during proxy authentication request."
+                        )
+                        return@Authenticator null
+                    }
+
+                    val challenges = response.challenges()
+                    for (challenge in challenges) {
+                        val scheme = challenge.scheme()
+                        if ("Basic".equals(scheme, ignoreCase = true) ||
+                            "OkHttp-Preemptive".equals(scheme, ignoreCase = true)
+                        ) {
+                            val credential = Credentials.basic(
+                                username,
+                                password,
+                                challenge.charset()
+                            )
+                            return@Authenticator response.request().newBuilder()
+                                .header("Proxy-Authorization", credential)
+                                .build()
+                        }
+                    }
+
+                    Log.w(
+                        TAG,
+                        "No known challenges are satisfied during proxy authentication request."
+                    )
+                    null
+                }
+            } else {
+                null
+            }
+
+            return Pair(proxy, authenticator)
+        }
+
         // -- Initialization --
 
         @JvmStatic
@@ -80,7 +153,8 @@ class DatadogWrapper {
             batchSize: String? = null,
             uploadFrequency: String? = null,
             batchProcessingLevel: String? = null,
-            additionalConfiguration: Map<String, Any>? = null
+            additionalConfiguration: Map<String, Any>? = null,
+            proxyConfiguration: Map<String, Any>? = null
         ): Boolean {
             return try {
                 val builder = Configuration.Builder(
@@ -104,6 +178,12 @@ class DatadogWrapper {
 
                 additionalConfiguration?.let {
                     builder.setAdditionalConfiguration(it)
+                }
+
+                proxyConfiguration?.let { proxyConfig ->
+                    mapProxyConfiguration(proxyConfig)?.let { (proxy, authenticator) ->
+                        builder.setProxy(proxy, authenticator)
+                    }
                 }
 
                 if (additionalConfiguration?.get("_dd.needsClearTextHttp") == true) {

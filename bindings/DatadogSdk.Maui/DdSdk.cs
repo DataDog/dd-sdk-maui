@@ -25,7 +25,8 @@ namespace DatadogSdk.Maui
                 string? batchSize,
                 string? uploadFrequency,
                 string? batchProcessingLevel,
-                Dictionary<string, object>? additionalConfiguration);
+                Dictionary<string, object>? additionalConfiguration,
+                Dictionary<string, object>? proxyConfiguration);
 
             void SetTrackingConsent(string consent);
             void AddAttribute(string key, object value);
@@ -72,6 +73,8 @@ namespace DatadogSdk.Maui
                 config.VersionSuffix
             );
 
+            var proxyConfig = ConvertProxyConfiguration(config.ProxyConfiguration);
+
             var sdkInitialized = false;
 
             if (testBridge is not null)
@@ -86,7 +89,8 @@ namespace DatadogSdk.Maui
                     batchSize,
                     uploadFrequency,
                     batchProcessingLevel,
-                    mergedConfig);
+                    mergedConfig,
+                    proxyConfig);
             }
             else
             {
@@ -97,6 +101,24 @@ namespace DatadogSdk.Maui
             if (mergedConfig != null)
             {
                 androidConfig = ToJavaDictionary(mergedConfig);
+            }
+
+            IDictionary<string, Java.Lang.Object>? androidProxyConfig = null;
+            if (proxyConfig != null)
+            {
+                androidProxyConfig = new Dictionary<string, Java.Lang.Object>();
+                foreach (var kvp in proxyConfig)
+                {
+                    androidProxyConfig[kvp.Key] = kvp.Value switch
+                    {
+                        string s => new Java.Lang.String(s),
+                        int i => Java.Lang.Integer.ValueOf(i),
+                        bool b => Java.Lang.Boolean.ValueOf(b),
+                        long l => Java.Lang.Long.ValueOf(l),
+                        double d => Java.Lang.Double.ValueOf(d),
+                        _ => new Java.Lang.String(kvp.Value?.ToString() ?? "")
+                    };
+                }
             }
 
             sdkInitialized = NativeDatadogWrapper.Initialize(
@@ -110,13 +132,23 @@ namespace DatadogSdk.Maui
                 batchSize,
                 uploadFrequency,
                 batchProcessingLevel,
-                androidConfig
+                androidConfig,
+                androidProxyConfig
             );
 #elif IOS
                 NSDictionary? iosConfig = null;
                 if (mergedConfig != null)
                 {
                     iosConfig = ToNSDictionary(mergedConfig);
+                }
+
+                NSDictionary? iosProxyConfig = null;
+                if (proxyConfig != null)
+                {
+                    iosProxyConfig = NSDictionary.FromObjectsAndKeys(
+                        proxyConfig.Values.Select(v => NSObject.FromObject(v)).ToArray(),
+                        proxyConfig.Keys.Select(k => (NSObject)new NSString(k)).ToArray()
+                    );
                 }
 
                 sdkInitialized = NativeDatadogWrapper.Initialize(
@@ -129,7 +161,8 @@ namespace DatadogSdk.Maui
                     batchSize,
                     uploadFrequency,
                     batchProcessingLevel,
-                    iosConfig
+                    iosConfig,
+                    iosProxyConfig
                 );
 #endif
             }
@@ -507,6 +540,44 @@ namespace DatadogSdk.Maui
             TrackingConsent.Pending => "pending",
             _ => "pending"
         };
+
+        internal static string ConvertProxyType(ProxyType type) => type switch
+        {
+            ProxyType.Http => "http",
+            ProxyType.Https => "https",
+            ProxyType.Socks => "socks",
+            _ => "http"
+        };
+
+        internal static Dictionary<string, object>? ConvertProxyConfiguration(ProxyConfiguration? proxy)
+        {
+            if (proxy is null)
+                return null;
+
+            var dict = new Dictionary<string, object>
+            {
+                ["type"] = ConvertProxyType(proxy.Type),
+                ["address"] = proxy.Address,
+                ["port"] = proxy.Port
+            };
+
+            if (proxy.Type == ProxyType.Socks && (proxy.Username != null || proxy.Password != null))
+            {
+                InternalLog.Log(
+                    "SOCKS proxy with authentication is not supported. Credentials will be ignored.",
+                    SdkVerbosity.WARN
+                );
+            }
+            else
+            {
+                if (proxy.Username != null)
+                    dict["username"] = proxy.Username;
+                if (proxy.Password != null)
+                    dict["password"] = proxy.Password;
+            }
+
+            return dict;
+        }
 
         /// Merges Version and VersionSuffix into the additionalConfiguration dictionary
         /// as the reserved keys _dd.version and _dd.version_suffix.

@@ -290,4 +290,43 @@ public class DdSdkConfigurationTests : IDisposable
         Assert.Equal(2, bridge.SetTrackingConsentCallCount);
         Assert.Equal("granted", bridge.LastSetTrackingConsent);
     }
+
+    // --- Proxy configuration -------------------------------------------------
+
+    [Fact]
+    public void Initialize_WithProxyConfiguration_PassesProxyDictToNative()
+    {
+        DdSdk.Initialize(new DdSdkConfiguration
+        {
+            ClientToken = "pub-token",
+            Environment = "test",
+            ProxyConfiguration = new ProxyConfiguration
+            {
+                Type = ProxyType.Http,
+                Address = "1.2.3.4",
+                Port = 8080,
+                Username = "user",
+                Password = "pass"
+            }
+        });
+
+        Assert.NotNull(bridge.ProxyConfiguration);
+        Assert.Equal("http", bridge.ProxyConfiguration["type"]);
+        Assert.Equal("1.2.3.4", bridge.ProxyConfiguration["address"]);
+        Assert.Equal(8080, bridge.ProxyConfiguration["port"]);
+        Assert.Equal("user", bridge.ProxyConfiguration["username"]);
+        Assert.Equal("pass", bridge.ProxyConfiguration["password"]);
+    }
+
+    [Fact]
+    public void Initialize_WithoutProxyConfiguration_PassesNullProxyToNative()
+    {
+        DdSdk.Initialize(new DdSdkConfiguration
+        {
+            ClientToken = "pub-token",
+            Environment = "test"
+        });
+
+        Assert.Null(bridge.ProxyConfiguration);
+    }
 }

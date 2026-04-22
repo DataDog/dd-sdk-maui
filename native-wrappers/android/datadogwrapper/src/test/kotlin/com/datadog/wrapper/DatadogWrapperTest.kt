@@ -11,6 +11,10 @@ import com.datadog.android.core.configuration.UploadFrequency
 import com.datadog.android.privacy.TrackingConsent
 import com.datadog.android.rum.GlobalRumMonitor
 import com.datadog.android.rum.RumMonitor
+import java.net.InetSocketAddress
+import java.net.Proxy
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkStatic
@@ -302,6 +306,68 @@ class DatadogWrapperTest {
             DatadogWrapper.setTrackingConsent("pending")
             verify { Datadog.setTrackingConsent(TrackingConsent.PENDING) }
         }
+    }
+
+    // -- Proxy configuration mapping --
+
+    @Test
+    fun mapProxyConfiguration_null_returnsNull() {
+        assertEquals(null, DatadogWrapper.mapProxyConfiguration(null))
+    }
+
+    @Test
+    fun mapProxyConfiguration_http_returnsHttpProxy() {
+        val config = mapOf<String, Any>("type" to "http", "address" to "1.2.3.4", "port" to 8080)
+        val result = DatadogWrapper.mapProxyConfiguration(config)
+
+        checkNotNull(result)
+        assertEquals(Proxy.Type.HTTP, result.first.type())
+        assertEquals(InetSocketAddress("1.2.3.4", 8080), result.first.address())
+        assertNull(result.second)
+    }
+
+    @Test
+    fun mapProxyConfiguration_https_returnsHttpProxy() {
+        val config = mapOf<String, Any>("type" to "https", "address" to "proxy.example.com", "port" to 443)
+        val result = DatadogWrapper.mapProxyConfiguration(config)
+
+        checkNotNull(result)
+        assertEquals(Proxy.Type.HTTP, result.first.type())
+        assertEquals(InetSocketAddress("proxy.example.com", 443), result.first.address())
+    }
+
+    @Test
+    fun mapProxyConfiguration_socks_returnsSocksProxy() {
+        val config = mapOf<String, Any>("type" to "socks", "address" to "socks.example.com", "port" to 1080)
+        val result = DatadogWrapper.mapProxyConfiguration(config)
+
+        checkNotNull(result)
+        assertEquals(Proxy.Type.SOCKS, result.first.type())
+        assertEquals(InetSocketAddress("socks.example.com", 1080), result.first.address())
+    }
+
+    @Test
+    fun mapProxyConfiguration_withAuth_returnsAuthenticator() {
+        val config = mapOf<String, Any>(
+            "type" to "http",
+            "address" to "1.2.3.4",
+            "port" to 8080,
+            "username" to "user",
+            "password" to "pass"
+        )
+        val result = DatadogWrapper.mapProxyConfiguration(config)
+
+        checkNotNull(result)
+        assertNotNull(result.second)
+    }
+
+    @Test
+    fun mapProxyConfiguration_withoutAuth_returnsNullAuthenticator() {
+        val config = mapOf<String, Any>("type" to "http", "address" to "1.2.3.4", "port" to 8080)
+        val result = DatadogWrapper.mapProxyConfiguration(config)
+
+        checkNotNull(result)
+        assertNull(result.second)
     }
 
     // -- Global attributes --

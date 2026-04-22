@@ -13,6 +13,7 @@ internal class MockNativeSdkBridge : DdSdk.INativeBridge
     public string? UploadFrequency { get; private set; }
     public string? BatchProcessingLevel { get; private set; }
     public Dictionary<string, object>? AdditionalConfiguration { get; private set; }
+    public Dictionary<string, object>? ProxyConfiguration { get; private set; }
     public bool ReturnValue { get; set; } = true;
     public int SetTrackingConsentCallCount { get; private set; }
     public string? LastSetTrackingConsent { get; private set; }
@@ -25,7 +26,8 @@ internal class MockNativeSdkBridge : DdSdk.INativeBridge
         string clientToken, string environment, string? service,
         string site, string verbosity, string trackingConsent,
         string? batchSize, string? uploadFrequency, string? batchProcessingLevel,
-        Dictionary<string, object>? additionalConfiguration)
+        Dictionary<string, object>? additionalConfiguration,
+        Dictionary<string, object>? proxyConfiguration)
     {
         CallCount++;
         ClientToken = clientToken;
@@ -38,6 +40,7 @@ internal class MockNativeSdkBridge : DdSdk.INativeBridge
         UploadFrequency = uploadFrequency;
         BatchProcessingLevel = batchProcessingLevel;
         AdditionalConfiguration = additionalConfiguration;
+        ProxyConfiguration = proxyConfiguration;
         return ReturnValue;
     }
 
