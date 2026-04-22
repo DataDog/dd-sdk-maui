@@ -40,7 +40,7 @@ dependencies {
     implementation("com.datadoghq:dd-sdk-android-trace:3.8.0")
     implementation("com.datadoghq:dd-sdk-android-rum:3.8.0")
     implementation("com.datadoghq:dd-sdk-android-ndk:3.8.0")
-    implementation("com.squareup.okhttp3:okhttp:4.12.0")
+    implementation("com.squareup.okhttp3:okhttp:5.3.2")
 
     // Test dependencies
     testImplementation("junit:junit:4.13.2")
