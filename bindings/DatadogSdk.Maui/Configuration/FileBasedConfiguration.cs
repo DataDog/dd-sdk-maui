@@ -49,6 +49,13 @@ namespace DatadogSdk.Maui.Configuration
             if (TryParseEnum<BatchProcessingLevel>(root, "BatchProcessingLevel", out BatchProcessingLevel batchProcessingLevel))
                 config.BatchProcessingLevel = batchProcessingLevel;
 
+            // Optional first-party hosts
+            if (root.TryGetProperty("FirstPartyHosts", out JsonElement hostsElement)
+                && hostsElement.ValueKind == JsonValueKind.Array)
+            {
+                config.FirstPartyHosts = ParseFirstPartyHosts(hostsElement);
+            }
+
             // Optional additional configuration
             if (root.TryGetProperty("AdditionalConfiguration", out JsonElement additionalElement)
                 && additionalElement.ValueKind == JsonValueKind.Object)
@@ -108,6 +115,39 @@ namespace DatadogSdk.Maui.Configuration
                     $"Valid values are: {string.Join(", ", Enum.GetNames(typeof(T)))}.");
             }
             return false;
+        }
+
+        private static List<FirstPartyHost> ParseFirstPartyHosts(JsonElement element)
+        {
+            var hosts = new List<FirstPartyHost>();
+            foreach (JsonElement hostElement in element.EnumerateArray())
+            {
+                if (hostElement.ValueKind != JsonValueKind.Object)
+                    continue;
+
+                string? match = hostElement.TryGetProperty("Match", out JsonElement matchEl)
+                    ? matchEl.GetString() : null;
+
+                if (string.IsNullOrWhiteSpace(match))
+                    continue;
+
+                var headerTypes = new List<TracingHeaderType>();
+                if (hostElement.TryGetProperty("HeaderTypes", out JsonElement typesEl)
+                    && typesEl.ValueKind == JsonValueKind.Array)
+                {
+                    foreach (JsonElement typeEl in typesEl.EnumerateArray())
+                    {
+                        string? raw = typeEl.GetString();
+                        if (raw != null && Enum.TryParse(raw, ignoreCase: true, out TracingHeaderType parsed))
+                        {
+                            headerTypes.Add(parsed);
+                        }
+                    }
+                }
+
+                hosts.Add(new FirstPartyHost { Match = match!, HeaderTypes = headerTypes });
+            }
+            return hosts;
         }
 
         private static Dictionary<string, object> ParseAdditionalConfiguration(JsonElement element)

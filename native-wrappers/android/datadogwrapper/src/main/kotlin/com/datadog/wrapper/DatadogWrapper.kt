@@ -11,7 +11,9 @@ import com.datadog.android.core.configuration.Configuration
 import com.datadog.android.core.configuration.UploadFrequency
 import com.datadog.android.privacy.TrackingConsent
 import com.datadog.android.rum.GlobalRumMonitor
+import com.datadog.android.trace.TracingHeaderType
 import java.net.InetSocketAddress
+import java.util.Locale
 import java.net.Proxy
 import okhttp3.Authenticator
 import okhttp3.Credentials
@@ -28,7 +30,7 @@ class DatadogWrapper {
         // -- Mapping helpers --
 
         @JvmStatic
-        fun mapSite(site: String): DatadogSite = when (site.lowercase()) {
+        fun mapSite(site: String): DatadogSite = when (site.lowercase(Locale.US)) {
             "us1" -> DatadogSite.US1
             "us3" -> DatadogSite.US3
             "us5" -> DatadogSite.US5
@@ -40,14 +42,14 @@ class DatadogWrapper {
         }
 
         @JvmStatic
-        fun mapTrackingConsent(consent: String): TrackingConsent = when (consent.lowercase()) {
+        fun mapTrackingConsent(consent: String): TrackingConsent = when (consent.lowercase(Locale.US)) {
             "granted" -> TrackingConsent.GRANTED
             "not_granted" -> TrackingConsent.NOT_GRANTED
             else -> TrackingConsent.PENDING
         }
 
         @JvmStatic
-        fun mapVerbosity(verbosity: String): Int = when (verbosity.lowercase()) {
+        fun mapVerbosity(verbosity: String): Int = when (verbosity.lowercase(Locale.US)) {
             "debug" -> Log.DEBUG
             "info" -> Log.INFO
             "warn" -> Log.WARN
@@ -56,21 +58,21 @@ class DatadogWrapper {
         }
 
         @JvmStatic
-        fun mapBatchSize(batchSize: String): BatchSize = when (batchSize.lowercase()) {
+        fun mapBatchSize(batchSize: String): BatchSize = when (batchSize.lowercase(Locale.US)) {
             "small" -> BatchSize.SMALL
             "large" -> BatchSize.LARGE
             else -> BatchSize.MEDIUM
         }
 
         @JvmStatic
-        fun mapUploadFrequency(uploadFrequency: String): UploadFrequency = when (uploadFrequency.lowercase()) {
+        fun mapUploadFrequency(uploadFrequency: String): UploadFrequency = when (uploadFrequency.lowercase(Locale.US)) {
             "frequent" -> UploadFrequency.FREQUENT
             "rare" -> UploadFrequency.RARE
             else -> UploadFrequency.AVERAGE
         }
 
         @JvmStatic
-        fun mapBatchProcessingLevel(level: String): BatchProcessingLevel = when (level.lowercase()) {
+        fun mapBatchProcessingLevel(level: String): BatchProcessingLevel = when (level.lowercase(Locale.US)) {
             "low" -> BatchProcessingLevel.LOW
             "high" -> BatchProcessingLevel.HIGH
             else -> BatchProcessingLevel.MEDIUM
@@ -80,7 +82,7 @@ class DatadogWrapper {
         fun mapProxyConfiguration(config: Map<String, Any>?): Pair<Proxy, Authenticator?>? {
             if (config == null) return null
 
-            val type = (config["type"] as? String)?.lowercase() ?: return null
+            val type = (config["type"] as? String)?.lowercase(Locale.US) ?: return null
             val address = config["address"] as? String ?: return null
             val port = (config["port"] as? Number)?.toInt() ?: return null
 
@@ -142,6 +144,33 @@ class DatadogWrapper {
         // -- Initialization --
 
         @JvmStatic
+        fun mapTracingHeaderType(type: String): TracingHeaderType = when (type.lowercase(Locale.US)) {
+            "b3" -> TracingHeaderType.B3
+            "b3multi" -> TracingHeaderType.B3MULTI
+            "tracecontext" -> TracingHeaderType.TRACECONTEXT
+            else -> TracingHeaderType.DATADOG
+        }
+
+        /// Parses a flat dictionary of host -> comma-separated header types
+        /// into the format expected by the Datadog SDK.
+        @JvmStatic
+        fun parseFirstPartyHosts(hosts: Map<String, Any?>): Map<String, Set<TracingHeaderType>> {
+            val result = mutableMapOf<String, Set<TracingHeaderType>>()
+            for ((host, value) in hosts) {
+                val headerTypesStr = value?.toString() ?: continue
+                val types = headerTypesStr.split(",")
+                    .map { it.trim() }
+                    .filter { it.isNotEmpty() }
+                    .map { mapTracingHeaderType(it) }
+                    .toSet()
+                if (types.isNotEmpty()) {
+                    result[host] = types
+                }
+            }
+            return result
+        }
+
+        @JvmStatic
         fun initialize(
             context: Context,
             clientToken: String,
@@ -153,8 +182,9 @@ class DatadogWrapper {
             batchSize: String? = null,
             uploadFrequency: String? = null,
             batchProcessingLevel: String? = null,
-            additionalConfiguration: Map<String, Any>? = null,
-            proxyConfiguration: Map<String, Any>? = null
+            proxyConfiguration: Map<String, Any> = emptyMap(),
+            firstPartyHosts: Map<String, Any?> = emptyMap(),
+            additionalConfiguration: Map<String, Any> = emptyMap()
         ): Boolean {
             return try {
                 val builder = Configuration.Builder(
@@ -176,18 +206,24 @@ class DatadogWrapper {
                     builder.setBatchProcessingLevel(mapBatchProcessingLevel(it))
                 }
 
-                additionalConfiguration?.let {
-                    builder.setAdditionalConfiguration(it)
+                if (additionalConfiguration.isNotEmpty()) {
+                    builder.setAdditionalConfiguration(additionalConfiguration)
                 }
 
-                proxyConfiguration?.let { proxyConfig ->
-                    mapProxyConfiguration(proxyConfig)?.let { (proxy, authenticator) ->
+                if (proxyConfiguration.isNotEmpty()) {
+                    mapProxyConfiguration(proxyConfiguration)?.let { (proxy, authenticator) ->
                         builder.setProxy(proxy, authenticator)
                     }
                 }
 
-                if (additionalConfiguration?.get("_dd.needsClearTextHttp") == true) {
+                if (additionalConfiguration["_dd.needsClearTextHttp"] == true) {
                     _InternalProxy.allowClearTextHttp(builder)
+                }
+
+                // Configure first-party hosts for distributed tracing
+                val hosts = parseFirstPartyHosts(firstPartyHosts)
+                if (hosts.isNotEmpty()) {
+                    builder.setFirstPartyHostsWithHeaderType(hosts)
                 }
 
                 Datadog.initialize(context, builder.build(), mapTrackingConsent(trackingConsent))

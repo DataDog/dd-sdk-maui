@@ -129,30 +129,15 @@ public class DdRum: NSObject {
             rumConfig.customEndpoint = url
         }
 
-        // First party hosts + resource trace sample rate
-        if let firstPartyHostsJson = config["firstPartyHosts"] as? String,
-           let jsonData = firstPartyHostsJson.data(using: .utf8),
-           let hostsArray = try? JSONSerialization.jsonObject(with: jsonData) as? [[String: Any]] {
-
+        // First party hosts (stored during SDK initialization) + resource trace sample rate
+        if let hosts = DdSdkNativeWrapper.firstPartyHosts {
             let resourceTraceSampleRate = config["resourceTraceSampleRate"] as? Double ?? 20.0
-
-            var firstPartyHosts: [String: Set<TracingHeaderType>] = [:]
-            for hostEntry in hostsArray {
-                if let match = hostEntry["match"] as? String,
-                   let headerTypes = hostEntry["headerTypes"] as? [String] {
-                    let types = Set(headerTypes.map { mapTracingHeaderType($0) })
-                    firstPartyHosts[match] = types
-                }
-            }
-
-            if !firstPartyHosts.isEmpty {
-                rumConfig.urlSessionTracking = .init(
-                    firstPartyHostsTracing: .traceWithHeaders(
-                        hostsWithHeaders: firstPartyHosts,
-                        sampleRate: Float(resourceTraceSampleRate)
-                    )
+            rumConfig.urlSessionTracking = .init(
+                firstPartyHostsTracing: .traceWithHeaders(
+                    hostsWithHeaders: hosts,
+                    sampleRate: Float(resourceTraceSampleRate)
                 )
-            }
+            )
         }
 
         // Initial resource threshold (stored for resource tracking configuration)

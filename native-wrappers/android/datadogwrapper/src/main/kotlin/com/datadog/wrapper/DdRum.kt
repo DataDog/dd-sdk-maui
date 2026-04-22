@@ -7,7 +7,6 @@ import com.datadog.android.rum.Rum
 import com.datadog.android.rum.RumConfiguration
 import com.datadog.android.rum.tracking.ActivityViewTrackingStrategy
 import com.datadog.android.rum.configuration.VitalsUpdateFrequency
-import com.datadog.android.trace.TracingHeaderType
 
 class DdRum {
     companion object {
@@ -35,15 +34,6 @@ class DdRum {
                 "average" -> VitalsUpdateFrequency.AVERAGE
                 "frequent" -> VitalsUpdateFrequency.FREQUENT
                 else -> VitalsUpdateFrequency.AVERAGE
-            }
-
-        @JvmStatic
-        fun mapTracingHeaderType(type: String): TracingHeaderType =
-            when (type.lowercase()) {
-                "b3" -> TracingHeaderType.B3
-                "b3multi" -> TracingHeaderType.B3MULTI
-                "tracecontext" -> TracingHeaderType.TRACECONTEXT
-                else -> TracingHeaderType.DATADOG
             }
 
         // -- Enable --
@@ -110,9 +100,6 @@ class DdRum {
                         builder.useCustomEndpoint(it)
                     }
                 }
-
-                // Note: firstPartyHosts are configured at the core Datadog Configuration level,
-                // not on the RumConfiguration.Builder. This field is intentionally skipped here.
 
                 // Initial resource threshold (stored for resource tracking configuration)
                 initialResourceThreshold = (configuration["initialResourceThreshold"] as? Number)?.toDouble()

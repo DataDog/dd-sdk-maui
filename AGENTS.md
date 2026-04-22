@@ -132,7 +132,7 @@ dd-sdk-maui/
 │       │   ├── DdRumConfiguration.cs   # RUM module configuration
 │       │   ├── VitalsUpdateFrequency.cs
 │       │   ├── TracingHeaderType.cs
-│       │   ├── DdFirstPartyHost.cs
+│       │   ├── FirstPartyHost.cs
 │       │   ├── TrackingConsent.cs
 │       │   ├── BatchSize.cs
 │       │   ├── BatchProcessingLevel.cs

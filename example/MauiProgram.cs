@@ -35,19 +35,7 @@ public static class MauiProgram
             Site = DatadogSite.Us1,
             TrackingConsent = TrackingConsent.Granted,
             Verbosity = SdkVerbosity.DEBUG,
-            UploadFrequency = UploadFrequency.Frequent,
-            // ProxyConfiguration = new ProxyConfiguration
-            // {
-            //     Type = ProxyType.Http,
-            //     Address = "192.168.1.100",
-            //     Port = 8080,
-            //     // Username = "user",
-            //     // Password = "pass",
-            // },
-            // AdditionalConfiguration = new Dictionary<string, object>
-            // {
-            //     { "_dd.needsClearTextHttp", true }
-            // },
+            UploadFrequency = UploadFrequency.Frequent
         });
 
         return builder.Build();

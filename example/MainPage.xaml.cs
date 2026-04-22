@@ -41,11 +41,7 @@ public partial class MainPage : ContentPage
             NativeInteractionTracking = true,
             TrackMemoryWarnings = true,
             NativeLongTaskThresholdMs = 200.0,
-            VitalsUpdateFrequency = VitalsUpdateFrequency.Average,
-            FirstPartyHosts = new List<DdFirstPartyHost>
-            {
-                new() { Match = "datadoghq.com", HeaderTypes = new List<TracingHeaderType> { TracingHeaderType.Datadog, TracingHeaderType.TraceContext } }
-            }
+            VitalsUpdateFrequency = VitalsUpdateFrequency.Average
         };
 
         DdRum.Enable(rumConfiguration);
@@ -99,7 +95,7 @@ public partial class MainPage : ContentPage
 
     private async void OnSetTrackingConsentClicked(object? sender, EventArgs e)
     {
-        string? choice = await DisplayActionSheet(
+        string? choice = await DisplayActionSheetAsync(
             "Set Tracking Consent",
             "Cancel",
             null,

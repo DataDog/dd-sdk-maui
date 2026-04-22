@@ -6,7 +6,6 @@ using NativeDdRum = DatadogSdk.iOS.Binding.DdRum;
 #endif
 
 using DatadogSdk.Maui.Configuration;
-using System.Diagnostics.CodeAnalysis;
 
 namespace DatadogSdk.Maui
 {
@@ -17,7 +16,6 @@ namespace DatadogSdk.Maui
         /// Must be called after DdSdk.Initialize().
         /// </summary>
         /// <param name="configuration">Configuration for the RUM module.</param>
-        [RequiresUnreferencedCode("Calls DdRumConfiguration methods that use JSON serialization")]
         public static void Enable(DdRumConfiguration configuration)
         {
             InternalLog.Log($"DdRum.Enable called with applicationId: {configuration.ApplicationId}", SdkVerbosity.DEBUG);

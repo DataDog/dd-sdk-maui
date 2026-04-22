@@ -9,7 +9,7 @@ namespace DatadogSdk.iOS.Binding
     interface DatadogWrapper
     {
         [Static]
-        [Export("initializeWithClientToken:environment:service:site:verbosity:trackingConsent:batchSize:uploadFrequency:batchProcessingLevel:additionalConfiguration:proxyConfiguration:")]
+        [Export("initializeWithClientToken:environment:service:site:verbosity:trackingConsent:batchSize:uploadFrequency:batchProcessingLevel:proxyConfiguration:firstPartyHosts:additionalConfiguration:")]
         bool Initialize(
             string clientToken,
             string environment,
@@ -20,8 +20,9 @@ namespace DatadogSdk.iOS.Binding
             [NullAllowed] string batchSize,
             [NullAllowed] string uploadFrequency,
             [NullAllowed] string batchProcessingLevel,
-            [NullAllowed] NSDictionary additionalConfiguration,
-            [NullAllowed] NSDictionary proxyConfiguration
+            [NullAllowed] NSDictionary proxyConfiguration,
+            [NullAllowed] NSDictionary firstPartyHosts,
+            [NullAllowed] NSDictionary additionalConfiguration
         );
 
         [Static]

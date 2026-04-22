@@ -97,6 +97,10 @@ public class DdSdkConfigurationTests : IDisposable
         Assert.Equal("-rc1", bridge.AdditionalConfiguration["_dd.version_suffix"]);
         Assert.Equal(true, bridge.AdditionalConfiguration["_dd.needsClearTextHttp"]);
         Assert.Equal("custom_value", bridge.AdditionalConfiguration["_dd.custom_key"]);
+        Assert.NotNull(bridge.FirstPartyHosts);
+        Assert.Equal(2, bridge.FirstPartyHosts!.Count);
+        Assert.Equal("datadog,tracecontext", bridge.FirstPartyHosts["api.example.com"]);
+        Assert.Equal("b3", bridge.FirstPartyHosts["cdn.example.com"]);
     }
 
     // --- Site ----------------------------------------------------------------
@@ -265,6 +269,53 @@ public class DdSdkConfigurationTests : IDisposable
         });
 
         Assert.Equal("error", bridge.Verbosity);
+    }
+
+    // --- First-party hosts ---------------------------------------------------
+
+    [Fact]
+    public void Initialize_WithFirstPartyHosts_PassesDictionaryToNative()
+    {
+        DdSdk.Initialize(new DdSdkConfiguration
+        {
+            ClientToken = "pub-token",
+            Environment = "test",
+            FirstPartyHosts = new List<FirstPartyHost>
+            {
+                new() { Match = "api.example.com", HeaderTypes = new List<TracingHeaderType> { TracingHeaderType.Datadog, TracingHeaderType.TraceContext } },
+                new() { Match = "cdn.example.com", HeaderTypes = new List<TracingHeaderType> { TracingHeaderType.B3 } }
+            }
+        });
+
+        Assert.NotNull(bridge.FirstPartyHosts);
+        Assert.Equal(2, bridge.FirstPartyHosts!.Count);
+        Assert.Equal("datadog,tracecontext", bridge.FirstPartyHosts["api.example.com"]);
+        Assert.Equal("b3", bridge.FirstPartyHosts["cdn.example.com"]);
+    }
+
+    [Fact]
+    public void Initialize_WithoutFirstPartyHosts_PassesNullToNative()
+    {
+        DdSdk.Initialize(new DdSdkConfiguration
+        {
+            ClientToken = "pub-token",
+            Environment = "test"
+        });
+
+        Assert.Null(bridge.FirstPartyHosts);
+    }
+
+    [Fact]
+    public void Initialize_WithEmptyFirstPartyHosts_PassesNullToNative()
+    {
+        DdSdk.Initialize(new DdSdkConfiguration
+        {
+            ClientToken = "pub-token",
+            Environment = "test",
+            FirstPartyHosts = new List<FirstPartyHost>()
+        });
+
+        Assert.Null(bridge.FirstPartyHosts);
     }
 
     // --- SetTrackingConsent --------------------------------------------------

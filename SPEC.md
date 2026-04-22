@@ -602,6 +602,7 @@ namespace DatadogSdk.Maui.Configuration
         public string? Version { get; set; }
         public string? VersionSuffix { get; set; }
         public SdkVerbosity? Verbosity { get; set; }
+        public List<FirstPartyHost>? FirstPartyHosts { get; set; }
     }
 
     public enum TrackingConsent { Granted, NotGranted, Pending }
@@ -629,6 +630,7 @@ namespace DatadogSdk.Maui.Configuration
 - `Verbosity` - SDK logging level for debugging
 - `AdditionalConfiguration` - Pass-through dictionary for platform-specific or internal keys
 - `ProxyConfiguration` - Proxy configuration object (type, address, port, optional username/password)
+- `FirstPartyHosts` - List of first-party hosts for distributed tracing. On Android, applied at core SDK init via `Configuration.Builder.setFirstPartyHostsWithHeaderType()`. On iOS, stored during init and applied when RUM is enabled via `RUM.Configuration.urlSessionTracking`.
 
 **Reserved `AdditionalConfiguration` keys**:
 
@@ -1073,12 +1075,6 @@ DdRum.Enable(new DdRumConfiguration
     // Vitals and endpoints
     VitalsUpdateFrequency = VitalsUpdateFrequency.Average,
     CustomEndpoint = null,                     // optional
-
-    // Distributed tracing
-    FirstPartyHosts = new List<DdFirstPartyHost>
-    {
-        new() { Match = "api.example.com", HeaderTypes = new List<TracingHeaderType> { TracingHeaderType.Datadog, TracingHeaderType.TraceContext } }
-    }
 });
 ```
 

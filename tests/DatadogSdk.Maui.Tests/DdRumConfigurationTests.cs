@@ -29,7 +29,6 @@ public class DdRumConfigurationTests
         Assert.Null(config.TrackWatchdogTerminations);
         Assert.Equal(VitalsUpdateFrequency.Average, config.VitalsUpdateFrequency);
         Assert.Null(config.CustomEndpoint);
-        Assert.Null(config.FirstPartyHosts);
         Assert.Null(config.ErrorEventMapper);
         Assert.Null(config.ResourceEventMapper);
         Assert.Null(config.ActionEventMapper);
@@ -68,7 +67,6 @@ public class DdRumConfigurationTests
         Assert.False(dict.ContainsKey("trackNonFatalAnrs"));
         Assert.False(dict.ContainsKey("trackWatchdogTerminations"));
         Assert.False(dict.ContainsKey("customEndpoint"));
-        Assert.False(dict.ContainsKey("firstPartyHosts"));
     }
 
     [Fact]
@@ -92,11 +90,7 @@ public class DdRumConfigurationTests
             TrackNonFatalAnrs = true,
             TrackWatchdogTerminations = true,
             VitalsUpdateFrequency = VitalsUpdateFrequency.Frequent,
-            CustomEndpoint = "https://rum.example.com",
-            FirstPartyHosts = new List<DdFirstPartyHost>
-            {
-                new() { Match = "api.example.com", HeaderTypes = new List<TracingHeaderType> { TracingHeaderType.Datadog, TracingHeaderType.TraceContext } }
-            }
+            CustomEndpoint = "https://rum.example.com"
         };
 
         var dict = config.ToDictionary();
@@ -117,7 +111,6 @@ public class DdRumConfigurationTests
         Assert.Equal(true, dict["trackWatchdogTerminations"]);
         Assert.Equal("frequent", dict["vitalsUpdateFrequency"]);
         Assert.Equal("https://rum.example.com", dict["customEndpoint"]);
-        Assert.True(dict.ContainsKey("firstPartyHosts"));
     }
 
     // ── Enum conversions ────────────────────────────────────────
@@ -147,7 +140,7 @@ public class DdRumConfigurationTests
     [Fact]
     public void SerializeFirstPartyHosts_ProducesCorrectJson()
     {
-        var hosts = new List<DdFirstPartyHost>
+        var hosts = new List<FirstPartyHost>
         {
             new() { Match = "api.example.com", HeaderTypes = new List<TracingHeaderType> { TracingHeaderType.Datadog, TracingHeaderType.TraceContext } },
             new() { Match = "cdn.example.com", HeaderTypes = new List<TracingHeaderType> { TracingHeaderType.B3 } }
@@ -171,23 +164,4 @@ public class DdRumConfigurationTests
         Assert.Equal("b3", second.GetProperty("headerTypes")[0].GetString());
     }
 
-    [Fact]
-    public void ToDictionary_WithFirstPartyHosts_SerializesAsJsonString()
-    {
-        var config = new DdRumConfiguration
-        {
-            ApplicationId = "app-id",
-            FirstPartyHosts = new List<DdFirstPartyHost>
-            {
-                new() { Match = "api.example.com", HeaderTypes = new List<TracingHeaderType> { TracingHeaderType.Datadog } }
-            }
-        };
-
-        var dict = config.ToDictionary();
-        var json = dict["firstPartyHosts"] as string;
-
-        Assert.NotNull(json);
-        Assert.Contains("api.example.com", json);
-        Assert.Contains("datadog", json);
-    }
 }

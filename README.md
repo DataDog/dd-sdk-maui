@@ -40,7 +40,13 @@ DdSdk.Initialize(new DdSdkConfiguration
     Service = "my-maui-app",
     Site = DatadogSite.Us1,
     BatchSize = BatchSize.Medium,
-    UploadFrequency = UploadFrequency.Average
+    UploadFrequency = UploadFrequency.Average,
+
+    // Distributed tracing (optional)
+    FirstPartyHosts = new List<FirstPartyHost>
+    {
+        new() { Match = "api.example.com", HeaderTypes = new List<TracingHeaderType> { TracingHeaderType.Datadog, TracingHeaderType.TraceContext } }
+    }
 });
 ```
 
@@ -55,7 +61,10 @@ You can also initialize from a JSON configuration file:
   "Site": "Us1",
   "Service": "my-maui-app",
   "TrackingConsent": "Granted",
-  "Verbosity": "DEBUG"
+  "Verbosity": "DEBUG",
+  "FirstPartyHosts": [
+    { "Match": "api.example.com", "HeaderTypes": ["Datadog", "TraceContext"] }
+  ]
 }
 ```
 
@@ -79,6 +88,7 @@ DdSdk.Initialize(config);
 - `Version` - Application version
 - `VersionSuffix` - Version suffix
 - `Verbosity` - SDK logging level
+- `FirstPartyHosts` - List of first-party hosts for distributed tracing
 - `AdditionalConfiguration` - Additional configuration dictionary
 - `ProxyConfiguration` - Proxy configuration object (see Proxy Configuration section)
 
@@ -266,11 +276,7 @@ DdRum.Enable(new DdRumConfiguration
     NativeCrashReportEnabled = true,
     NativeViewTracking = true,
     NativeInteractionTracking = true,
-    VitalsUpdateFrequency = VitalsUpdateFrequency.Average,
-    FirstPartyHosts = new List<DdFirstPartyHost>
-    {
-        new() { Match = "api.example.com", HeaderTypes = new List<TracingHeaderType> { TracingHeaderType.Datadog, TracingHeaderType.TraceContext } }
-    }
+    VitalsUpdateFrequency = VitalsUpdateFrequency.Average
 });
 ```
 
