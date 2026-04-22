@@ -35,14 +35,14 @@ android {
 dependencies {
     // Use 'implementation' to hide dependencies from AAR consumers
     // Dependencies will be needed at runtime but won't be in the binding API
-    implementation("com.datadoghq:dd-sdk-android-core:3.8.0")
-    implementation("com.datadoghq:dd-sdk-android-logs:3.8.0")
-    implementation("com.datadoghq:dd-sdk-android-trace:3.8.0")
-    implementation("com.datadoghq:dd-sdk-android-rum:3.8.0")
-    implementation("com.datadoghq:dd-sdk-android-ndk:3.8.0")
+    implementation("com.datadoghq:dd-sdk-android-core:3.9.0")
+    implementation("com.datadoghq:dd-sdk-android-logs:3.9.0")
+    implementation("com.datadoghq:dd-sdk-android-trace:3.9.0")
+    implementation("com.datadoghq:dd-sdk-android-rum:3.9.0")
+    implementation("com.datadoghq:dd-sdk-android-ndk:3.9.0")
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
 
     // Test dependencies
     testImplementation("junit:junit:4.13.2")
-    testImplementation("io.mockk:mockk:1.13.16")
+    testImplementation("io.mockk:mockk:1.14.9")
 }
