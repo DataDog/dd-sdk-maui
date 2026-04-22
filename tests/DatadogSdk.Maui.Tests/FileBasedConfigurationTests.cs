@@ -37,6 +37,7 @@ public class FileBasedConfigurationTests
         Assert.Equal(8080, config.ProxyConfiguration.Port);
         Assert.Equal("user", config.ProxyConfiguration.Username);
         Assert.Equal("pass", config.ProxyConfiguration.Password);
+        Assert.True(config.NativeCrashReportEnabled);
     }
 
     [Fact]
@@ -79,6 +80,7 @@ public class FileBasedConfigurationTests
         Assert.Null(config.VersionSuffix);
         Assert.Null(config.AdditionalConfiguration);
         Assert.Null(config.ProxyConfiguration);
+        Assert.False(config.NativeCrashReportEnabled);
     }
 
     // --- Malformed JSON ------------------------------------------------------

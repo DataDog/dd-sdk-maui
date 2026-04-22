@@ -33,6 +33,12 @@
 		<!-- Datadog symbol upload settings -->
 		<DatadogServiceName>datadog-maui-test</DatadogServiceName>
 
+		<!-- Include PDB files for symbolicated C# stack traces in crash reports -->
+		<DebugType>portable</DebugType>
+		<DebugSymbols>true</DebugSymbols>
+		<!-- Bundle PDBs into the Android APK so the runtime resolves file/line info -->
+		<AndroidIncludeDebugSymbols Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">true</AndroidIncludeDebugSymbols>
+
 		<!-- Enable R8 for Android Release builds (generates mapping.txt for deobfuscation) -->
 		<AndroidLinkTool Condition="'$(Configuration)' == 'Release'">r8</AndroidLinkTool>
 		<AndroidCreateProguardMappingFile Condition="'$(Configuration)' == 'Release'">true</AndroidCreateProguardMappingFile>

@@ -89,20 +89,20 @@
                 HorizontalOptions="Start" />
 
             <Button
+                x:Name="ManagedCrashBtn"
+                Text="Trigger C# Crash"
+                SemanticProperties.Hint="Throws an unhandled C# exception"
+                Clicked="OnManagedCrashClicked"
+                BackgroundColor="DarkRed"
+                TextColor="White"
+                HorizontalOptions="Fill" />
+
+            <Button
                 x:Name="NativeCrashBtn"
                 Text="Trigger Native Crash"
                 SemanticProperties.Hint="Triggers a native crash for testing"
                 Clicked="OnNativeCrashClicked"
                 BackgroundColor="Red"
-                TextColor="White"
-                HorizontalOptions="Fill" />
-
-            <Button
-                x:Name="ManagedCrashBtn"
-                Text="Trigger C# Crash"
-                SemanticProperties.Hint="Triggers a managed C# crash for testing"
-                Clicked="OnManagedCrashClicked"
-                BackgroundColor="DarkRed"
                 TextColor="White"
                 HorizontalOptions="Fill" />
 

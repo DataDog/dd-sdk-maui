@@ -5,7 +5,7 @@
 # debug symbols (dSYMs / ProGuard mappings) to Datadog.
 #
 # Prerequisites:
-#   - Run ./build.sh --<platform> --release first to build the app
+#   - Run ./build.sh from the repo root first to build native wrappers + NuGet packages
 #   - Install datadog-ci: npm install -g @datadog/datadog-ci
 #   - Export DATADOG_API_KEY in your shell
 #
@@ -81,6 +81,12 @@ if [ -z "$TARGET" ]; then
     exit 1
 fi
 
+# ── Clean ─────────────────────────────────────────────────────────────────────
+
+log_section "Cleaning previous build artifacts"
+rm -rf bin/Release obj/Release
+log_info "Cleaned bin/Release and obj/Release"
+
 # ── Publish ───────────────────────────────────────────────────────────────────
 
 UPLOAD_FLAG="false"
@@ -89,7 +95,6 @@ UPLOAD_FLAG="false"
 if [ "$TARGET" = "ios" ]; then
     log_section "Publishing iOS Release (device)"
 
-    touch MauiProgram.cs
     dotnet publish -c Release -f net10.0-ios -r ios-arm64 \
         -p:DatadogUploadSymbols=$UPLOAD_FLAG \
         -v n -tl:off
@@ -97,7 +102,6 @@ if [ "$TARGET" = "ios" ]; then
 elif [ "$TARGET" = "android" ]; then
     log_section "Publishing Android Release"
 
-    touch MauiProgram.cs
     dotnet publish -c Release -f net10.0-android \
         -p:DatadogUploadSymbols=$UPLOAD_FLAG \
         -v n -tl:off
@@ -110,14 +114,17 @@ log_section "Publish complete"
 if [ "$TARGET" = "ios" ]; then
     echo ""
     log_info "IPA: bin/Release/net10.0-ios/ios-arm64/publish/example.ipa"
-    log_info "dSYM: bin/Release/net10.0-ios/ios-arm64/example.app.dSYM"
+    log_info "App dSYM: bin/Release/net10.0-ios/ios-arm64/example.app.dSYM"
 elif [ "$TARGET" = "android" ]; then
     echo ""
     log_info "APK: bin/Release/net10.0-android/publish/"
+    if [ -f "bin/Release/net10.0-android/mapping.txt" ]; then
+        log_info "Mapping: bin/Release/net10.0-android/mapping.txt"
+    fi
 fi
 
 if [ "$UPLOAD" = true ]; then
-    log_info "Symbols uploaded to Datadog (see build output above)"
+    log_info "App symbols uploaded to Datadog (see build output above)"
 else
     echo ""
     echo -e "${YELLOW}Symbol upload skipped (--no-upload).${NC}"

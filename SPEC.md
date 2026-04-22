@@ -6,7 +6,7 @@ This document provides a comprehensive technical specification for the Datadog S
 
 **Version**: See `versions.properties` for current SDK and native SDK versions
 **Target Frameworks**: net10.0-ios, net10.0-android
-**Status**: Core SDK configuration complete, Logs module functional, Trace module functional, RUM module configuration and enablement complete
+**Status**: Core SDK configuration complete, Logs module functional, Trace module functional, RUM module with error tracking and crash reporting complete
 
 
 ## Project Goals
@@ -1061,7 +1061,6 @@ DdRum.Enable(new DdRumConfiguration
     // Tracking
     TrackFrustrations = true,
     TrackBackgroundEvents = false,
-    NativeCrashReportEnabled = true,
     NativeViewTracking = true,
     NativeInteractionTracking = true,
     TrackMemoryWarnings = false,              // iOS only
@@ -1130,13 +1129,19 @@ DdRum.Enable(new DdRumConfiguration
 - ✅ First-party hosts for distributed tracing (iOS)
 - ✅ Vitals, view tracking, interaction tracking, long tasks configuration
 - ✅ Unit tests at all three layers
-- 🔲 RUM tracking API (views, actions, resources, errors) — RUM-15184
-- 🔲 Error tracking / C# crash handler — RUM-15107
+- ✅ `DdRum.AddError()` for manual error reporting
+- ✅ Automatic C# error tracking (`DdRumErrorTracking`) — RUM-15107
+- ✅ `NativeCrashReportEnabled` moved to `DdSdkConfiguration` (core-level initialization)
+- ✅ `ErrorEventMapper` on `DdRumConfiguration` for modifying/dropping C# error events
+- 🔲 RUM tracking API (views, actions, resources) — RUM-15184
 
-### Phase 4: Error & Crash Reporting (Planned)
-- Error tracking
-- Crash reporting integration
-- Custom error reporting
+### Phase 4: Error & Crash Reporting (Complete)
+- ✅ Native crash reporting (iOS: CrashReporting, Android: NdkCrashReports) via `DdSdkConfiguration.NativeCrashReportEnabled`
+- ✅ C# error tracking: `AppDomain.UnhandledException` and `TaskScheduler.UnobservedTaskException` handlers
+- ✅ Manual error reporting via `DdRum.AddError(message, source, stacktrace, context, timestampMs)`
+- ✅ Error context includes `_dd.error.source_type: "maui"`, `_dd.error.is_crash`, and `_dd.error.handler`
+- ✅ `ErrorEventMapper` for modifying or dropping error events before they are sent
+- ✅ On Android, `JavaProxyThrowable` unwrapping to extract original C# exception details
 
 ### Phase 5: Tracing & APM (Complete — Manual Spans)
 - ✅ Manual span creation with `DdTrace.StartSpan` / `FinishSpan`

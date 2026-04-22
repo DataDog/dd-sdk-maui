@@ -27,6 +27,7 @@ namespace DatadogSdk.Maui
                 string? batchProcessingLevel,
                 Dictionary<string, object>? proxyConfiguration,
                 Dictionary<string, object>? firstPartyHosts,
+                bool nativeCrashReportEnabled,
                 Dictionary<string, object>? additionalConfiguration);
 
             void SetTrackingConsent(string consent);
@@ -99,6 +100,7 @@ namespace DatadogSdk.Maui
                     batchProcessingLevel,
                     proxyConfig,
                     firstPartyHosts,
+                    config.NativeCrashReportEnabled,
                     mergedConfig);
             }
             else
@@ -153,6 +155,7 @@ namespace DatadogSdk.Maui
                 batchProcessingLevel,
                 androidProxyConfig,
                 androidHosts,
+                config.NativeCrashReportEnabled,
                 androidConfig
             );
 #elif IOS
@@ -192,6 +195,7 @@ namespace DatadogSdk.Maui
                     batchProcessingLevel,
                     iosProxyConfig,
                     iosHosts,
+                    config.NativeCrashReportEnabled,
                     iosConfig
                 );
 #endif

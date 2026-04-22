@@ -12,6 +12,7 @@ internal class MockNativeSdkBridge : DdSdk.INativeBridge
     public string? BatchSize { get; private set; }
     public string? UploadFrequency { get; private set; }
     public string? BatchProcessingLevel { get; private set; }
+    public bool NativeCrashReportEnabled { get; private set; }
     public Dictionary<string, object>? AdditionalConfiguration { get; private set; }
     public Dictionary<string, object>? ProxyConfiguration { get; private set; }
     public Dictionary<string, object>? FirstPartyHosts { get; private set; }
@@ -29,6 +30,7 @@ internal class MockNativeSdkBridge : DdSdk.INativeBridge
         string? batchSize, string? uploadFrequency, string? batchProcessingLevel,
         Dictionary<string, object>? proxyConfiguration,
         Dictionary<string, object>? firstPartyHosts,
+        bool nativeCrashReportEnabled,
         Dictionary<string, object>? additionalConfiguration)
     {
         CallCount++;
@@ -41,6 +43,7 @@ internal class MockNativeSdkBridge : DdSdk.INativeBridge
         BatchSize = batchSize;
         UploadFrequency = uploadFrequency;
         BatchProcessingLevel = batchProcessingLevel;
+        NativeCrashReportEnabled = nativeCrashReportEnabled;
         AdditionalConfiguration = additionalConfiguration;
         ProxyConfiguration = proxyConfiguration;
         FirstPartyHosts = firstPartyHosts;

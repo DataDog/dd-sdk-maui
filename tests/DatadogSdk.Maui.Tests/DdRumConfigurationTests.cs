@@ -18,7 +18,6 @@ public class DdRumConfigurationTests
         Assert.Equal(20.0, config.ResourceTraceSampleRate);
         Assert.True(config.TrackFrustrations);
         Assert.False(config.TrackBackgroundEvents);
-        Assert.False(config.NativeCrashReportEnabled);
         Assert.False(config.NativeViewTracking);
         Assert.False(config.NativeInteractionTracking);
         Assert.False(config.TrackMemoryWarnings);
@@ -48,7 +47,6 @@ public class DdRumConfigurationTests
         Assert.Equal(20.0, dict["resourceTraceSampleRate"]);
         Assert.Equal(true, dict["trackFrustrations"]);
         Assert.Equal(false, dict["trackBackgroundEvents"]);
-        Assert.Equal(false, dict["nativeCrashReportEnabled"]);
         Assert.Equal(false, dict["nativeViewTracking"]);
         Assert.Equal(false, dict["nativeInteractionTracking"]);
         Assert.Equal(false, dict["trackMemoryWarnings"]);
@@ -80,7 +78,6 @@ public class DdRumConfigurationTests
             ResourceTraceSampleRate = 50.0,
             TrackFrustrations = false,
             TrackBackgroundEvents = true,
-            NativeCrashReportEnabled = true,
             NativeViewTracking = true,
             NativeInteractionTracking = true,
             TrackMemoryWarnings = true,
@@ -100,7 +97,6 @@ public class DdRumConfigurationTests
         Assert.Equal(50.0, dict["resourceTraceSampleRate"]);
         Assert.Equal(false, dict["trackFrustrations"]);
         Assert.Equal(true, dict["trackBackgroundEvents"]);
-        Assert.Equal(true, dict["nativeCrashReportEnabled"]);
         Assert.Equal(true, dict["nativeViewTracking"]);
         Assert.Equal(true, dict["nativeInteractionTracking"]);
         Assert.Equal(true, dict["trackMemoryWarnings"]);

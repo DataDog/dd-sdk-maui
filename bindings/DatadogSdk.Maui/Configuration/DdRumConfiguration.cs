@@ -42,11 +42,6 @@ namespace DatadogSdk.Maui.Configuration
         public bool TrackBackgroundEvents { get; set; } = false;
 
         /// <summary>
-        /// Enable native crash reporting. Default: false.
-        /// </summary>
-        public bool NativeCrashReportEnabled { get; set; } = false;
-
-        /// <summary>
         /// Enable automatic native view tracking. Default: false.
         /// </summary>
         public bool NativeViewTracking { get; set; } = false;
@@ -100,11 +95,17 @@ namespace DatadogSdk.Maui.Configuration
         /// </summary>
         public string? CustomEndpoint { get; set; }
 
-        // Event mappers (stubs - not wired to native yet)
         /// <summary>
-        /// Mapper for RUM error events. Not yet implemented - setting this will log a warning.
+        /// List of first-party hosts for distributed tracing. Optional.
         /// </summary>
-        public Func<object, object?>? ErrorEventMapper { get; set; }
+        public List<FirstPartyHost>? FirstPartyHosts { get; set; }
+
+        // Event mappers
+        /// <summary>
+        /// Mapper for RUM error events. Return the modified event to send it, or null to drop it.
+        /// Applies to C# errors reported via DdRum.AddError and automatic error tracking.
+        /// </summary>
+        public Func<DdRumErrorEvent, DdRumErrorEvent?>? ErrorEventMapper { get; set; }
 
         /// <summary>
         /// Mapper for RUM resource events. Not yet implemented - setting this will log a warning.
@@ -129,7 +130,6 @@ namespace DatadogSdk.Maui.Configuration
                 ["resourceTraceSampleRate"] = ResourceTraceSampleRate,
                 ["trackFrustrations"] = TrackFrustrations,
                 ["trackBackgroundEvents"] = TrackBackgroundEvents,
-                ["nativeCrashReportEnabled"] = NativeCrashReportEnabled,
                 ["nativeViewTracking"] = NativeViewTracking,
                 ["nativeInteractionTracking"] = NativeInteractionTracking,
                 ["trackMemoryWarnings"] = TrackMemoryWarnings,

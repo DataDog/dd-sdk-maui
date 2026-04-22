@@ -2,8 +2,10 @@ package com.datadog.wrapper
 
 import android.util.Log
 import com.datadog.android.Datadog
-import com.datadog.android.ndk.NdkCrashReports
+import com.datadog.android.rum.GlobalRumMonitor
 import com.datadog.android.rum.Rum
+import com.datadog.android.rum.RumErrorSource
+import com.datadog.android.rum.RumMonitor
 import com.datadog.android.rum.RumConfiguration
 import com.datadog.android.rum.configuration.VitalsUpdateFrequency
 import com.datadog.android.rum.tracking.ActivityViewTrackingStrategy
@@ -34,11 +36,8 @@ class DdRumTest {
 
         mockkStatic(Rum::class)
         mockkStatic(Datadog::class)
-        mockkStatic(NdkCrashReports::class)
+        mockkStatic(GlobalRumMonitor::class)
         mockkConstructor(RumConfiguration.Builder::class)
-
-        every { NdkCrashReports.enable() } just runs
-        every { NdkCrashReports.enable(any()) } just runs
 
         every { Datadog.getInstance() } returns mockDatadogInstance
         every { anyConstructed<RumConfiguration.Builder>().setSessionSampleRate(any()) } returns mockRumConfigBuilder
@@ -262,30 +261,97 @@ class DdRumTest {
         assertNull(DdRum.initialResourceThreshold)
     }
 
-    // ── nativeCrashReportEnabled storage ─────────────────────
+    // ── addError ─────────────────────────────────────────
 
     @Test
-    fun `enableRum stores nativeCrashReportEnabled true and enables NdkCrashReports`() {
-        DdRum.enableRum(mapOf(
-            "applicationId" to "app-id",
-            "nativeCrashReportEnabled" to true
-        ))
+    fun `addError calls GlobalRumMonitor addErrorWithStacktrace`() {
+        val mockRumMonitor = mockk<RumMonitor>(relaxed = true)
+        every { GlobalRumMonitor.get() } returns mockRumMonitor
 
-        assertTrue(DdRum.nativeCrashReportEnabled)
-        verify { NdkCrashReports.enable(any()) }
+        DdRum.addError(
+            message = "Test error",
+            source = "source",
+            stacktrace = "at Foo.Bar()",
+            context = mapOf("key" to "value"),
+            timestampMs = 1234567890L
+        )
+
+        verify {
+            mockRumMonitor.addErrorWithStacktrace(
+                message = "Test error",
+                source = RumErrorSource.SOURCE,
+                stacktrace = "at Foo.Bar()",
+                attributes = match { attrs ->
+                    attrs["key"] == "value" &&
+                    attrs["_dd.timestamp"] == 1234567890L &&
+                    attrs["_dd.error.source_type"] == "maui"
+                }
+            )
+        }
     }
 
     @Test
-    fun `enableRum nativeCrashReportEnabled false does not enable NdkCrashReports`() {
-        DdRum.enableRum(mapOf(
-            "applicationId" to "app-id"
-        ))
+    fun `addError with zero timestamp does not add timestamp attribute`() {
+        val mockRumMonitor = mockk<RumMonitor>(relaxed = true)
+        every { GlobalRumMonitor.get() } returns mockRumMonitor
 
-        assertFalse(DdRum.nativeCrashReportEnabled)
-        verify(exactly = 0) { NdkCrashReports.enable(any()) }
+        DdRum.addError(
+            message = "Error",
+            source = "source",
+            stacktrace = "stack",
+            context = emptyMap(),
+            timestampMs = 0L
+        )
+
+        verify {
+            mockRumMonitor.addErrorWithStacktrace(
+                message = "Error",
+                source = RumErrorSource.SOURCE,
+                stacktrace = "stack",
+                attributes = match { attrs ->
+                    !attrs.containsKey("_dd.timestamp") &&
+                    attrs["_dd.error.source_type"] == "maui"
+                }
+            )
+        }
+    }
+
+    @Test
+    fun `addError maps network source correctly`() {
+        val mockRumMonitor = mockk<RumMonitor>(relaxed = true)
+        every { GlobalRumMonitor.get() } returns mockRumMonitor
+
+        DdRum.addError(
+            message = "Network error",
+            source = "network",
+            stacktrace = "stack",
+            context = emptyMap(),
+            timestampMs = 0L
+        )
+
+        verify {
+            mockRumMonitor.addErrorWithStacktrace(
+                message = "Network error",
+                source = RumErrorSource.NETWORK,
+                stacktrace = any(),
+                attributes = any()
+            )
+        }
     }
 
     // ── Mapping helpers ──────────────────────────────────────
+
+    @Test
+    fun `mapErrorSource maps all values`() {
+        assertEquals(RumErrorSource.SOURCE, DdRum.mapErrorSource("source"))
+        assertEquals(RumErrorSource.NETWORK, DdRum.mapErrorSource("network"))
+        assertEquals(RumErrorSource.CONSOLE, DdRum.mapErrorSource("console"))
+        assertEquals(RumErrorSource.WEBVIEW, DdRum.mapErrorSource("webview"))
+        assertEquals(RumErrorSource.CUSTOM, DdRum.mapErrorSource("custom"))
+        // Unknown defaults to CUSTOM
+        assertEquals(RumErrorSource.CUSTOM, DdRum.mapErrorSource("unknown"))
+    }
+
 
     @Test
     fun `mapVitalsUpdateFrequency maps all values`() {

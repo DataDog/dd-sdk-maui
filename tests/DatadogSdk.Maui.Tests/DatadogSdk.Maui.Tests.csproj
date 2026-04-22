@@ -34,6 +34,9 @@
     <Compile Include="../../bindings/DatadogSdk.Maui/Configuration/ProxyConfiguration.cs" Link="Linked/Configuration/ProxyConfiguration.cs" />
     <Compile Include="../../bindings/DatadogSdk.Maui/Configuration/DdUserInfo.cs" Link="Linked/Configuration/DdUserInfo.cs" />
     <Compile Include="../../bindings/DatadogSdk.Maui/Configuration/DdAccountInfo.cs" Link="Linked/Configuration/DdAccountInfo.cs" />
+    <Compile Include="../../bindings/DatadogSdk.Maui/DdRum.cs" Link="Linked/DdRum.cs" />
+    <Compile Include="../../bindings/DatadogSdk.Maui/Configuration/DdRumErrorEvent.cs" Link="Linked/Configuration/DdRumErrorEvent.cs" />
+    <Compile Include="../../bindings/DatadogSdk.Maui/DdRumErrorTracking.cs" Link="Linked/DdRumErrorTracking.cs" />
   </ItemGroup>
 
   <!-- Test fixture files -->
