@@ -98,14 +98,13 @@ class DatadogWrapper {
             val password = config["password"] as? String
 
             val authenticator: Authenticator? = if (username != null && password != null) {
-                @Suppress("DEPRECATION_ERROR")
                 Authenticator { _: Route?, response: Response ->
-                    val proxyAuthorization = response.code() == PROXY_AUTHORIZATION_REQUIRED_STATUS_CODE
+                    val proxyAuthorization = response.code == PROXY_AUTHORIZATION_REQUIRED_STATUS_CODE
 
                     if (!proxyAuthorization) {
                         Log.w(
                             TAG,
-                            "Unexpected response code=${response.code()}" +
+                            "Unexpected response code=${response.code}" +
                                 " received during proxy authentication request."
                         )
                         return@Authenticator null
@@ -113,16 +112,16 @@ class DatadogWrapper {
 
                     val challenges = response.challenges()
                     for (challenge in challenges) {
-                        val scheme = challenge.scheme()
+                        val scheme = challenge.scheme
                         if ("Basic".equals(scheme, ignoreCase = true) ||
                             "OkHttp-Preemptive".equals(scheme, ignoreCase = true)
                         ) {
                             val credential = Credentials.basic(
                                 username,
                                 password,
-                                challenge.charset()
+                                challenge.charset
                             )
-                            return@Authenticator response.request().newBuilder()
+                            return@Authenticator response.request.newBuilder()
                                 .header("Proxy-Authorization", credential)
                                 .build()
                         }
