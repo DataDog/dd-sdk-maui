@@ -39,6 +39,11 @@ internal class MockRumBridge : DdRum.IRumBridge
     public List<Dictionary<string, object>> AddViewAttributesCalls { get; } = new();
     public List<List<string>> RemoveViewAttributesCalls { get; } = new();
 
+    // Feature Operations
+    public List<(string Name, string? OperationKey, Dictionary<string, object> Attributes)> StartOperationCalls { get; } = new();
+    public List<(string Name, string? OperationKey, Dictionary<string, object> Attributes)> SucceedOperationCalls { get; } = new();
+    public List<(string Name, string? OperationKey, string Reason, Dictionary<string, object> Attributes)> FailOperationCalls { get; } = new();
+
     public void AddError(string message, RumErrorSource source, string stacktrace,
                          Dictionary<string, object> context, long timestampMs)
     {
@@ -78,6 +83,12 @@ internal class MockRumBridge : DdRum.IRumBridge
         => AddViewAttributesCalls.Add(attributes);
     public void RemoveViewAttributes(List<string> keys)
         => RemoveViewAttributesCalls.Add(keys);
+    public void StartOperation(string name, string? operationKey, Dictionary<string, object> attributes)
+        => StartOperationCalls.Add((name, operationKey, attributes));
+    public void SucceedOperation(string name, string? operationKey, Dictionary<string, object> attributes)
+        => SucceedOperationCalls.Add((name, operationKey, attributes));
+    public void FailOperation(string name, string? operationKey, string reason, Dictionary<string, object> attributes)
+        => FailOperationCalls.Add((name, operationKey, reason, attributes));
 
     public void Reset()
     {

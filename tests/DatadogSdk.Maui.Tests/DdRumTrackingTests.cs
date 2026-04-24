@@ -189,4 +189,86 @@ public class DdRumTrackingTests : IDisposable
         Assert.Single(bridge.RemoveViewAttributesCalls);
         Assert.Equal(new List<string> { "theme", "lang" }, bridge.RemoveViewAttributesCalls[0]);
     }
+
+    // --- Feature Operations --------------------------------------------------
+
+    [Fact]
+    public void StartOperation_PassesAllParametersToBridge()
+    {
+        var attrs = new Dictionary<string, object> { { "step", "checkout" } };
+        DdRum.StartOperation("checkout", "op-1", attrs);
+
+        Assert.Single(bridge.StartOperationCalls);
+        Assert.Equal("checkout", bridge.StartOperationCalls[0].Name);
+        Assert.Equal("op-1", bridge.StartOperationCalls[0].OperationKey);
+        Assert.Equal("checkout", bridge.StartOperationCalls[0].Attributes["step"]);
+    }
+
+    [Fact]
+    public void StartOperation_DefaultsOptionalParameters()
+    {
+        DdRum.StartOperation("checkout");
+
+        Assert.Single(bridge.StartOperationCalls);
+        Assert.Equal("checkout", bridge.StartOperationCalls[0].Name);
+        Assert.Null(bridge.StartOperationCalls[0].OperationKey);
+        Assert.Empty(bridge.StartOperationCalls[0].Attributes);
+    }
+
+    [Fact]
+    public void SucceedOperation_PassesAllParametersToBridge()
+    {
+        var attrs = new Dictionary<string, object> { { "result", "success" } };
+        DdRum.SucceedOperation("checkout", "op-1", attrs);
+
+        Assert.Single(bridge.SucceedOperationCalls);
+        Assert.Equal("checkout", bridge.SucceedOperationCalls[0].Name);
+        Assert.Equal("op-1", bridge.SucceedOperationCalls[0].OperationKey);
+        Assert.Equal("success", bridge.SucceedOperationCalls[0].Attributes["result"]);
+    }
+
+    [Fact]
+    public void SucceedOperation_DefaultsOptionalParameters()
+    {
+        DdRum.SucceedOperation("checkout");
+
+        Assert.Single(bridge.SucceedOperationCalls);
+        Assert.Null(bridge.SucceedOperationCalls[0].OperationKey);
+        Assert.Empty(bridge.SucceedOperationCalls[0].Attributes);
+    }
+
+    [Fact]
+    public void FailOperation_PassesAllParametersToBridge()
+    {
+        var attrs = new Dictionary<string, object> { { "error_code", 500 } };
+        DdRum.FailOperation("checkout", OperationFailure.Error, "op-1", attrs);
+
+        Assert.Single(bridge.FailOperationCalls);
+        Assert.Equal("checkout", bridge.FailOperationCalls[0].Name);
+        Assert.Equal("op-1", bridge.FailOperationCalls[0].OperationKey);
+        Assert.Equal("error", bridge.FailOperationCalls[0].Reason);
+        Assert.Equal(500, bridge.FailOperationCalls[0].Attributes["error_code"]);
+    }
+
+    [Fact]
+    public void FailOperation_DefaultsOptionalParameters()
+    {
+        DdRum.FailOperation("checkout", OperationFailure.Abandoned);
+
+        Assert.Single(bridge.FailOperationCalls);
+        Assert.Null(bridge.FailOperationCalls[0].OperationKey);
+        Assert.Equal("abandoned", bridge.FailOperationCalls[0].Reason);
+        Assert.Empty(bridge.FailOperationCalls[0].Attributes);
+    }
+
+    [Theory]
+    [InlineData(OperationFailure.Error, "error")]
+    [InlineData(OperationFailure.Abandoned, "abandoned")]
+    [InlineData(OperationFailure.Other, "other")]
+    public void FailOperation_ConvertsAllFailureReasons(OperationFailure reason, string expected)
+    {
+        DdRum.FailOperation("op", reason);
+
+        Assert.Equal(expected, bridge.FailOperationCalls[0].Reason);
+    }
 }

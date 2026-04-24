@@ -682,4 +682,70 @@ final class DdRumTests: XCTestCase {
         XCTAssertTrue(mockRumModule.removeViewAttributesCalled)
         XCTAssertEqual(mockRumModule.capturedRemoveViewAttributesKeys, ["key1", "key2"])
     }
+
+    // MARK: - startFeatureOperation
+
+    func testStartFeatureOperation_callsRumModuleWithNameAndKey() {
+        let context: NSDictionary = ["step": "checkout"]
+        DdRum.startFeatureOperation("checkout", operationKey: "op-1", context: context)
+
+        XCTAssertTrue(mockRumModule.startFeatureOperationCalled)
+        XCTAssertEqual(mockRumModule.capturedStartFeatureOperationName, "checkout")
+        XCTAssertEqual(mockRumModule.capturedStartFeatureOperationKey, "op-1")
+    }
+
+    func testStartFeatureOperation_withNilOperationKey() {
+        DdRum.startFeatureOperation("checkout", operationKey: nil, context: [:])
+
+        XCTAssertTrue(mockRumModule.startFeatureOperationCalled)
+        XCTAssertNil(mockRumModule.capturedStartFeatureOperationKey)
+    }
+
+    // MARK: - succeedFeatureOperation
+
+    func testSucceedFeatureOperation_callsRumModuleWithNameAndKey() {
+        let context: NSDictionary = ["result": "ok"]
+        DdRum.succeedFeatureOperation("checkout", operationKey: "op-1", context: context)
+
+        XCTAssertTrue(mockRumModule.succeedFeatureOperationCalled)
+        XCTAssertEqual(mockRumModule.capturedSucceedFeatureOperationName, "checkout")
+        XCTAssertEqual(mockRumModule.capturedSucceedFeatureOperationKey, "op-1")
+    }
+
+    func testSucceedFeatureOperation_withNilOperationKey() {
+        DdRum.succeedFeatureOperation("checkout", operationKey: nil, context: [:])
+
+        XCTAssertTrue(mockRumModule.succeedFeatureOperationCalled)
+        XCTAssertNil(mockRumModule.capturedSucceedFeatureOperationKey)
+    }
+
+    // MARK: - failFeatureOperation
+
+    func testFailFeatureOperation_callsRumModuleWithNameKeyAndReason() {
+        let context: NSDictionary = ["error_code": 500]
+        DdRum.failFeatureOperation("checkout", operationKey: "op-1", reason: "error", context: context)
+
+        XCTAssertTrue(mockRumModule.failFeatureOperationCalled)
+        XCTAssertEqual(mockRumModule.capturedFailFeatureOperationName, "checkout")
+        XCTAssertEqual(mockRumModule.capturedFailFeatureOperationKey, "op-1")
+        XCTAssertEqual(mockRumModule.capturedFailFeatureOperationReason, .error)
+    }
+
+    func testFailFeatureOperation_withNilOperationKey() {
+        DdRum.failFeatureOperation("checkout", operationKey: nil, reason: "abandoned", context: [:])
+
+        XCTAssertTrue(mockRumModule.failFeatureOperationCalled)
+        XCTAssertNil(mockRumModule.capturedFailFeatureOperationKey)
+        XCTAssertEqual(mockRumModule.capturedFailFeatureOperationReason, .abandoned)
+    }
+
+    // MARK: - mapFailureReason
+
+    func testMapFailureReason_allValues() {
+        XCTAssertEqual(DdRum.mapFailureReason("error"), .error)
+        XCTAssertEqual(DdRum.mapFailureReason("abandoned"), .abandoned)
+        XCTAssertEqual(DdRum.mapFailureReason("other"), .other)
+        // Unknown defaults to error
+        XCTAssertEqual(DdRum.mapFailureReason("unknown"), .error)
+    }
 }

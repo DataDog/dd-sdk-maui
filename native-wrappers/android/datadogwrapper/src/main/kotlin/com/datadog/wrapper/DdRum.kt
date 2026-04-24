@@ -12,6 +12,8 @@ import com.datadog.android.rum.RumResourceKind
 import com.datadog.android.rum.RumResourceMethod
 import com.datadog.android.rum.tracking.ActivityViewTrackingStrategy
 import com.datadog.android.rum.configuration.VitalsUpdateFrequency
+import com.datadog.android.rum.ExperimentalRumApi
+import com.datadog.android.rum.featureoperations.FailureReason
 
 class DdRum {
     companion object {
@@ -85,6 +87,14 @@ class DdRum {
                 "media" -> RumResourceKind.MEDIA
                 "js" -> RumResourceKind.JS
                 else -> RumResourceKind.OTHER
+            }
+
+        @JvmStatic
+        fun mapFailureReason(reason: String): FailureReason =
+            when (reason.lowercase()) {
+                "abandoned" -> FailureReason.ABANDONED
+                "other" -> FailureReason.OTHER
+                else -> FailureReason.ERROR
             }
 
         // -- Enable --
@@ -347,6 +357,51 @@ class DdRum {
                 GlobalRumMonitor.get().removeViewAttributes(keys)
             } catch (e: Exception) {
                 Log.e("DatadogWrapper", "DdRum.removeViewAttributes failed", e)
+            }
+        }
+
+        // -- Operations --
+
+        @JvmStatic
+        @OptIn(ExperimentalRumApi::class)
+        fun startOperation(name: String, operationKey: String?, context: Map<String, Any?>) {
+            try {
+                GlobalRumMonitor.get().startFeatureOperation(
+                    name = name,
+                    operationKey = operationKey,
+                    attributes = context
+                )
+            } catch (e: Exception) {
+                Log.e("DatadogWrapper", "DdRum.startOperation failed", e)
+            }
+        }
+
+        @JvmStatic
+        @OptIn(ExperimentalRumApi::class)
+        fun succeedOperation(name: String, operationKey: String?, context: Map<String, Any?>) {
+            try {
+                GlobalRumMonitor.get().succeedFeatureOperation(
+                    name = name,
+                    operationKey = operationKey,
+                    attributes = context
+                )
+            } catch (e: Exception) {
+                Log.e("DatadogWrapper", "DdRum.succeedOperation failed", e)
+            }
+        }
+
+        @JvmStatic
+        @OptIn(ExperimentalRumApi::class)
+        fun failOperation(name: String, operationKey: String?, reason: String, context: Map<String, Any?>) {
+            try {
+                GlobalRumMonitor.get().failFeatureOperation(
+                    name = name,
+                    operationKey = operationKey,
+                    failureReason = mapFailureReason(reason),
+                    attributes = context
+                )
+            } catch (e: Exception) {
+                Log.e("DatadogWrapper", "DdRum.failOperation failed", e)
             }
         }
     }

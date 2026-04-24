@@ -90,6 +90,14 @@ public class DdRum: NSObject {
         }
     }
 
+    static func mapFailureReason(_ reason: String) -> RUMFeatureOperationFailureReason {
+        switch reason.lowercased() {
+        case "abandoned": return .abandoned
+        case "other": return .other
+        default: return .error
+        }
+    }
+
     private static func buildAttributes(from context: NSDictionary, timestampMs: Int64) -> [AttributeKey: AttributeValue] {
         var attributes: [AttributeKey: AttributeValue] = [:]
         if let contextDict = context as? [String: Any] {
@@ -383,5 +391,25 @@ public class DdRum: NSObject {
     public static func removeViewAttributes(_ keys: NSArray) {
         guard let keyList = keys as? [String] else { return }
         rumModule.removeViewAttributes(forKeys: keyList)
+    }
+
+    // MARK: - Feature Operations
+
+    @objc(startFeatureOperation:operationKey:context:)
+    public static func startFeatureOperation(_ name: String, operationKey: String?, context: NSDictionary) {
+        let attributes = buildAttributes(from: context, timestampMs: 0)
+        rumModule.startFeatureOperation(name: name, operationKey: operationKey, attributes: attributes)
+    }
+
+    @objc(succeedFeatureOperation:operationKey:context:)
+    public static func succeedFeatureOperation(_ name: String, operationKey: String?, context: NSDictionary) {
+        let attributes = buildAttributes(from: context, timestampMs: 0)
+        rumModule.succeedFeatureOperation(name: name, operationKey: operationKey, attributes: attributes)
+    }
+
+    @objc(failFeatureOperation:operationKey:reason:context:)
+    public static func failFeatureOperation(_ name: String, operationKey: String?, reason: String, context: NSDictionary) {
+        let attributes = buildAttributes(from: context, timestampMs: 0)
+        rumModule.failFeatureOperation(name: name, operationKey: operationKey, reason: mapFailureReason(reason), attributes: attributes)
     }
 }
