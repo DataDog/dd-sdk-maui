@@ -186,16 +186,48 @@ public class DdRum: NSObject {
         // First party hosts (stored during SDK initialization) + resource trace sample rate
         if let hosts = DdSdkNativeWrapper.firstPartyHosts {
             let resourceTraceSampleRate = config["resourceTraceSampleRate"] as? Double ?? 20.0
-            rumConfig.urlSessionTracking = .init(
-                firstPartyHostsTracing: .traceWithHeaders(
-                    hostsWithHeaders: hosts,
-                    sampleRate: Float(resourceTraceSampleRate)
+            let automaticResourceTracking = config["automaticResourceTracking"] as? Bool ?? true
+
+            if automaticResourceTracking {
+                // When C# automatic resource tracking is enabled, use a resourceAttributesProvider
+                // to drop requests already tracked at the C# layer (identified by x-datadog-tracked-by: maui header).
+                rumConfig.urlSessionTracking = .init(
+                    firstPartyHostsTracing: .traceWithHeaders(
+                        hostsWithHeaders: hosts,
+                        sampleRate: Float(resourceTraceSampleRate)
+                    ),
+                    resourceAttributesProvider: { request, _, _, _ in
+                        if request.value(forHTTPHeaderField: "x-datadog-tracked-by") == "maui" {
+                            return ["_dd.resource.drop_resource": true]
+                        }
+                        return nil
+                    }
                 )
-            )
+            } else {
+                // Auto resource tracking is off, but first-party host tracing is still needed
+                // for distributed tracing header injection (RUM↔APM correlation).
+                rumConfig.urlSessionTracking = .init(
+                    firstPartyHostsTracing: .traceWithHeaders(
+                        hostsWithHeaders: hosts,
+                        sampleRate: Float(resourceTraceSampleRate)
+                    )
+                )
+            }
         }
 
         // Initial resource threshold (stored for resource tracking configuration)
         initialResourceThreshold = config["initialResourceThreshold"] as? Double
+
+        // Drop native resources that were already tracked at the C# level
+        let automaticResourceTracking = config["automaticResourceTracking"] as? Bool ?? true
+        if automaticResourceTracking {
+            rumConfig.resourceEventMapper = { resourceEvent in
+                if resourceEvent.context?.contextInfo["_dd.resource.drop_resource"] != nil {
+                    return nil
+                }
+                return resourceEvent
+            }
+        }
 
         rumModule.enable(with: rumConfig)
 

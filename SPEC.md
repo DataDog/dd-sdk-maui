@@ -6,7 +6,7 @@ This document provides a comprehensive technical specification for the Datadog S
 
 **Version**: See `versions.properties` for current SDK and native SDK versions
 **Target Frameworks**: net10.0-ios, net10.0-android
-**Status**: Core SDK configuration complete, Logs module functional, Trace module functional, RUM module with error tracking and crash reporting complete
+**Status**: Core SDK configuration complete, Logs module functional, Trace module functional, RUM module with error tracking, crash reporting, and automatic resource tracking complete
 
 
 ## Project Goals
@@ -1119,7 +1119,7 @@ The following methods are available on `DdRum` for manual RUM event tracking:
 
 All methods that accept `context` and `timestampMs` use defaults of empty dictionary and 0 (current time) respectively.
 
-### Automatic View and Action Tracking
+### Automatic View, Action, and Resource Tracking
 
 The SDK automatically tracks MAUI page navigations and user interactions when enabled (default: on).
 
@@ -1127,6 +1127,7 @@ The SDK automatically tracks MAUI page navigations and user interactions when en
 - Uses `Application.DescendantAdded` to hook into MAUI's visual tree at runtime
 - View tracking: `Shell.Navigated` for Shell apps, `Page.Appearing` for NavigationPage apps, `Window.Resumed`/`Stopped` for lifecycle
 - Action tracking: per-control event binders for Button, ImageButton, Switch, CheckBox, RadioButton, Picker, Stepper, DatePicker, TapGestureRecognizer, SwipeGestureRecognizer
+- Resource tracking: `DiagnosticListener` subscription to `HttpHandlerDiagnosticListener` intercepts all HttpClient requests. Derives resource kind from Content-Type header. Filters out Datadog intake URLs. Adds `x-datadog-tracked-by: maui` header to prevent iOS native SDK double-tracking.
 - Relies on implicit view stop (new `StartView` auto-stops previous on the native SDK)
 - 10ms debounce on action tracking to prevent duplicate events
 
@@ -1139,6 +1140,8 @@ The SDK automatically tracks MAUI page navigations and user interactions when en
 | `ViewNamePredicate` | `Func<Page, string?>?` | `null` | Custom view name resolution |
 | `ViewTrackingPredicate` | `Func<Page, bool>?` | `null` | Filter which pages are tracked |
 | `ActionEventMapper` | `Func<DdRumActionEvent, DdRumActionEvent?>?` | `null` | Filter/modify/drop actions before sending |
+| `AutomaticResourceTracking` | `bool` | `true` | Track HTTP requests as RUM resources |
+| `ResourceEventMapper` | `Func<DdRumResourceEvent, DdRumResourceEvent?>?` | `null` | Filter/modify/drop resources before sending |
 
 ## Known Limitations
 

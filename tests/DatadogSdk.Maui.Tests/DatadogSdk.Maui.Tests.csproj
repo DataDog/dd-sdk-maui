@@ -11,7 +11,7 @@
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.*" />
     <PackageReference Include="xunit" Version="2.*" />
     <PackageReference Include="xunit.runner.visualstudio" Version="2.*" />
-    <PackageReference Include="Microsoft.Maui.Controls" Version="10.0.1" />
+    <PackageReference Include="Microsoft.Maui.Controls" Version="10.0.0" />
   </ItemGroup>
 
   <!-- Link source files from DatadogSdk.Maui for testing -->
@@ -46,6 +46,9 @@
     <Compile Include="../../bindings/DatadogSdk.Maui/AutoTracking/ActionTargetResolver.cs" Link="Linked/AutoTracking/ActionTargetResolver.cs" />
     <Compile Include="../../bindings/DatadogSdk.Maui/AutoTracking/DdAutoViewTracker.cs" Link="Linked/AutoTracking/DdAutoViewTracker.cs" />
     <Compile Include="../../bindings/DatadogSdk.Maui/AutoTracking/DdAutoActionTracker.cs" Link="Linked/AutoTracking/DdAutoActionTracker.cs" />
+    <Compile Include="../../bindings/DatadogSdk.Maui/Configuration/DdRumResourceEvent.cs" Link="Linked/Configuration/DdRumResourceEvent.cs" />
+    <Compile Include="../../bindings/DatadogSdk.Maui/AutoTracking/ResourceKindResolver.cs" Link="Linked/AutoTracking/ResourceKindResolver.cs" />
+    <Compile Include="../../bindings/DatadogSdk.Maui/AutoTracking/DdAutoResourceTracker.cs" Link="Linked/AutoTracking/DdAutoResourceTracker.cs" />
   </ItemGroup>
 
   <!-- Test fixture files -->

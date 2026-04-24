@@ -106,7 +106,7 @@ public partial class MainPage : ContentPage
 
     private void OnAddActionClicked(object? sender, EventArgs e)
     {
-        DdRum.AddAction(RumActionType.Custom, "Custom Action");
+        DdRum.AddAction(RumActionType.Custom, "CustomAction");
     }
 
     private void OnTrackResourceClicked(object? sender, EventArgs e)
@@ -114,6 +114,31 @@ public partial class MainPage : ContentPage
         var resourceKey = $"api-call-{DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}";
         DdRum.StartResource(resourceKey, RumResourceMethod.Get, "https://api.example.com/data");
         DdRum.StopResource(resourceKey, 200, RumResourceKind.Xhr, 1024);
+    }
+
+    private async void OnSendHttpRequestsClicked(object? sender, EventArgs e)
+    {
+        using var client = new HttpClient();
+
+        try
+        {
+            // JSON API — should be tracked as "xhr"
+            await client.GetAsync("https://jsonplaceholder.typicode.com/posts/1");
+
+            // Another JSON API
+            await client.GetAsync("https://jsonplaceholder.typicode.com/users/1");
+
+            // Image
+            await client.GetAsync("https://picsum.photos/200");
+
+            // POST request
+            var content = new StringContent("{\"title\":\"test\",\"body\":\"hello\",\"userId\":1}", System.Text.Encoding.UTF8, "application/json");
+            await client.PostAsync("https://jsonplaceholder.typicode.com/posts", content);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"HTTP request failed: {ex.Message}");
+        }
     }
 
     private async void OnSetTrackingConsentClicked(object? sender, EventArgs e)

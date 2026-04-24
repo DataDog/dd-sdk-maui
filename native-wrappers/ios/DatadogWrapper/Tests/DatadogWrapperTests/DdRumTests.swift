@@ -310,6 +310,35 @@ final class DdRumTests: XCTestCase {
         XCTAssertNil(mockRumModule.capturedConfig?.urlSessionTracking)
     }
 
+    func testEnableRum_firstPartyHosts_withAutoResourceTrackingOff_stillSetsUrlSessionTracking() {
+        DdSdkNativeWrapper.firstPartyHosts = [
+            "api.example.com": Set([.datadog])
+        ]
+
+        let config: NSDictionary = [
+            "applicationId": "test-app-id",
+            "automaticResourceTracking": false
+        ]
+
+        DdRum.enableRum(configuration: config)
+
+        // urlSessionTracking should still be set for distributed tracing header injection
+        XCTAssertNotNil(mockRumModule.capturedConfig?.urlSessionTracking)
+    }
+
+    func testEnableRum_noFirstPartyHosts_withAutoResourceTrackingOff_doesNotSetUrlSessionTracking() {
+        DdSdkNativeWrapper.firstPartyHosts = nil
+
+        let config: NSDictionary = [
+            "applicationId": "test-app-id",
+            "automaticResourceTracking": false
+        ]
+
+        DdRum.enableRum(configuration: config)
+
+        XCTAssertNil(mockRumModule.capturedConfig?.urlSessionTracking)
+    }
+
     // MARK: - Initial resource threshold
 
     func testEnableRum_storesInitialResourceThreshold() {
