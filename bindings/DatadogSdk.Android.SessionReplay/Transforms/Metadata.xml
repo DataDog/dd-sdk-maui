@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<metadata>
+  <!-- Session Replay module binding transformations -->
+
+  <!-- Remove internal recorder/mapper classes that have interface conflicts -->
+  <!-- We only need SessionReplay and SessionReplayConfiguration from this binding -->
+  <remove-node path="/api/package[@name='com.datadog.android.sessionreplay.recorder']" />
+  <remove-node path="/api/package[@name='com.datadog.android.sessionreplay.recorder.mapper']" />
+  <remove-node path="/api/package[@name='com.datadog.android.sessionreplay.recorder.callback']" />
+  <remove-node path="/api/package[@name='com.datadog.android.sessionreplay.utils']" />
+</metadata>

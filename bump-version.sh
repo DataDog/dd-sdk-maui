@@ -144,6 +144,9 @@ BINDING_CSPROJ_FILES=(
     "bindings/DatadogSdk.Android.Internal/DatadogSdk.Android.Internal.csproj"
     "bindings/DatadogSdk.Android.Core/DatadogSdk.Android.Core.csproj"
     "bindings/DatadogSdk.Android.Logs/DatadogSdk.Android.Logs.csproj"
+    "bindings/DatadogSdk.Android.Trace/DatadogSdk.Android.Trace.csproj"
+    "bindings/DatadogSdk.Android.Rum/DatadogSdk.Android.Rum.csproj"
+    "bindings/DatadogSdk.Android.SessionReplay/DatadogSdk.Android.SessionReplay.csproj"
     "bindings/DatadogSdk.Android.Binding/DatadogSdk.Android.Binding.csproj"
     "bindings/DatadogSdk.Maui/DatadogSdk.Maui.csproj"
 )

@@ -156,6 +156,7 @@ if [ "$RUN_NUGET" = true ]; then
         "DatadogSdk.Android.Logs.${SDK_VERSION}.nupkg"
         "DatadogSdk.Android.Trace.${SDK_VERSION}.nupkg"
         "DatadogSdk.Android.Rum.${SDK_VERSION}.nupkg"
+        "DatadogSdk.Android.SessionReplay.${SDK_VERSION}.nupkg"
         "DatadogSdk.Android.Binding.${SDK_VERSION}.nupkg"
         "DatadogSdk.Maui.${SDK_VERSION}.nupkg"
     )

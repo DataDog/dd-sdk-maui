@@ -25,7 +25,8 @@ let package = Package(
                 .product(name: "DatadogLogs", package: "dd-sdk-ios"),
                 .product(name: "DatadogTrace", package: "dd-sdk-ios"),
                 .product(name: "DatadogRUM", package: "dd-sdk-ios"),
-                .product(name: "DatadogCrashReporting", package: "dd-sdk-ios")
+                .product(name: "DatadogCrashReporting", package: "dd-sdk-ios"),
+                .product(name: "DatadogSessionReplay", package: "dd-sdk-ios")
             ],
             path: "Sources/DatadogWrapper"
         ),
