@@ -47,6 +47,7 @@ RUN_MAUI=false
 RUN_IOS=false
 RUN_ANDROID=false
 RUN_ALL=true
+DOTNET_VERSION="10"
 
 while [[ $# -gt 0 ]]; do
     case $1 in
@@ -65,6 +66,10 @@ while [[ $# -gt 0 ]]; do
             RUN_ALL=false
             shift
             ;;
+        --net9)
+            DOTNET_VERSION="9"
+            shift
+            ;;
         -h|--help)
             echo "Usage: ./check.sh [OPTIONS]"
             echo ""
@@ -75,10 +80,12 @@ while [[ $# -gt 0 ]]; do
             echo "  --maui             Run C# unit tests only"
             echo "  --ios              Run iOS Swift tests only"
             echo "  --android          Run Android Kotlin tests only"
+            echo "  --net9             Run C# tests against .NET 9 (default: .NET 10)"
             echo "  -h, --help         Show this help message"
             echo ""
             echo "Multiple flags can be combined:"
             echo "  ./check.sh --maui --android"
+            echo "  ./check.sh --maui --net9"
             exit 0
             ;;
         *)
@@ -107,8 +114,8 @@ ANDROID_RESULT=-1
 if [ "$RUN_MAUI" = true ]; then
     log_section "C# Tests (xUnit)"
 
-    log_info "Running dotnet test..."
-    if dotnet test "$SCRIPT_DIR/tests/DatadogSdk.Maui.Tests/"; then
+    log_info "Running dotnet test (net${DOTNET_VERSION}.0)..."
+    if dotnet test "$SCRIPT_DIR/tests/DatadogSdk.Maui.Tests/" -f "net${DOTNET_VERSION}.0"; then
         MAUI_RESULT=0
         log_info "C# tests passed"
     else

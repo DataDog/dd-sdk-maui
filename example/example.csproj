@@ -2,7 +2,7 @@
 
 	<PropertyGroup>
 		<!-- Temporarily testing iOS and Android with NuGet packages -->
-		<TargetFrameworks>net10.0-android;net10.0-ios</TargetFrameworks>
+		<TargetFrameworks>net10.0-android;net10.0-ios;net9.0-android;net9.0-ios</TargetFrameworks>
 		<!-- macCatalyst and Windows support coming soon -->
 		<!--<TargetFrameworks Condition="$([MSBuild]::IsOSPlatform('windows'))">$(TargetFrameworks);net10.0-windows10.0.19041.0</TargetFrameworks>-->
 

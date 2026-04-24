@@ -629,13 +629,13 @@ namespace DatadogSdk.Maui
 
             if (version != null)
             {
-                merged ??= [];
+                merged ??= new Dictionary<string, object>();
                 merged["_dd.version"] = version;
             }
 
             if (versionSuffix != null)
             {
-                merged ??= [];
+                merged ??= new Dictionary<string, object>();
                 merged["_dd.version_suffix"] = versionSuffix;
             }
 

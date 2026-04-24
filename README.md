@@ -10,6 +10,11 @@
 - **RUM (Real User Monitoring)**: Full RUM tracking API including views, actions, resources, timings, and session management. Configure session sampling, vitals monitoring, native view/interaction tracking, crash reporting, and first-party hosts for distributed tracing.
 - **Error Tracking**: Automatic C# error and crash tracking. When RUM is enabled, unhandled exceptions and unobserved task exceptions are automatically captured and reported to Datadog. You can also manually report errors using `DdRum.AddError()`.
 
+## Requirements
+
+- .NET 9.0 or .NET 10.0
+- iOS 15.0+ / Android API 23+
+
 ## Setup
 
 To integrate the Datadog SDK into your .NET MAUI application, see the setup instructions below.
@@ -422,9 +427,22 @@ Run all test suites (iOS, Android, C#):
 Individual suites:
 
 ```bash
-./check.sh --maui      # C# unit tests (xUnit)
-./check.sh --ios       # Swift tests (XCTest)
-./check.sh --android   # Kotlin tests (JUnit + MockK)
+./check.sh --maui              # C# unit tests (xUnit, .NET 10)
+./check.sh --maui --net9       # C# unit tests against .NET 9
+./check.sh --ios               # Swift tests (XCTest)
+./check.sh --android           # Kotlin tests (JUnit + MockK)
+```
+
+## Example App
+
+Build and run the example app (defaults to .NET 10):
+
+```bash
+cd example
+./build.sh --ios --run          # iOS, .NET 10
+./build.sh --android --run      # Android, .NET 10
+./build.sh --ios --run --net9   # iOS, .NET 9
+./build.sh --android --run --net9  # Android, .NET 9
 ```
 
 ## Contributing

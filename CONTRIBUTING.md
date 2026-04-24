@@ -24,16 +24,16 @@ Thank you for your interest in contributing to the Datadog SDK for .NET MAUI! Th
 **macOS Development Machine** (required for iOS development):
 - macOS 13.0+ (Ventura or later)
 - Xcode 15.0+ with Command Line Tools
-- .NET 10 SDK
+- .NET 9 SDK or .NET 10 SDK
 - Android SDK (for Android development)
 
 **Tools and SDKs**:
 
-1. **.NET 10 SDK**
+1. **.NET 9 or .NET 10 SDK**
    ```bash
    # Download from https://dotnet.microsoft.com/download
    # Verify installation:
-   dotnet --version  # Should show 10.0.x
+   dotnet --version  # Should show 9.0.x or 10.0.x
    ```
 
 2. **Xcode** (for iOS)
@@ -312,11 +312,17 @@ Options:
 
 3. **Build** (with `--no-restore` to avoid redundant restores):
    ```bash
-   # iOS
+   # iOS (.NET 10)
    dotnet build -f net10.0-ios --no-restore
 
-   # Android
+   # Android (.NET 10)
    dotnet build -f net10.0-android --no-restore
+
+   # iOS (.NET 9)
+   dotnet build -f net9.0-ios --no-restore
+
+   # Android (.NET 9)
+   dotnet build -f net9.0-android --no-restore
    ```
 
 4. **Run** (if `--run` flag provided):
@@ -326,6 +332,13 @@ Options:
 
    # Android
    dotnet build -t:Run -f net10.0-android -p:AndroidAttachDebugger=false --no-restore
+   ```
+
+   Or use the `build.sh` script which also supports `--net9`:
+   ```bash
+   ./build.sh --ios --run           # .NET 10 (default)
+   ./build.sh --ios --run --net9    # .NET 9
+   ./build.sh --android --run --net9
    ```
 
 The build script always cleans `obj/` and the NuGet cache to prevent stale restore data from causing build failures after SDK rebuilds.

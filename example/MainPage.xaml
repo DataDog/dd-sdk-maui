@@ -21,7 +21,9 @@
         </HorizontalStackLayout>
     </Shell.TitleView>
 
-    <ScrollView>
+    <Grid RowDefinitions="*, Auto">
+
+    <ScrollView Grid.Row="0">
         <VerticalStackLayout
             Padding="30,0"
             Spacing="25">
@@ -161,5 +163,15 @@
             </Button>
         </VerticalStackLayout>
     </ScrollView>
+
+    <Label
+        x:Name="RuntimeLabel"
+        Grid.Row="1"
+        HorizontalOptions="Center"
+        FontSize="11"
+        TextColor="#888888"
+        Margin="0,4,0,8" />
+
+    </Grid>
 
 </ContentPage>
