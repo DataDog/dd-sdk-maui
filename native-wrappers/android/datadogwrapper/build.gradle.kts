@@ -40,6 +40,7 @@ dependencies {
     implementation("com.datadoghq:dd-sdk-android-trace:3.8.0")
     implementation("com.datadoghq:dd-sdk-android-rum:3.8.0")
     implementation("com.datadoghq:dd-sdk-android-ndk:3.8.0")
+    implementation("com.datadoghq:dd-sdk-android-session-replay:3.8.0")
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
 
     // Test dependencies

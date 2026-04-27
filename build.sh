@@ -167,6 +167,7 @@ ANDROID_DEPS=(
     "DatadogSdk.Android.Logs"
     "DatadogSdk.Android.Trace"
     "DatadogSdk.Android.Rum"
+    "DatadogSdk.Android.SessionReplay"
 )
 
 for BINDING in "${ANDROID_DEPS[@]}"; do
@@ -199,6 +200,7 @@ CORE_BIN="$SCRIPT_DIR/bindings/DatadogSdk.Android.Core/bin/Release/net10.0-andro
 LOGS_BIN="$SCRIPT_DIR/bindings/DatadogSdk.Android.Logs/bin/Release/net10.0-android"
 TRACE_BIN="$SCRIPT_DIR/bindings/DatadogSdk.Android.Trace/bin/Release/net10.0-android"
 RUM_BIN="$SCRIPT_DIR/bindings/DatadogSdk.Android.Rum/bin/Release/net10.0-android"
+SESSION_REPLAY_BIN="$SCRIPT_DIR/bindings/DatadogSdk.Android.SessionReplay/bin/Release/net10.0-android"
 
 log_info "Starting from wrapper consumer-rules.pro..."
 echo "# Auto-generated file - Do not edit" > "$PROGUARD_OUT"
@@ -212,7 +214,8 @@ for aar in \
     "$INTERNAL_BIN/dd-sdk-android-internal-${ANDROID_NATIVE_VERSION}.aar" \
     "$LOGS_BIN/dd-sdk-android-logs-${ANDROID_NATIVE_VERSION}.aar" \
     "$TRACE_BIN/dd-sdk-android-trace-${ANDROID_NATIVE_VERSION}.aar" \
-    "$RUM_BIN/dd-sdk-android-rum-${ANDROID_NATIVE_VERSION}.aar"; do
+    "$RUM_BIN/dd-sdk-android-rum-${ANDROID_NATIVE_VERSION}.aar" \
+    "$SESSION_REPLAY_BIN/dd-sdk-android-session-replay-${ANDROID_NATIVE_VERSION}.aar"; do
 
     if [ -f "$aar" ]; then
         aar_name=$(basename "$aar")

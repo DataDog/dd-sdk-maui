@@ -118,6 +118,9 @@ PACKAGES=(
     "DatadogSdk.iOS.Binding.${SDK_VERSION}.nupkg"
     "DatadogSdk.Android.Core.${SDK_VERSION}.nupkg"
     "DatadogSdk.Android.Logs.${SDK_VERSION}.nupkg"
+    "DatadogSdk.Android.Trace.${SDK_VERSION}.nupkg"
+    "DatadogSdk.Android.Rum.${SDK_VERSION}.nupkg"
+    "DatadogSdk.Android.SessionReplay.${SDK_VERSION}.nupkg"
     "DatadogSdk.Android.Binding.${SDK_VERSION}.nupkg"
     "DatadogSdk.Maui.${SDK_VERSION}.nupkg"
 )

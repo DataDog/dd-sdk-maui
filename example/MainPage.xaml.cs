@@ -50,6 +50,15 @@ public partial class MainPage : ContentPage
 
         DdRum.Enable(rumConfiguration);
 
+        // Enable Session Replay
+        DdSessionReplay.Enable(new SessionReplayConfiguration
+        {
+            ReplaySampleRate = 100.0,
+            TextAndInputPrivacyLevel = TextAndInputPrivacy.MaskSensitiveInputs,
+            ImagePrivacyLevel = ImagePrivacy.MaskNone,
+            TouchPrivacyLevel = TouchPrivacy.Show
+        });
+
         // Set global attributes
         DdSdk.AddAttribute("StringAttribute", "AttributeValue");
         DdSdk.AddAttribute("ArrayAttribute", new string[] { "AttributeValue", "AttributeValue" });

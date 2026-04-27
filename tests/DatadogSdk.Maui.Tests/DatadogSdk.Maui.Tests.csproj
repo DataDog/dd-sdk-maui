@@ -51,6 +51,11 @@
     <Compile Include="../../bindings/DatadogSdk.Maui/Configuration/DdRumResourceEvent.cs" Link="Linked/Configuration/DdRumResourceEvent.cs" />
     <Compile Include="../../bindings/DatadogSdk.Maui/AutoTracking/ResourceKindResolver.cs" Link="Linked/AutoTracking/ResourceKindResolver.cs" />
     <Compile Include="../../bindings/DatadogSdk.Maui/AutoTracking/DdAutoResourceTracker.cs" Link="Linked/AutoTracking/DdAutoResourceTracker.cs" />
+    <Compile Include="../../bindings/DatadogSdk.Maui/DdSessionReplay.cs" Link="Linked/DdSessionReplay.cs" />
+    <Compile Include="../../bindings/DatadogSdk.Maui/Configuration/SessionReplayConfiguration.cs" Link="Linked/Configuration/SessionReplayConfiguration.cs" />
+    <Compile Include="../../bindings/DatadogSdk.Maui/Configuration/TextAndInputPrivacy.cs" Link="Linked/Configuration/TextAndInputPrivacy.cs" />
+    <Compile Include="../../bindings/DatadogSdk.Maui/Configuration/ImagePrivacy.cs" Link="Linked/Configuration/ImagePrivacy.cs" />
+    <Compile Include="../../bindings/DatadogSdk.Maui/Configuration/TouchPrivacy.cs" Link="Linked/Configuration/TouchPrivacy.cs" />
   </ItemGroup>
 
   <!-- Test fixture files -->
