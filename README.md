@@ -7,7 +7,7 @@
 - **Core SDK**: Initialize Datadog with full configuration support, including runtime tracking consent updates, global attributes, user info, and account info.
 - **Logs**: Send logs from your .NET MAUI application to Datadog with support for debug, info, warn, and error levels, plus custom attributes.
 - **Traces**: Manual span tracking with support for nested parent-child relationships, custom context attributes, and configurable endpoints.
-- **RUM (Real User Monitoring)**: Full RUM tracking API including views, actions, resources, timings, and session management. Configure session sampling, vitals monitoring, native view/interaction tracking, crash reporting, and first-party hosts for distributed tracing.
+- **RUM (Real User Monitoring)**: Full RUM tracking API including views, actions, resources, operations, timings, and session management. Configure session sampling, vitals monitoring, native view/interaction tracking, crash reporting, and first-party hosts for distributed tracing.
 - **Error Tracking**: Automatic C# error and crash tracking. When RUM is enabled, unhandled exceptions and unobserved task exceptions are automatically captured and reported to Datadog. You can also manually report errors using `DdRum.AddError()`.
 
 ## Requirements
@@ -309,6 +309,15 @@ DdRum.AddViewLoadingTime(overwrite: false);
 // Manage view attributes
 DdRum.AddViewAttribute("screen_variant", "A");
 DdRum.RemoveViewAttribute("screen_variant");
+
+// Track operations (e.g., checkout flow, file upload)
+DdRum.StartOperation("checkout", operationKey: "op-1",
+    new Dictionary<string, object> { { "step", "payment" } });
+// On success:
+DdRum.SucceedOperation("checkout", operationKey: "op-1");
+// On failure:
+DdRum.FailOperation("checkout", OperationFailure.Error, operationKey: "op-1",
+    new Dictionary<string, object> { { "error_code", 500 } });
 
 // Report errors
 DdRum.AddError("Something went wrong", RumErrorSource.Source, "stacktrace here");

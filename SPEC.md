@@ -1109,6 +1109,15 @@ The following methods are available on `DdRum` for manual RUM event tracking:
 - `AddViewAttributes(Dictionary<string, object> attributes)` — Add multiple view attributes
 - `RemoveViewAttributes(List<string> keys)` — Remove multiple view attributes
 
+**Operations:**
+- `StartOperation(string name, string? operationKey, Dictionary<string, object>? attributes)` — Start tracking an operation
+- `SucceedOperation(string name, string? operationKey, Dictionary<string, object>? attributes)` — Mark an operation as succeeded
+- `FailOperation(string name, OperationFailure reason, string? operationKey, Dictionary<string, object>? attributes)` — Mark an operation as failed
+
+`OperationFailure` enum: `Error`, `Abandoned`, `Other`
+
+The `operationKey` parameter is optional and allows distinguishing multiple concurrent operations with the same name.
+
 **Session:**
 - `StopSession()` — Stop the current RUM session
 

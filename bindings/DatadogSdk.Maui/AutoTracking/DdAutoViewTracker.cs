@@ -137,10 +137,13 @@ namespace DatadogSdk.Maui.AutoTracking
             }
 
             // 2. Shell route (cleaned up — remove leading slashes and query params)
+            //    Skip internal MAUI-generated routes (e.g. "D_FAULT_NavDetailPage6")
+            //    which appear when pages are pushed via Navigation.PushAsync inside a Shell app.
             if (shellRoute != null)
             {
                 var cleaned = shellRoute.TrimStart('/').Split('?')[0];
-                if (!string.IsNullOrEmpty(cleaned)) return cleaned;
+                if (!string.IsNullOrEmpty(cleaned) && !IsInternalRoute(cleaned))
+                    return cleaned;
             }
 
             // 3. Page class name
@@ -149,6 +152,22 @@ namespace DatadogSdk.Maui.AutoTracking
 
             // 4. Fallback
             return "Unknown";
+        }
+
+        /// <summary>
+        /// Detects MAUI-generated internal route segments (e.g. "D_FAULT_", "IMPL_")
+        /// that appear when pages are pushed via Navigation.PushAsync inside a Shell app.
+        /// </summary>
+        private static bool IsInternalRoute(string route)
+        {
+            // Check each segment — routes can be "MainPage/D_FAULT_NavDetailPage6"
+            foreach (var segment in route.Split('/'))
+            {
+                if (segment.StartsWith("D_FAULT_", StringComparison.Ordinal) ||
+                    segment.StartsWith("IMPL_", StringComparison.Ordinal))
+                    return true;
+            }
+            return false;
         }
 
         /// <summary>

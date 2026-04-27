@@ -7,6 +7,8 @@ public partial class MainPage : ContentPage
 {
     private readonly Stack<(int id, string spanId)> _activeSpans = new();
     private int _nextSpanId;
+    private const string OperationName = "checkout";
+    private const string OperationKey = "example-op-1";
 
     public MainPage()
     {
@@ -14,16 +16,11 @@ public partial class MainPage : ContentPage
         RuntimeLabel.Text = $".NET {Environment.Version.ToString(2)} · {DeviceInfo.Platform}";
 
         // Enable Logs
-        var logsConfiguration = new DdLogsConfiguration
-        {
-            //CustomEndpoint = "http://custom.endpoint"
-        };
+        var logsConfiguration = new DdLogsConfiguration { };
         DdLogs.Enable(logsConfiguration);
 
-        var traceConfiguration = new DdTraceConfiguration
-        {
-            //CustomEndpoint = "http://custom.endpoint"
-        };
+        // Enable Trace
+        var traceConfiguration = new DdTraceConfiguration { };
         DdTrace.Enable(traceConfiguration);
 
         // Enable RUM
@@ -37,8 +34,6 @@ public partial class MainPage : ContentPage
             ResourceTraceSampleRate = 100.0,
             TrackFrustrations = true,
             TrackBackgroundEvents = true,
-            NativeViewTracking = false,
-            NativeInteractionTracking = false,
             TrackMemoryWarnings = true,
             NativeLongTaskThresholdMs = 200.0,
             VitalsUpdateFrequency = VitalsUpdateFrequency.Average,
@@ -209,9 +204,35 @@ public partial class MainPage : ContentPage
             ? $"Active spans: {string.Join(", ", _activeSpans.Select(s => $"#{s.id}"))}"
             : "No active spans";
     }
+    private void OnStartOperationClicked(object? sender, EventArgs e)
+    {
+        DdRum.StartOperation(OperationName, OperationKey,
+            new Dictionary<string, object> { { "source", "example_app" } });
+        OperationStatusLabel.Text = $"Operation '{OperationName}' started (key: {OperationKey})";
+    }
+
+    private void OnSucceedOperationClicked(object? sender, EventArgs e)
+    {
+        DdRum.SucceedOperation(OperationName, OperationKey,
+            new Dictionary<string, object> { { "result", "success" } });
+        OperationStatusLabel.Text = $"Operation '{OperationName}' succeeded";
+    }
+
+    private void OnFailOperationClicked(object? sender, EventArgs e)
+    {
+        DdRum.FailOperation(OperationName, OperationFailure.Error, OperationKey,
+            new Dictionary<string, object> { { "error_code", 500 } });
+        OperationStatusLabel.Text = $"Operation '{OperationName}' failed (reason: Error)";
+    }
+
     private async void OnNavigateClicked(object? sender, EventArgs e)
     {
         await Shell.Current.GoToAsync("DetailPage");
+    }
+
+    private async void OnNavNavigateClicked(object? sender, EventArgs e)
+    {
+        await Navigation.PushAsync(new NavDetailPage(), true);
     }
 
     private void OnManagedCrashClicked(object? sender, EventArgs e) =>

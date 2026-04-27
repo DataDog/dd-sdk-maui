@@ -12,6 +12,8 @@ import com.datadog.android.rum.RumConfiguration
 import com.datadog.android.rum.RumResourceKind
 import com.datadog.android.rum.RumResourceMethod
 import com.datadog.android.rum.configuration.VitalsUpdateFrequency
+import com.datadog.android.rum.ExperimentalRumApi
+import com.datadog.android.rum.featureoperations.FailureReason
 import com.datadog.android.rum.tracking.ActivityViewTrackingStrategy
 import io.mockk.every
 import io.mockk.just
@@ -686,5 +688,105 @@ class DdRumTest {
         DdRum.removeViewAttributes(listOf("theme", "locale"))
 
         verify { mockRumMonitor.removeViewAttributes(listOf("theme", "locale")) }
+    }
+
+    // ── Feature Operations ───────────────────────────────
+
+    @OptIn(ExperimentalRumApi::class)
+    @Test
+    fun `startOperation calls GlobalRumMonitor startOperation`() {
+        val mockRumMonitor = mockk<RumMonitor>(relaxed = true)
+        every { GlobalRumMonitor.get() } returns mockRumMonitor
+
+        DdRum.startOperation("checkout", "op-1", mapOf("step" to "payment"))
+
+        verify {
+            mockRumMonitor.startFeatureOperation(
+                name = "checkout",
+                operationKey = "op-1",
+                attributes = match { it["step"] == "payment" }
+            )
+        }
+    }
+
+    @OptIn(ExperimentalRumApi::class)
+    @Test
+    fun `startOperation with null operationKey`() {
+        val mockRumMonitor = mockk<RumMonitor>(relaxed = true)
+        every { GlobalRumMonitor.get() } returns mockRumMonitor
+
+        DdRum.startOperation("checkout", null, emptyMap())
+
+        verify {
+            mockRumMonitor.startFeatureOperation(
+                name = "checkout",
+                operationKey = null,
+                attributes = any()
+            )
+        }
+    }
+
+    @OptIn(ExperimentalRumApi::class)
+    @Test
+    fun `succeedOperation calls GlobalRumMonitor succeedOperation`() {
+        val mockRumMonitor = mockk<RumMonitor>(relaxed = true)
+        every { GlobalRumMonitor.get() } returns mockRumMonitor
+
+        DdRum.succeedOperation("checkout", "op-1", mapOf("result" to "ok"))
+
+        verify {
+            mockRumMonitor.succeedFeatureOperation(
+                name = "checkout",
+                operationKey = "op-1",
+                attributes = match { it["result"] == "ok" }
+            )
+        }
+    }
+
+    @OptIn(ExperimentalRumApi::class)
+    @Test
+    fun `failOperation calls GlobalRumMonitor failOperation`() {
+        val mockRumMonitor = mockk<RumMonitor>(relaxed = true)
+        every { GlobalRumMonitor.get() } returns mockRumMonitor
+
+        DdRum.failOperation("checkout", "op-1", "error", mapOf("error_code" to 500))
+
+        verify {
+            mockRumMonitor.failFeatureOperation(
+                name = "checkout",
+                operationKey = "op-1",
+                failureReason = FailureReason.ERROR,
+                attributes = match { it["error_code"] == 500 }
+            )
+        }
+    }
+
+    @OptIn(ExperimentalRumApi::class)
+    @Test
+    fun `failOperation with null operationKey and abandoned reason`() {
+        val mockRumMonitor = mockk<RumMonitor>(relaxed = true)
+        every { GlobalRumMonitor.get() } returns mockRumMonitor
+
+        DdRum.failOperation("checkout", null, "abandoned", emptyMap())
+
+        verify {
+            mockRumMonitor.failFeatureOperation(
+                name = "checkout",
+                operationKey = null,
+                failureReason = FailureReason.ABANDONED,
+                attributes = any()
+            )
+        }
+    }
+
+    // ── mapFailureReason ─────────────────────────────────
+
+    @Test
+    fun `mapFailureReason maps all values`() {
+        assertEquals(FailureReason.ERROR, DdRum.mapFailureReason("error"))
+        assertEquals(FailureReason.ABANDONED, DdRum.mapFailureReason("abandoned"))
+        assertEquals(FailureReason.OTHER, DdRum.mapFailureReason("other"))
+        // Unknown defaults to ERROR
+        assertEquals(FailureReason.ERROR, DdRum.mapFailureReason("unknown"))
     }
 }

@@ -77,5 +77,18 @@ namespace DatadogSdk.iOS.Binding
         [Static]
         [Export("removeViewAttributes:")]
         void RemoveViewAttributes(NSArray keys);
+
+        // Feature Operations
+        [Static]
+        [Export("startFeatureOperation:operationKey:context:")]
+        void StartFeatureOperation(string name, [NullAllowed] string operationKey, NSDictionary context);
+
+        [Static]
+        [Export("succeedFeatureOperation:operationKey:context:")]
+        void SucceedFeatureOperation(string name, [NullAllowed] string operationKey, NSDictionary context);
+
+        [Static]
+        [Export("failFeatureOperation:operationKey:reason:context:")]
+        void FailFeatureOperation(string name, [NullAllowed] string operationKey, string reason, NSDictionary context);
     }
 }

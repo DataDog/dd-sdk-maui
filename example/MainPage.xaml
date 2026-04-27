@@ -120,13 +120,56 @@
 
             <Button
                 x:Name="NavigateBtn"
-                Text="Navigate to Detail"
+                Text="Navigate to Detail (Shell)"
                 AutomationId="navigate_detail"
-                SemanticProperties.Hint="Navigate to a detail page to test view tracking"
+                SemanticProperties.Hint="Navigate to a detail page via Shell navigation"
                 Clicked="OnNavigateClicked"
                 BackgroundColor="Indigo"
                 TextColor="White"
                 HorizontalOptions="Fill" />
+
+            <Button
+                x:Name="NavNavigateBtn"
+                Text="Navigate to Detail (NavigationPage)"
+                AutomationId="navigate_detail_nav"
+                SemanticProperties.Hint="Navigate to a detail page via NavigationPage PushAsync"
+                Clicked="OnNavNavigateClicked"
+                BackgroundColor="DarkSlateBlue"
+                TextColor="White"
+                HorizontalOptions="Fill" />
+            
+            <Button
+                x:Name="StartOperationBtn"
+                Text="Start Operation"
+                SemanticProperties.Hint="Start an operation"
+                Clicked="OnStartOperationClicked"
+                BackgroundColor="SteelBlue"
+                TextColor="White"
+                HorizontalOptions="Fill" />
+
+            <Button
+                x:Name="SucceedOperationBtn"
+                Text="Succeed Operation"
+                SemanticProperties.Hint="Mark the operation as succeeded"
+                Clicked="OnSucceedOperationClicked"
+                BackgroundColor="Green"
+                TextColor="White"
+                HorizontalOptions="Fill" />
+
+            <Button
+                x:Name="FailOperationBtn"
+                Text="Fail Operation"
+                SemanticProperties.Hint="Mark the operation as failed"
+                Clicked="OnFailOperationClicked"
+                BackgroundColor="Red"
+                TextColor="White"
+                HorizontalOptions="Fill" />
+
+            <Label
+                x:Name="OperationStatusLabel"
+                Text="No active operation"
+                HorizontalOptions="Center"
+                FontSize="14" />
 
             <Button
                 x:Name="ManagedCrashBtn"

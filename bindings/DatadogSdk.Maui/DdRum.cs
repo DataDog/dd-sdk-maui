@@ -42,6 +42,11 @@ namespace DatadogSdk.Maui
             void RemoveViewAttribute(string key);
             void AddViewAttributes(Dictionary<string, object> attributes);
             void RemoveViewAttributes(List<string> keys);
+
+            // Operations
+            void StartOperation(string name, string? operationKey, Dictionary<string, object> attributes);
+            void SucceedOperation(string name, string? operationKey, Dictionary<string, object> attributes);
+            void FailOperation(string name, string? operationKey, string reason, Dictionary<string, object> attributes);
         }
 
         internal static IRumBridge? testBridge;
@@ -462,6 +467,74 @@ namespace DatadogSdk.Maui
             NativeDdRum.RemoveViewAttributes(iosArray);
 #endif
         }
+        // ── Operations ─────────────────────────────────────────
+
+        /// <summary>
+        /// Start tracking an operation.
+        /// </summary>
+        /// <param name="name">The name of the operation.</param>
+        /// <param name="operationKey">Optional key to distinguish multiple concurrent operations with the same name.</param>
+        /// <param name="attributes">Additional attributes. Optional.</param>
+        public static void StartOperation(string name, string? operationKey = null,
+                                           Dictionary<string, object>? attributes = null)
+        {
+            InternalLog.Log($"DdRum.StartOperation: name={name}, operationKey={operationKey}", SdkVerbosity.DEBUG);
+            var ctx = attributes ?? new Dictionary<string, object>();
+
+            if (testBridge is not null) { testBridge.StartOperation(name, operationKey, ctx); return; }
+
+#if ANDROID
+            NativeDdRum.StartOperation(name, operationKey, DdSdk.ToJavaDictionary(ctx));
+#elif IOS
+            NativeDdRum.StartFeatureOperation(name, operationKey, DdSdk.ToNSDictionary(ctx));
+#endif
+        }
+
+        /// <summary>
+        /// Mark an operation as succeeded.
+        /// </summary>
+        /// <param name="name">The name of the operation.</param>
+        /// <param name="operationKey">Optional key to distinguish multiple concurrent operations with the same name.</param>
+        /// <param name="attributes">Additional attributes. Optional.</param>
+        public static void SucceedOperation(string name, string? operationKey = null,
+                                             Dictionary<string, object>? attributes = null)
+        {
+            InternalLog.Log($"DdRum.SucceedOperation: name={name}, operationKey={operationKey}", SdkVerbosity.DEBUG);
+            var ctx = attributes ?? new Dictionary<string, object>();
+
+            if (testBridge is not null) { testBridge.SucceedOperation(name, operationKey, ctx); return; }
+
+#if ANDROID
+            NativeDdRum.SucceedOperation(name, operationKey, DdSdk.ToJavaDictionary(ctx));
+#elif IOS
+            NativeDdRum.SucceedFeatureOperation(name, operationKey, DdSdk.ToNSDictionary(ctx));
+#endif
+        }
+
+        /// <summary>
+        /// Mark an operation as failed.
+        /// </summary>
+        /// <param name="name">The name of the operation.</param>
+        /// <param name="reason">The reason for the failure.</param>
+        /// <param name="operationKey">Optional key to distinguish multiple concurrent operations with the same name.</param>
+        /// <param name="attributes">Additional attributes. Optional.</param>
+        public static void FailOperation(string name, OperationFailure reason,
+                                          string? operationKey = null,
+                                          Dictionary<string, object>? attributes = null)
+        {
+            InternalLog.Log($"DdRum.FailOperation: name={name}, reason={reason}, operationKey={operationKey}", SdkVerbosity.DEBUG);
+            var ctx = attributes ?? new Dictionary<string, object>();
+            var reasonStr = ConvertFailureReason(reason);
+
+            if (testBridge is not null) { testBridge.FailOperation(name, operationKey, reasonStr, ctx); return; }
+
+#if ANDROID
+            NativeDdRum.FailOperation(name, operationKey, reasonStr, DdSdk.ToJavaDictionary(ctx));
+#elif IOS
+            NativeDdRum.FailFeatureOperation(name, operationKey, reasonStr, DdSdk.ToNSDictionary(ctx));
+#endif
+        }
+
         // ── Enum-to-string conversions ─────────────────────
 
         private static string ConvertActionType(RumActionType type) => type switch
@@ -502,6 +575,14 @@ namespace DatadogSdk.Maui
             RumResourceKind.Media => "media",
             RumResourceKind.Js => "js",
             _ => "other"
+        };
+
+        private static string ConvertFailureReason(OperationFailure reason) => reason switch
+        {
+            OperationFailure.Error => "error",
+            OperationFailure.Abandoned => "abandoned",
+            OperationFailure.Other => "other",
+            _ => "error"
         };
 
         private static string ConvertErrorSource(RumErrorSource source) => source switch

@@ -77,6 +77,23 @@ class MockRumModule: RumModuleProtocol {
     var removeViewAttributesCalled = false
     var capturedRemoveViewAttributesKeys: [AttributeKey]?
 
+    // Feature Operations
+    var startFeatureOperationCalled = false
+    var capturedStartFeatureOperationName: String?
+    var capturedStartFeatureOperationKey: String?
+    var capturedStartFeatureOperationAttributes: [AttributeKey: AttributeValue]?
+
+    var succeedFeatureOperationCalled = false
+    var capturedSucceedFeatureOperationName: String?
+    var capturedSucceedFeatureOperationKey: String?
+    var capturedSucceedFeatureOperationAttributes: [AttributeKey: AttributeValue]?
+
+    var failFeatureOperationCalled = false
+    var capturedFailFeatureOperationName: String?
+    var capturedFailFeatureOperationKey: String?
+    var capturedFailFeatureOperationReason: RUMFeatureOperationFailureReason?
+    var capturedFailFeatureOperationAttributes: [AttributeKey: AttributeValue]?
+
     func enable(with configuration: RUM.Configuration) {
         enableCalled = true
         capturedConfig = configuration
@@ -176,6 +193,28 @@ class MockRumModule: RumModuleProtocol {
         capturedRemoveViewAttributesKeys = keys
     }
 
+    func startFeatureOperation(name: String, operationKey: String?, attributes: [AttributeKey: AttributeValue]) {
+        startFeatureOperationCalled = true
+        capturedStartFeatureOperationName = name
+        capturedStartFeatureOperationKey = operationKey
+        capturedStartFeatureOperationAttributes = attributes
+    }
+
+    func succeedFeatureOperation(name: String, operationKey: String?, attributes: [AttributeKey: AttributeValue]) {
+        succeedFeatureOperationCalled = true
+        capturedSucceedFeatureOperationName = name
+        capturedSucceedFeatureOperationKey = operationKey
+        capturedSucceedFeatureOperationAttributes = attributes
+    }
+
+    func failFeatureOperation(name: String, operationKey: String?, reason: RUMFeatureOperationFailureReason, attributes: [AttributeKey: AttributeValue]) {
+        failFeatureOperationCalled = true
+        capturedFailFeatureOperationName = name
+        capturedFailFeatureOperationKey = operationKey
+        capturedFailFeatureOperationReason = reason
+        capturedFailFeatureOperationAttributes = attributes
+    }
+
     func reset() {
         enableCalled = false
         capturedConfig = nil
@@ -228,5 +267,18 @@ class MockRumModule: RumModuleProtocol {
         capturedAddViewAttributesDict = nil
         removeViewAttributesCalled = false
         capturedRemoveViewAttributesKeys = nil
+        startFeatureOperationCalled = false
+        capturedStartFeatureOperationName = nil
+        capturedStartFeatureOperationKey = nil
+        capturedStartFeatureOperationAttributes = nil
+        succeedFeatureOperationCalled = false
+        capturedSucceedFeatureOperationName = nil
+        capturedSucceedFeatureOperationKey = nil
+        capturedSucceedFeatureOperationAttributes = nil
+        failFeatureOperationCalled = false
+        capturedFailFeatureOperationName = nil
+        capturedFailFeatureOperationKey = nil
+        capturedFailFeatureOperationReason = nil
+        capturedFailFeatureOperationAttributes = nil
     }
 }

@@ -37,6 +37,11 @@ protocol RumModuleProtocol {
     func removeViewAttribute(forKey key: AttributeKey)
     func addViewAttributes(_ attributes: [AttributeKey: AttributeValue])
     func removeViewAttributes(forKeys keys: [AttributeKey])
+
+    // Feature Operations
+    func startFeatureOperation(name: String, operationKey: String?, attributes: [AttributeKey: AttributeValue])
+    func succeedFeatureOperation(name: String, operationKey: String?, attributes: [AttributeKey: AttributeValue])
+    func failFeatureOperation(name: String, operationKey: String?, reason: RUMFeatureOperationFailureReason, attributes: [AttributeKey: AttributeValue])
 }
 
 /// Production implementation that wraps the real Datadog RUM module
@@ -103,5 +108,17 @@ class RealRumModule: RumModuleProtocol {
 
     func removeViewAttributes(forKeys keys: [AttributeKey]) {
         RUMMonitor.shared().removeViewAttributes(forKeys: keys)
+    }
+
+    func startFeatureOperation(name: String, operationKey: String?, attributes: [AttributeKey: AttributeValue]) {
+        RUMMonitor.shared().startFeatureOperation(name: name, operationKey: operationKey, attributes: attributes)
+    }
+
+    func succeedFeatureOperation(name: String, operationKey: String?, attributes: [AttributeKey: AttributeValue]) {
+        RUMMonitor.shared().succeedFeatureOperation(name: name, operationKey: operationKey, attributes: attributes)
+    }
+
+    func failFeatureOperation(name: String, operationKey: String?, reason: RUMFeatureOperationFailureReason, attributes: [AttributeKey: AttributeValue]) {
+        RUMMonitor.shared().failFeatureOperation(name: name, operationKey: operationKey, reason: reason, attributes: attributes)
     }
 }
