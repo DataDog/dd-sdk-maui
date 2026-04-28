@@ -10,8 +10,11 @@ namespace DatadogSdk.Maui.AutoTracking
 {
     /// <summary>
     /// Automatically tracks MAUI page navigations as RUM views.
-    /// Hooks into Shell.Navigated and Page.Appearing via Application.DescendantAdded.
-    /// Relies on implicit view stop (new StartView auto-stops previous on the native SDK).
+    /// Subscribes to <see cref="Application.PageAppearing"/> — a single app-level
+    /// event raised by the framework for any page appearing anywhere in the visual
+    /// tree (Shell route changes, Navigation.PushAsync, modals).
+    /// Relies on implicit view stop (a new StartView auto-stops the previous one
+    /// on the native SDK).
     /// </summary>
     internal class DdAutoViewTracker
     {
@@ -19,7 +22,16 @@ namespace DatadogSdk.Maui.AutoTracking
         private readonly Func<Page, bool>? _viewTrackingPredicate;
         private string? _lastViewKey;
         private string? _lastViewName;
-        private bool _isShellApp;
+
+        // Resolved absolute destination route for the in-flight navigation, computed in
+        // Shell.Navigating by combining the (possibly relative) Target.Location with the last
+        // post-navigation location. Cleared on Shell.Navigated. Read by ResolveViewName at
+        // PageAppearing time, since CurrentState.Location lags one step behind PageAppearing.
+        private string? _pendingShellLocation;
+
+        // Last resolved absolute location captured on Shell.Navigated. Used as the base for
+        // resolving relative targets (".." / "DetailPage") against in the next Navigating.
+        private string? _lastResolvedShellLocation;
 
         internal DdAutoViewTracker(
             Func<Page, string?>? viewNamePredicate,
@@ -30,12 +42,13 @@ namespace DatadogSdk.Maui.AutoTracking
         }
 
         /// <summary>
-        /// Start automatic view tracking by hooking into the application's visual tree.
+        /// Start automatic view tracking by hooking into the application's page lifecycle.
         /// </summary>
         internal void Start(Application application)
         {
+            application.PageAppearing += OnPageAppearing;
             application.DescendantAdded += OnDescendantAdded;
-            WalkExistingTree(application);
+            WalkExistingWindows(application);
             InternalLog.Log("DdAutoViewTracker: Started automatic view tracking", SdkVerbosity.DEBUG);
         }
 
@@ -44,6 +57,7 @@ namespace DatadogSdk.Maui.AutoTracking
         /// </summary>
         internal void Stop(Application application)
         {
+            application.PageAppearing -= OnPageAppearing;
             application.DescendantAdded -= OnDescendantAdded;
             InternalLog.Log("DdAutoViewTracker: Stopped automatic view tracking", SdkVerbosity.DEBUG);
         }
@@ -52,56 +66,92 @@ namespace DatadogSdk.Maui.AutoTracking
         {
             switch (e.Element)
             {
-                case Shell shell:
-                    _isShellApp = true;
-                    shell.Navigated += OnShellNavigated;
-                    break;
-                case Page page when !_isShellApp:
-                    // Only track Page.Appearing for non-Shell apps
-                    // In Shell apps, Shell.Navigated handles everything
-                    page.Appearing += OnPageAppearing;
-                    break;
                 case Window window:
                     window.Resumed += OnWindowResumed;
                     window.Stopped += OnWindowStopped;
                     break;
+                case Shell shell:
+                    shell.Navigating += OnShellNavigating;
+                    shell.Navigated += OnShellNavigated;
+                    break;
             }
         }
 
+        // Resolve the (possibly relative) Target against the last known absolute location.
+        // This gives us the destination route at PageAppearing time, before Shell ticks
+        // CurrentState.Location forward.
+        private void OnShellNavigating(object? sender, ShellNavigatingEventArgs e) =>
+            _pendingShellLocation = ResolveTarget(_lastResolvedShellLocation, e.Target?.Location?.ToString());
+
         private void OnShellNavigated(object? sender, ShellNavigatedEventArgs e)
         {
-            var location = e.Current?.Location?.ToString() ?? "unknown";
-            var page = Shell.Current?.CurrentPage;
-
-            // Apply tracking predicate
-            if (page != null && _viewTrackingPredicate != null && !_viewTrackingPredicate(page))
-                return;
-
-            var name = ResolveViewName(page, location);
-            var key = location;
-
-            // Dedup: don't re-start the same view
-            if (key == _lastViewKey) return;
-            _lastViewKey = key;
-            _lastViewName = name;
-
-            InternalLog.Log($"DdAutoViewTracker: Shell navigated to {name} (key={key})", SdkVerbosity.DEBUG);
-            DdRum.StartView(key, name);
+            _pendingShellLocation = null;
+            _lastResolvedShellLocation = e.Current?.Location?.ToString();
         }
 
-        private void OnPageAppearing(object? sender, EventArgs e)
+        /// <summary>
+        /// Resolve a Shell navigation target against a base location.
+        /// Handles absolute paths ("//Foo/Bar"), back navigation (".." / "../Bar"),
+        /// and relative paths ("Bar"). Returns null if the target is empty or
+        /// if a relative target can't be resolved (no base).
+        /// </summary>
+        private static string? ResolveTarget(string? current, string? target)
         {
-            if (sender is not Page page) return;
+            if (string.IsNullOrEmpty(target))
+            {
+                return null;
+            }
 
-            // Apply tracking predicate
+            if (target.StartsWith("//", StringComparison.Ordinal))
+            {
+                return target;
+            }
+
+            if (string.IsNullOrEmpty(current))
+            {
+                return null;
+            }
+
+            // Drop any query string on both the base and the target before splitting into
+            // segments. Without this, a relative target gets appended after the query
+            // (e.g. "Product?id=1" + "Reviews" → ".../Product?id=1/Reviews", truncated by
+            // CleanRoute back to ".../Product"), and back-nav targets with query
+            // parameters (e.g. "..?id=1") don't match the ".." segment check and are
+            // treated as a literal route segment instead.
+            string baseLocation = current.Split('?', 2)[0];
+            string targetPath = target.Split('?', 2)[0];
+            List<string> parts = [.. baseLocation.TrimStart('/').Split('/', StringSplitOptions.RemoveEmptyEntries)];
+            foreach (var segment in targetPath.Split('/', StringSplitOptions.RemoveEmptyEntries))
+            {
+                if (segment == "..")
+                {
+                    if (parts.Count > 0)
+                    {
+                        parts.RemoveAt(parts.Count - 1);
+                    }
+                }
+                else if (segment != ".")
+                {
+                    parts.Add(segment);
+                }
+            }
+
+            return "//" + string.Join('/', parts);
+        }
+
+        private void OnPageAppearing(object? sender, Page page)
+        {
             if (_viewTrackingPredicate != null && !_viewTrackingPredicate(page))
                 return;
 
-            var name = ResolveViewName(page, null);
             var key = page.GetType().FullName ?? page.GetType().Name;
+            var name = ResolveViewName(page);
 
-            // Dedup
-            if (key == _lastViewKey) return;
+            // Dedup: don't re-start the same view back-to-back. Compare on (key, name) so
+            // Shell apps that reuse a Page class across distinct routes (e.g. ProductPage
+            // opened with different ids) still produce separate RUM views — name carries
+            // the resolved Shell route when available.
+            if (key == _lastViewKey && name == _lastViewName) return;
             _lastViewKey = key;
             _lastViewName = name;
 
@@ -131,42 +181,57 @@ namespace DatadogSdk.Maui.AutoTracking
 
         /// <summary>
         /// Resolve a human-readable view name.
-        /// Priority: custom predicate → Shell route → Page class name → "Unknown"
+        /// Priority: custom predicate → Shell route (when applicable) → Page class name.
+        /// Internal MAUI-generated routes (e.g. "D_FAULT_NavDetailPage6", which appear
+        /// when pages are pushed via Navigation.PushAsync inside a Shell app) are skipped
+        /// so we fall back to the cleaner page class name.
         /// </summary>
-        private string ResolveViewName(Page? page, string? shellRoute)
+        private string ResolveViewName(Page page)
         {
-            // 1. Custom predicate
-            if (page != null && _viewNamePredicate != null)
+            if (_viewNamePredicate != null)
             {
                 var custom = _viewNamePredicate(page);
                 if (custom != null) return custom;
             }
 
-            // 2. Shell route (cleaned up — remove leading slashes and query params)
-            //    Skip internal MAUI-generated routes (e.g. "D_FAULT_NavDetailPage6")
-            //    which appear when pages are pushed via Navigation.PushAsync inside a Shell app.
-            if (shellRoute != null)
+            if (Shell.Current?.CurrentPage == page)
             {
-                var cleaned = shellRoute.TrimStart('/').Split('?')[0];
-                if (!string.IsNullOrEmpty(cleaned) && !IsInternalRoute(cleaned))
-                    return cleaned;
+                // _pendingShellLocation is the resolved absolute destination of the in-flight
+                // navigation, computed in OnShellNavigating. We don't fall back to
+                // CurrentState.Location because it always lags PageAppearing by one nav step.
+                string? pendingClean = CleanRoute(_pendingShellLocation);
+                if (pendingClean != null)
+                {
+                    return pendingClean;
+                }
             }
 
-            // 3. Page class name
-            if (page != null)
-                return page.GetType().Name;
-
-            // 4. Fallback
-            return "Unknown";
+            return page.GetType().Name;
         }
 
         /// <summary>
-        /// Detects MAUI-generated internal route segments (e.g. "D_FAULT_", "IMPL_")
-        /// that appear when pages are pushed via Navigation.PushAsync inside a Shell app.
+        /// Strip leading slashes and query strings from a Shell location, and reject
+        /// internal MAUI-generated routes. Returns null if the result isn't a usable
+        /// view name.
         /// </summary>
+        private static string? CleanRoute(string? location)
+        {
+            if (string.IsNullOrEmpty(location))
+            {
+                return null;
+            }
+
+            string cleaned = location.TrimStart('/').Split('?')[0];
+            if (string.IsNullOrEmpty(cleaned) || IsInternalRoute(cleaned))
+            {
+                return null;
+            }
+
+            return cleaned;
+        }
+
         private static bool IsInternalRoute(string route)
         {
-            // Check each segment — routes can be "MainPage/D_FAULT_NavDetailPage6"
             foreach (var segment in route.Split('/'))
             {
                 if (segment.StartsWith("D_FAULT_", StringComparison.Ordinal) ||
@@ -176,10 +241,7 @@ namespace DatadogSdk.Maui.AutoTracking
             return false;
         }
 
-        /// <summary>
-        /// Walk the existing visual tree on init to attach to any Shell/Page/Window already present.
-        /// </summary>
-        private void WalkExistingTree(Application application)
+        private void WalkExistingWindows(Application application)
         {
             foreach (var window in application.Windows)
             {
@@ -188,12 +250,12 @@ namespace DatadogSdk.Maui.AutoTracking
 
                 if (window.Page is Shell shell)
                 {
-                    _isShellApp = true;
+                    shell.Navigating += OnShellNavigating;
                     shell.Navigated += OnShellNavigated;
-                }
-                else if (window.Page is Page page)
-                {
-                    page.Appearing += OnPageAppearing;
+                    // Seed the base for relative-target resolution. The initial Shell.Navigated
+                    // may or may not fire before our first Navigating, so we capture whatever
+                    // the Shell already considers its current route.
+                    _lastResolvedShellLocation ??= shell.CurrentState?.Location?.ToString();
                 }
             }
         }

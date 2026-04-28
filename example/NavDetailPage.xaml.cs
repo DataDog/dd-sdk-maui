@@ -13,7 +13,11 @@ public partial class NavDetailPage : ContentPage
     public NavDetailPage()
     {
         InitializeComponent();
+    }
 
+    protected override void OnNavigatedTo(NavigatedToEventArgs args)
+    {
+        base.OnNavigatedTo(args);
         DdRum.AddViewAttribute("navigation_type", "navigation_page");
     }
 
