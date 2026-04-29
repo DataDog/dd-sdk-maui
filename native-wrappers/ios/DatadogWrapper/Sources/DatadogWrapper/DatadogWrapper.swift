@@ -286,4 +286,10 @@ public class DdSdkNativeWrapper: NSObject {
         datadogCore.clearAccountInfo()
     }
 
+    // MARK: - Flush
+
+    @objc public static func flush() {
+        datadogCore.flush()
+    }
+
 }

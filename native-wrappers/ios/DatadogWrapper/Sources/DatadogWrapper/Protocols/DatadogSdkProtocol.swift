@@ -5,7 +5,7 @@
  */
 
 import Foundation
-import DatadogCore
+@_spi(Internal) import DatadogCore
 import DatadogInternal
 import DatadogRUM
 
@@ -37,6 +37,9 @@ protocol DatadogSdkProtocol {
     func setAccountInfo(id: String, name: String?, extraInfo: [String: Any])
     func addAccountExtraInfo(_ extraInfo: [String: Any])
     func clearAccountInfo()
+
+    /// Force the SDK to upload all buffered data immediately.
+    func flush()
 }
 
 /// Production implementation that wraps the real Datadog SDK
@@ -93,5 +96,9 @@ class RealDatadogSdk: DatadogSdkProtocol {
 
     func clearAccountInfo() {
         Datadog.clearAccountInfo()
+    }
+
+    func flush() {
+        Datadog.flush()
     }
 }

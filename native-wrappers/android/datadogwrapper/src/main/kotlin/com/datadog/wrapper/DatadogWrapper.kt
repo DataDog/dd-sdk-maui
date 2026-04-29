@@ -321,5 +321,20 @@ class DatadogWrapper {
         fun clearAccountInfo() {
             Datadog.clearAccountInfo()
         }
+
+        // -- Flush --
+
+        /**
+         * Force the SDK to upload all buffered data immediately.
+         *
+         * Note: dd-sdk-android exposes flush via the internal proxy. This
+         * also shuts down the upload executors, so the SDK should not be
+         * used after calling flush() in the same process — it is intended
+         * for end-of-test or end-of-process draining.
+         */
+        @JvmStatic
+        fun flush() {
+            Datadog._internalProxy().flushAndShutdownExecutors()
+        }
     }
 }

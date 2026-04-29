@@ -12,7 +12,7 @@
 
   <ItemGroup>
     <!-- dd-sdk-android-core from Maven Central -->
-    <AndroidMavenLibrary Include="com.datadoghq:dd-sdk-android-core" Version="3.8.0" VerifyDependencies="false" />
+    <AndroidMavenLibrary Include="com.datadoghq:dd-sdk-android-core" Version="3.9.0" VerifyDependencies="false" />
 
     <!-- Transitive dependencies - don't bind, just package -->
     <AndroidMavenLibrary Include="com.squareup.okhttp3:okhttp" Version="4.12.0" Bind="false" VerifyDependencies="false" />

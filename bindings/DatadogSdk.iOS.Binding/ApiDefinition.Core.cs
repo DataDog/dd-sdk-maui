@@ -77,5 +77,10 @@ namespace DatadogSdk.iOS.Binding
         [Static]
         [Export("clearAccountInfo")]
         void ClearAccountInfo();
+
+        // Flush
+        [Static]
+        [Export("flush")]
+        void Flush();
     }
 }

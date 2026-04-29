@@ -67,4 +67,11 @@ class MockDatadogCore: DatadogSdkProtocol {
     func clearAccountInfo() {
         clearAccountInfoCallCount += 1
     }
+
+    // Flush
+    var flushCallCount = 0
+
+    func flush() {
+        flushCallCount += 1
+    }
 }

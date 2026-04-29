@@ -12,7 +12,7 @@
 
   <ItemGroup>
     <!-- dd-sdk-android-logs from Maven Central -->
-    <AndroidMavenLibrary Include="com.datadoghq:dd-sdk-android-logs" Version="3.8.0" VerifyDependencies="false" />
+    <AndroidMavenLibrary Include="com.datadoghq:dd-sdk-android-logs" Version="3.9.0" VerifyDependencies="false" />
 
     <!-- Metadata transformations -->
     <TransformFile Include="Transforms\Metadata.xml" />

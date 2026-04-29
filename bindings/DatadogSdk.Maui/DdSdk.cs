@@ -48,6 +48,7 @@ namespace DatadogSdk.Maui
             void SetAccountInfo(string id, string? name, Dictionary<string, object> extraInfo);
             void AddAccountExtraInfo(Dictionary<string, object> extraInfo);
             void ClearAccountInfo();
+            void Flush();
         }
 
         internal static DdSdkConfiguration? Configuration { get; private set; }
@@ -554,6 +555,31 @@ namespace DatadogSdk.Maui
                         : null
                 };
             }
+        }
+
+        /// <summary>
+        /// Force the SDK to upload all buffered data immediately.
+        /// </summary>
+        /// <remarks>
+        /// On Android this also shuts down the SDK's upload executors;
+        /// the SDK should not be used after calling Flush() in the same
+        /// process. Intended for end-of-test or end-of-process draining.
+        /// </remarks>
+        public static void Flush()
+        {
+            InternalLog.Log("DdSdk.Flush", SdkVerbosity.DEBUG);
+
+            if (testBridge is not null)
+            {
+                testBridge.Flush();
+                return;
+            }
+
+#if ANDROID
+            NativeDatadogWrapper.Flush();
+#elif IOS
+            NativeDatadogWrapper.Flush();
+#endif
         }
 
         internal static void ClearUserAndAccountInfoForTesting()
