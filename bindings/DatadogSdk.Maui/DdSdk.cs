@@ -664,7 +664,7 @@ namespace DatadogSdk.Maui
 
             // Report cross-platform source and SDK version
             merged ??= new Dictionary<string, object>();
-            merged["_dd.source"] = "maui";
+            // merged["_dd.source"] = "maui"; // TO DO - Restore once source type is available on intake
             merged["_dd.sdk_version"] = GetSdkVersion();
 
             if (version != null)
