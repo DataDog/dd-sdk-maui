@@ -1,3 +1,9 @@
+/*
+ * Unless explicitly stated otherwise all files in this repository are licensed under the Apache License Version 2.0.
+ * This product includes software developed at Datadog (https://www.datadoghq.com/).
+ * Copyright 2016-Present Datadog, Inc.
+ */
+
 package com.datadog.wrapper
 
 import android.content.Context
@@ -152,8 +158,8 @@ class DatadogWrapper {
             else -> TracingHeaderType.DATADOG
         }
 
-        /// Parses a flat dictionary of host -> comma-separated header types
-        /// into the format expected by the Datadog SDK.
+        // Parses a flat dictionary of host -> comma-separated header types
+        // into the format expected by the Datadog SDK.
         @JvmStatic
         fun parseFirstPartyHosts(hosts: Map<String, Any?>): Map<String, Set<TracingHeaderType>> {
             val result = mutableMapOf<String, Set<TracingHeaderType>>()
@@ -316,4 +322,4 @@ class DatadogWrapper {
             Datadog.clearAccountInfo()
         }
     }
-}
+}

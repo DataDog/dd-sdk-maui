@@ -1,3 +1,9 @@
+/*
+ * Unless explicitly stated otherwise all files in this repository are licensed under the Apache License Version 2.0.
+ * This product includes software developed at Datadog (https://www.datadoghq.com/).
+ * Copyright 2016-Present Datadog, Inc.
+ */
+
 using DatadogSdk.Maui.Configuration;
 using Xunit;
 
@@ -32,10 +38,14 @@ public class DdSdkConversionTests
     // --- BuildAdditionalConfiguration ---
 
     [Fact]
-    public void BuildAdditionalConfiguration_AllNull_ReturnsNull()
+    public void BuildAdditionalConfiguration_AllNull_ReturnsSourceAndSdkVersion()
     {
         Dictionary<string, object>? result = DdSdk.BuildAdditionalConfiguration(null, null, null);
-        Assert.Null(result);
+        Assert.NotNull(result);
+        Assert.Equal("maui", result["_dd.source"]);
+        Assert.True(result.ContainsKey("_dd.sdk_version"));
+        Assert.False(result.ContainsKey("_dd.version"));
+        Assert.False(result.ContainsKey("_dd.version_suffix"));
     }
 
     [Fact]

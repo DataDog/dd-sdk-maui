@@ -1,3 +1,9 @@
+/*
+ * Unless explicitly stated otherwise all files in this repository are licensed under the Apache License Version 2.0.
+ * This product includes software developed at Datadog (https://www.datadoghq.com/).
+ * Copyright 2016-Present Datadog, Inc.
+ */
+
 #if ANDROID
 using NativeDatadogWrapper = DatadogSdk.Android.Binding.DatadogWrapper;
 #elif IOS
@@ -7,6 +13,7 @@ using NativeDatadogWrapper = DatadogSdk.iOS.Binding.DatadogWrapper;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using DatadogSdk.Maui.Configuration;
 
 namespace DatadogSdk.Maui
@@ -613,11 +620,13 @@ namespace DatadogSdk.Maui
             return dict;
         }
 
+        /// <summary>
         /// Merges Version and VersionSuffix into the additionalConfiguration dictionary
         /// as the reserved keys _dd.version and _dd.version_suffix.
         /// Any other internal keys are passed directly
         /// via AdditionalConfiguration and flow through unchanged.
         /// Returns null when all three inputs are null/empty.
+        /// </summary>
         internal static Dictionary<string, object>? BuildAdditionalConfiguration(
             Dictionary<string, object>? additionalConfiguration,
             string? version,
@@ -627,19 +636,29 @@ namespace DatadogSdk.Maui
                 ? new(additionalConfiguration)
                 : null;
 
+            // Report cross-platform source and SDK version
+            merged ??= new Dictionary<string, object>();
+            merged["_dd.source"] = "maui";
+            merged["_dd.sdk_version"] = GetSdkVersion();
+
             if (version != null)
             {
-                merged ??= new Dictionary<string, object>();
                 merged["_dd.version"] = version;
             }
 
             if (versionSuffix != null)
             {
-                merged ??= new Dictionary<string, object>();
                 merged["_dd.version_suffix"] = versionSuffix;
             }
 
             return merged;
+        }
+
+        private static string GetSdkVersion()
+        {
+            return typeof(DdSdk).Assembly
+                .GetCustomAttribute<AssemblyInformationalVersionAttribute>()
+                ?.InformationalVersion ?? "0.0.0";
         }
 
 #if ANDROID
@@ -755,9 +774,11 @@ namespace DatadogSdk.Maui
         }
 #endif
 
+        /// <summary>
         /// Converts a list of FirstPartyHost into a flat dictionary
         /// where keys are host matches and values are comma-separated header type strings.
         /// e.g. { "api.example.com": "datadog,tracecontext", "cdn.example.com": "b3" }
+        /// </summary>
         internal static Dictionary<string, object> BuildFirstPartyHostsDictionary(
             List<FirstPartyHost> hosts)
         {
