@@ -10,6 +10,7 @@
     <!-- Package metadata -->
     <PackageId>DatadogSdk.Maui</PackageId>
     <Version>0.1.0</Version>
+    <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
     <Authors>Your Name</Authors>
     <Company>Your Company</Company>
     <Description>Datadog SDK bindings for .NET MAUI applications. Provides logging, RUM, and APM capabilities for iOS and Android.</Description>
