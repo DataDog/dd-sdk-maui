@@ -12,10 +12,10 @@
 
   <ItemGroup>
     <!-- dd-sdk-android-trace from Maven Central (bound to C#) -->
-    <AndroidMavenLibrary Include="com.datadoghq:dd-sdk-android-trace" Version="3.9.0" VerifyDependencies="false" />
+    <AndroidMavenLibrary Include="com.datadoghq:dd-sdk-android-trace" Version="3.9.1" VerifyDependencies="false" />
     <!-- Runtime transitive dependencies - included for DEX but NOT bound to C# -->
-    <AndroidMavenLibrary Include="com.datadoghq:dd-sdk-android-trace-api" Version="3.9.0" VerifyDependencies="false" Bind="false" />
-    <AndroidMavenLibrary Include="com.datadoghq:dd-sdk-android-trace-internal" Version="3.9.0" VerifyDependencies="false" Bind="false" />
+    <AndroidMavenLibrary Include="com.datadoghq:dd-sdk-android-trace-api" Version="3.9.1" VerifyDependencies="false" Bind="false" />
+    <AndroidMavenLibrary Include="com.datadoghq:dd-sdk-android-trace-internal" Version="3.9.1" VerifyDependencies="false" Bind="false" />
     <AndroidMavenLibrary Include="org.jctools:jctools-core" Version="3.3.0" VerifyDependencies="false" Bind="false" />
     <AndroidMavenLibrary Include="com.google.re2j:re2j" Version="1.7" VerifyDependencies="false" Bind="false" />
 
