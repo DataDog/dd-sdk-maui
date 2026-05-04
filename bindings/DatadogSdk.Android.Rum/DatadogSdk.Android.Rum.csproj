@@ -12,13 +12,13 @@
 
   <ItemGroup>
     <!-- dd-sdk-android-rum from Maven Central -->
-    <AndroidMavenLibrary Include="com.datadoghq:dd-sdk-android-rum" Version="3.8.0" VerifyDependencies="false" />
+    <AndroidMavenLibrary Include="com.datadoghq:dd-sdk-android-rum" Version="3.9.1" VerifyDependencies="false" />
 
     <!-- Runtime transitive dependency required by RUM (slow frames / JankStats) -->
     <AndroidMavenLibrary Include="androidx.metrics:metrics-performance" Version="1.0.0-beta03" VerifyDependencies="false" Bind="false" Repository="Google" />
 
     <!-- NDK crash reporting (called when nativeCrashReportEnabled = true) -->
-    <AndroidMavenLibrary Include="com.datadoghq:dd-sdk-android-ndk" Version="3.8.0" VerifyDependencies="false" Bind="false" />
+    <AndroidMavenLibrary Include="com.datadoghq:dd-sdk-android-ndk" Version="3.9.1" VerifyDependencies="false" Bind="false" />
 
     <!-- Metadata transformations -->
     <TransformFile Include="Transforms\Metadata.xml" />

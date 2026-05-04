@@ -121,4 +121,11 @@ internal class MockNativeSdkBridge : DdSdk.INativeBridge
     {
         ClearAccountInfoCallCount++;
     }
+
+    public int FlushCallCount { get; private set; }
+
+    public void Flush()
+    {
+        FlushCallCount++;
+    }
 }

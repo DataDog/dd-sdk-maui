@@ -12,7 +12,7 @@
 
   <ItemGroup>
     <!-- dd-sdk-android-internal from Maven Central -->
-    <AndroidMavenLibrary Include="com.datadoghq:dd-sdk-android-internal" Version="3.8.0" VerifyDependencies="false" />
+    <AndroidMavenLibrary Include="com.datadoghq:dd-sdk-android-internal" Version="3.9.1" VerifyDependencies="false" />
 
     <!-- Metadata transformations -->
     <TransformFile Include="Transforms\Metadata.xml" />
