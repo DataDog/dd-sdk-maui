@@ -1109,6 +1109,8 @@ The following methods are available on `DdRum` for manual RUM event tracking:
 - `AddViewAttributes(Dictionary<string, object> attributes)` — Add multiple view attributes
 - `RemoveViewAttributes(List<string> keys)` — Remove multiple view attributes
 
+These calls apply to whichever view is active at call time. With automatic view tracking enabled, the recommended call site from page code is `OnNavigatedTo` (after `base.OnNavigatedTo(args)`) — `Application.PageAppearing` fires earlier in the lifecycle and triggers the SDK's `StartView`, so by `OnNavigatedTo` the destination view is the active one and the attribute is attached to it rather than the previous view.
+
 **Operations:**
 - `StartOperation(string name, string? operationKey, Dictionary<string, object>? attributes)` — Start tracking an operation
 - `SucceedOperation(string name, string? operationKey, Dictionary<string, object>? attributes)` — Mark an operation as succeeded
@@ -1133,9 +1135,11 @@ All methods that accept `context` and `timestampMs` use defaults of empty dictio
 The SDK automatically tracks MAUI page navigations and user interactions when enabled (default: on).
 
 **Architecture:**
-- Uses `Application.DescendantAdded` to hook into MAUI's visual tree at runtime
-- View tracking: `Shell.Navigated` for Shell apps, `Page.Appearing` for NavigationPage apps, `Window.Resumed`/`Stopped` for lifecycle
-- Action tracking: per-control event binders for Button, ImageButton, Switch, CheckBox, RadioButton, Picker, Stepper, DatePicker, TapGestureRecognizer, SwipeGestureRecognizer
+- View tracking: subscribes to `Application.PageAppearing` (a single app-level event raised for any page appearing — Shell route changes, `Navigation.PushAsync`, modals) and calls `StartView`. Window-level `Resumed`/`Stopped` events drive view restart/stop on background/foreground transitions and are wired via `Application.DescendantAdded`.
+  - View names are derived from the resolved Shell destination route when the appearing page is `Shell.Current.CurrentPage`. The destination is computed in `Shell.Navigating` by resolving the (possibly relative) `Target.Location` (`..`, `../Other`, `DetailPage`) against the last `Shell.Navigated` location, so the name is correct even though `CurrentState.Location` lags `PageAppearing` by one nav step. Internal MAUI-generated routes (`D_FAULT_*`, `IMPL_*`, used for `PushAsync` inside Shell) are filtered out — those views fall back to the page class name. Non-Shell pages also use the page class name.
+- Action tracking: per-control event binders for Button, ImageButton, Switch, CheckBox, RadioButton, Picker, Stepper, DatePicker, TapGestureRecognizer, SwipeGestureRecognizer. Hooked via `Application.DescendantAdded` / `DescendantRemoved`.
+  - Button and ImageButton fire `AddAction` from `Pressed` (not `Clicked`). Pressed runs before any user-attached `Clicked` handler, so the native call happens before a `Clicked`-driven navigation can shift the active view. Trade-off: an abandoned press (drag-off before release) is recorded as a tap.
+  - Tap and Swipe gestures still fire on completion (`Tapped` / `Swiped`); navigation triggered from those handlers is bucketed under the destination view rather than the source view. Documented limitation.
 - Resource tracking: `DiagnosticListener` subscription to `HttpHandlerDiagnosticListener` intercepts all HttpClient requests. Derives resource kind from Content-Type header. Filters out Datadog intake URLs. Adds `x-datadog-tracked-by: maui` header to prevent iOS native SDK double-tracking.
 - Relies on implicit view stop (new `StartView` auto-stops previous on the native SDK)
 - 10ms debounce on action tracking to prevent duplicate events

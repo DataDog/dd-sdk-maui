@@ -61,10 +61,10 @@ namespace DatadogSdk.Maui.AutoTracking
             switch (element)
             {
                 case Button btn:
-                    btn.Clicked += OnButtonClicked;
+                    btn.Pressed += OnButtonPressed;
                     break;
                 case ImageButton imgBtn:
-                    imgBtn.Clicked += OnImageButtonClicked;
+                    imgBtn.Pressed += OnImageButtonPressed;
                     break;
                 case Switch sw:
                     sw.Toggled += OnSwitchToggled;
@@ -101,10 +101,10 @@ namespace DatadogSdk.Maui.AutoTracking
             switch (element)
             {
                 case Button btn:
-                    btn.Clicked -= OnButtonClicked;
+                    btn.Pressed -= OnButtonPressed;
                     break;
                 case ImageButton imgBtn:
-                    imgBtn.Clicked -= OnImageButtonClicked;
+                    imgBtn.Pressed -= OnImageButtonPressed;
                     break;
                 case Switch sw:
                     sw.Toggled -= OnSwitchToggled;
@@ -130,6 +130,13 @@ namespace DatadogSdk.Maui.AutoTracking
             // removed from the tree, so the handlers will be garbage collected.
         }
 
+        /// <summary>
+        /// Bind to gesture events on a view.
+        /// Tap and Swipe both fire on completion; an action that triggers navigation
+        /// from a Tapped/Swiped handler will be bucketed under the destination view
+        /// rather than the source view. Document this as a known limitation rather
+        /// than mutating the user's GestureRecognizers collection to work around it.
+        /// </summary>
         private void BindGesture(VisualElement owner, IGestureRecognizer gesture)
         {
             switch (gesture)
@@ -144,12 +151,14 @@ namespace DatadogSdk.Maui.AutoTracking
         }
 
         // Control event handlers
-        private void OnButtonClicked(object? s, EventArgs e)
+        // Buttons track on Pressed (not Clicked) so the native AddAction call
+        // happens before any Clicked-handler navigation can shift the active view.
+        private void OnButtonPressed(object? s, EventArgs e)
         {
             if (s is Button b) TrackAction(b, RumActionType.Tap);
         }
 
-        private void OnImageButtonClicked(object? s, EventArgs e)
+        private void OnImageButtonPressed(object? s, EventArgs e)
         {
             if (s is ImageButton b) TrackAction(b, RumActionType.Tap);
         }

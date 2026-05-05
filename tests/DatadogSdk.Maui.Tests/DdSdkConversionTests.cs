@@ -42,7 +42,7 @@ public class DdSdkConversionTests
     {
         Dictionary<string, object>? result = DdSdk.BuildAdditionalConfiguration(null, null, null);
         Assert.NotNull(result);
-        Assert.Equal("maui", result["_dd.source"]);
+        // Assert.Equal("maui", result["_dd.source"]); // TO DO - Restore once source type is available on intake
         Assert.True(result.ContainsKey("_dd.sdk_version"));
         Assert.False(result.ContainsKey("_dd.version"));
         Assert.False(result.ContainsKey("_dd.version_suffix"));

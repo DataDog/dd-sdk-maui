@@ -307,6 +307,16 @@ DdRum.AddTiming("time_to_interactive");
 DdRum.AddViewLoadingTime(overwrite: false);
 
 // Manage view attributes
+// Call AddViewAttribute *after* the view has been started by the SDK. With
+// automatic view tracking enabled, override OnNavigatedTo on your page (not
+// the constructor or OnAppearing) — by then the SDK has already called
+// StartView for the destination, so the attribute lands on the right view.
+//
+// protected override void OnNavigatedTo(NavigatedToEventArgs args)
+// {
+//     base.OnNavigatedTo(args);
+//     DdRum.AddViewAttribute("screen_variant", "A");
+// }
 DdRum.AddViewAttribute("screen_variant", "A");
 DdRum.RemoveViewAttribute("screen_variant");
 
@@ -358,8 +368,8 @@ The mapper receives a `DdRumErrorEvent` with `Message`, `Source`, `Stacktrace`, 
 ### Automatic Tracking
 
 By default, the SDK automatically tracks:
-- **Views**: MAUI page navigations via Shell.Navigated and Page.Appearing
-- **Actions**: User interactions with buttons, switches, checkboxes, pickers, and gesture recognizers
+- **Views**: MAUI page navigations via `Application.PageAppearing` (one app-level event covering Shell route changes, `Navigation.PushAsync`, and modals). For Shell apps, the destination route is resolved at `Shell.Navigating` time and used as the view name (e.g. `MainPage/DetailPage`).
+- **Actions**: User interactions with buttons, switches, checkboxes, pickers, and gesture recognizers. `Button` and `ImageButton` taps fire on `Pressed` (not `Clicked`) so the action is recorded against the source view before any navigation triggered by a `Clicked` handler can shift the active view. A consequence is that an abandoned press (finger dragged off the button before release) is recorded as a tap.
 - **Resources**: HTTP requests via DiagnosticListener (all HttpClient requests, including third-party libraries)
 
 Automatic tracking is enabled by default. To customize or disable:
@@ -402,7 +412,11 @@ DdRum.Enable(new DdRumConfiguration
 });
 ```
 
-**View naming priority:** Custom `ViewNamePredicate` → Shell route URI → Page class name
+**View naming priority:** Custom `ViewNamePredicate` → resolved Shell route (forward navs and back navs both produce absolute paths like `MainPage/DetailPage`) → Page class name. Pages pushed via `Navigation.PushAsync` (which Shell internally assigns synthetic `D_FAULT_…` routes) fall through to the page class name.
+
+**Setting view attributes from page code:** call `DdRum.AddViewAttribute(...)` from `OnNavigatedTo` (not the constructor or `OnAppearing`). The SDK's `StartView` for the destination has already fired by the time `OnNavigatedTo` runs, so the attribute attaches to the new view rather than the previous one.
+
+**Known limitation — gesture-driven navigation:** `TapGestureRecognizer.Tapped` and `SwipeGestureRecognizer.Swiped` only fire on completion. If a tap/swipe handler triggers a navigation, the resulting action is bucketed under the destination view rather than the source. This applies only to `View`s with explicit gesture recognizers; `Button`/`ImageButton` taps are unaffected.
 
 **Action target naming priority:** `AutomationId` → `StyleId` (x:Name) → control type name. Use `ActionEventMapper` to customize names further.
 
