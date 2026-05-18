@@ -21,51 +21,7 @@ public partial class MainPage : ContentPage
         InitializeComponent();
         RuntimeLabel.Text = $".NET {Environment.Version.ToString(2)} · {DeviceInfo.Platform}";
 
-        // Enable Logs
-        var logsConfiguration = new DdLogsConfiguration { };
-        DdLogs.Enable(logsConfiguration);
-
-        // Enable Trace
-        var traceConfiguration = new DdTraceConfiguration { };
-        DdTrace.Enable(traceConfiguration);
-
-        // Enable RUM
-        var config = AppSettings.Load();
-        var applicationId = config["Datadog"]!["ApplicationId"]!.ToString();
-        var rumConfiguration = new DdRumConfiguration
-        {
-            ApplicationId = applicationId,
-            SessionSampleRate = 100.0,
-            TelemetrySampleRate = 100.0,
-            ResourceTraceSampleRate = 100.0,
-            TrackFrustrations = true,
-            TrackBackgroundEvents = true,
-            TrackMemoryWarnings = true,
-            NativeLongTaskThresholdMs = 200.0,
-            VitalsUpdateFrequency = VitalsUpdateFrequency.Average,
-            FirstPartyHosts = new List<FirstPartyHost>
-            {
-                new() { Match = "datadoghq.com", HeaderTypes = new List<TracingHeaderType> { TracingHeaderType.Datadog, TracingHeaderType.TraceContext } }
-            },
-            ErrorEventMapper = e =>
-            {
-                e.Context["processedByErrorMapper"] = true;
-                return e;
-            }
-        };
-
-        DdRum.Enable(rumConfiguration);
-
-        // Enable Session Replay
-        DdSessionReplay.Enable(new SessionReplayConfiguration
-        {
-            ReplaySampleRate = 100.0,
-            TextAndInputPrivacyLevel = TextAndInputPrivacy.MaskSensitiveInputs,
-            ImagePrivacyLevel = ImagePrivacy.MaskNone,
-            TouchPrivacyLevel = TouchPrivacy.Show
-        });
-
-        // Set global attributes
+        // Global attributes
         DdSdk.AddAttribute("StringAttribute", "AttributeValue");
         DdSdk.AddAttribute("ArrayAttribute", new string[] { "AttributeValue", "AttributeValue" });
         DdSdk.AddAttribute("DictionaryAttribute", new Dictionary<string, object>
@@ -73,11 +29,7 @@ public partial class MainPage : ContentPage
             { "string", "test" },
             { "int", 123 },
             { "boolean", true },
-            { "nested", new Dictionary<string, object>
-                {
-                    { "value", "test" }
-                }
-            }
+            { "nested", new Dictionary<string, object> { { "value", "test" } } },
         });
 
         DdSdk.AddAttribute("DeleteAttribute", "DeleteMe");
@@ -86,22 +38,21 @@ public partial class MainPage : ContentPage
         {
             { "BatchAttribute1", "string" },
             { "BatchAttribute2", 123 },
-            { "BatchDeleteMe", false }
+            { "BatchDeleteMe", false },
         });
         DdSdk.RemoveAttributes(new List<string> { "BatchDeleteMe" });
 
-        // Set user info
+        // User info
         DdSdk.SetUserInfo("UserId", "Username", "user@datadog.com",
             new Dictionary<string, object> { { "plan", "premium" } });
-
         DdSdk.AddUserExtraInfo(new Dictionary<string, object> { { "extra", 123 } });
 
-        // Set account info
+        // Account info
         DdSdk.SetAccountInfo("AccountId", "AccountName",
             new Dictionary<string, object> { { "type", "subscription" } });
-
         DdSdk.AddAccountExtraInfo(new Dictionary<string, object> { { "extra", "test" } });
 
+        // View loading time
         DdRum.AddViewLoadingTime(true);
         DdRum.AddTiming("CustomTiming");
     }
