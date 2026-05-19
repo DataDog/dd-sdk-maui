@@ -86,6 +86,63 @@ namespace DatadogSdk.Maui
         /// <param name="configuration">Configuration for the RUM module.</param>
         public static void Enable(DdRumConfiguration configuration)
         {
+            EnableCore(configuration);
+
+            // Best-effort auto-tracker attachment for callers using the static API
+            // (e.g. from a Page constructor). The Hosting extension UseDatadogRum
+            // calls EnableCore + AttachAutoTrackers separately so it can defer the
+            // attachment to a MAUI lifecycle event that fires after Application.Current
+            // is set.
+            if (configuration.AutomaticViewTracking
+                || configuration.AutomaticActionTracking
+                || configuration.AutomaticResourceTracking)
+            {
+                if (Application.Current != null)
+                {
+                    AttachAutoTrackers(Application.Current, configuration);
+                }
+                else
+                {
+                    if (configuration.AutomaticViewTracking)
+                    {
+                        InternalLog.Log(
+                            "DdRum.Enable was called with AutomaticViewTracking=true before Application.Current was set " +
+                            "(typically from MauiProgram.CreateMauiApp). Auto-view tracking will NOT be attached. " +
+                            "Use builder.UseDatadogRum(config) from DatadogSdk.Maui.Hosting, or call DdRum.Enable from a Page constructor.",
+                            SdkVerbosity.WARN);
+                    }
+                    if (configuration.AutomaticActionTracking)
+                    {
+                        InternalLog.Log(
+                            "DdRum.Enable was called with AutomaticActionTracking=true before Application.Current was set " +
+                            "(typically from MauiProgram.CreateMauiApp). Auto-action tracking will NOT be attached. " +
+                            "Use builder.UseDatadogRum(config) from DatadogSdk.Maui.Hosting, or call DdRum.Enable from a Page constructor.",
+                            SdkVerbosity.WARN);
+                    }
+                    if (configuration.AutomaticResourceTracking)
+                    {
+                        InternalLog.Log(
+                            "DdRum.Enable was called with AutomaticResourceTracking=true before Application.Current was set " +
+                            "(typically from MauiProgram.CreateMauiApp). Auto-resource tracking will NOT be attached. " +
+                            "Use builder.UseDatadogRum(config) from DatadogSdk.Maui.Hosting, or call DdRum.Enable from a Page constructor.",
+                            SdkVerbosity.WARN);
+                    }
+                }
+            }
+
+            InternalLog.Log("DdRum.Enable completed", SdkVerbosity.DEBUG);
+        }
+
+        /// <summary>
+        /// Enables RUM in the native SDK and starts the parts of the C# layer
+        /// that do not depend on <see cref="Application.Current"/> being set
+        /// (error tracking, automatic resource tracking). Auto view/action
+        /// tracking is intentionally not attached here — call
+        /// <see cref="AttachAutoTrackers"/> once a MAUI <c>Application</c>
+        /// instance exists.
+        /// </summary>
+        internal static void EnableCore(DdRumConfiguration configuration)
+        {
             InternalLog.Log($"DdRum.Enable called with applicationId: {configuration.ApplicationId}", SdkVerbosity.DEBUG);
 
             // Store the error event mapper for use in AddError
@@ -107,34 +164,44 @@ namespace DatadogSdk.Maui
 
             // Start C# error tracking
             DdRumErrorTracking.StartTracking();
+        }
 
-            // Start automatic view tracking
-            if (configuration.AutomaticViewTracking && Application.Current != null)
+        /// <summary>
+        /// Attaches the MAUI-side automatic trackers — view, action, and
+        /// resource — subject to the corresponding flags in
+        /// <paramref name="configuration"/>. The Hosting extension
+        /// <c>UseDatadogRum</c> calls this from a lifecycle event that fires
+        /// after MAUI has constructed <see cref="Application.Current"/>, so
+        /// the <see cref="DiagnosticListener.AllListeners"/> subscription
+        /// performed by <see cref="DdAutoResourceTracker"/> happens once the
+        /// .NET runtime is fully wired up — subscribing during
+        /// <c>CreateMauiApp</c> can drop subsequent HttpClient diagnostic
+        /// events on iOS.
+        /// </summary>
+        internal static void AttachAutoTrackers(Application application, DdRumConfiguration configuration)
+        {
+            if (configuration.AutomaticViewTracking)
             {
                 viewTracker = new DdAutoViewTracker(
                     configuration.ViewNamePredicate,
                     configuration.ViewTrackingPredicate);
-                viewTracker.Start(Application.Current);
+                viewTracker.Start(application);
                 InternalLog.Log("DdRum: Automatic view tracking enabled", SdkVerbosity.INFO);
             }
 
-            // Start automatic action tracking
-            if (configuration.AutomaticActionTracking && Application.Current != null)
+            if (configuration.AutomaticActionTracking)
             {
                 actionTracker = new DdAutoActionTracker();
-                actionTracker.Start(Application.Current);
+                actionTracker.Start(application);
                 InternalLog.Log("DdRum: Automatic action tracking enabled", SdkVerbosity.INFO);
             }
 
-            // Start automatic resource tracking
             if (configuration.AutomaticResourceTracking)
             {
                 resourceTracker = new DdAutoResourceTracker();
                 resourceTracker.Start();
                 InternalLog.Log("DdRum: Automatic resource tracking enabled", SdkVerbosity.INFO);
             }
-
-            InternalLog.Log("DdRum.Enable completed", SdkVerbosity.DEBUG);
         }
 
         /// <summary>

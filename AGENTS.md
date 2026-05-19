@@ -139,9 +139,11 @@ dd-sdk-maui/
 │       │   ├── UploadFrequency.cs
 │       │   ├── DatadogSite.cs
 │       │   └── SdkVerbosity.cs
+│       ├── Hosting/               # MauiAppBuilder extensions (UseDatadog*)
+│       │   └── DatadogMauiAppBuilderExtensions.cs
 │       ├── DdSdk.cs               # SDK initialization + SetTrackingConsent + BuildAdditionalConfiguration
 │       ├── DdLogs.cs              # Logging API
-│       ├── DdRum.cs               # RUM API
+│       ├── DdRum.cs               # RUM API (Enable, EnableCore, AttachAutoTrackers)
 │       └── InternalLog.cs         # SDK-internal console logging
 │
 ├── tests/                         # C# unit tests

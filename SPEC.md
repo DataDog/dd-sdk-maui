@@ -900,6 +900,24 @@ Android runtime dependencies (OkHttp, Gson, Kotlin stdlib, AndroidX) must be exp
 
 ### Initialization
 
+Two supported patterns, mutually exclusive but otherwise equivalent. See the README's `### Initialization` section for the user-facing description.
+
+**Pattern 1 — Builder extensions** (recommended; lives in `DatadogSdk.Maui.Hosting`):
+
+```csharp
+builder
+    .UseMauiApp<App>()
+    .UseDatadogSdk(new DdSdkConfiguration { /* ... */ })
+    .UseDatadogLogs()
+    .UseDatadogTrace()
+    .UseDatadogRum(new DdRumConfiguration { /* ... */ })
+    .UseDatadogSessionReplay(new SessionReplayConfiguration { /* ... */ });
+```
+
+Implementation: each `Use*` extension calls the corresponding static `Initialize` / `Enable` synchronously. `UseDatadogRum` additionally calls `DdRum.EnableCore(config)` (native enable + error tracking) immediately, then registers a MAUI lifecycle event — `FinishedLaunching` on iOS, `OnApplicationCreating` on Android. When the event fires, the handler resolves `IApplication` from `IPlatformApplication.Services` (the DI container exposed via the native shim) and calls `DdRum.AttachAutoTrackers(application, config)` to wire up the view / action / resource trackers. Lifecycle-event attachment is preferred over forcing `App` construction inside `Build()` because the latter would run user code (`App` / `AppShell` constructors) before the platform shim has populated `MauiApplication.Current.Services` / `MauiUIApplicationDelegate.Current.Services`.
+
+**Pattern 2 — Standalone calls**:
+
 ```csharp
 using DatadogSdk.Maui;
 using DatadogSdk.Maui.Configuration;
@@ -922,7 +940,12 @@ DdSdk.Initialize(new DdSdkConfiguration
         Port = 8080
     }
 });
+
+// Feature `Enable` calls then run from a page constructor (where Application.Current is set)
+// so DdRum.Enable can attach its automatic page/action trackers.
 ```
+
+`DdRum.Enable` composes `EnableCore` + `AttachAutoTrackers(Application.Current, config)`, with a `WARN` fallback if `Application.Current` is null (which surfaces the case where a caller is on Pattern 2 but invoking from a too-early call site).
 
 ### Tracking Consent
 

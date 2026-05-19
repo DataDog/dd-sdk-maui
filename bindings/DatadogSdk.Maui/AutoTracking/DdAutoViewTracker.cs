@@ -257,8 +257,53 @@ namespace DatadogSdk.Maui.AutoTracking
                     // the Shell already considers its current route.
                     _lastResolvedShellLocation ??= shell.CurrentState?.Location?.ToString();
                 }
+
+                // If a page is already on screen at attach time, MAUI has already raised
+                // Application.PageAppearing for it and we missed the event. Emit a
+                // synthetic one so the initial view isn't silently lost — this happens
+                // under the MauiAppBuilder pattern, where UseDatadogRum attaches the
+                // tracker from a lifecycle event that fires a few ms after the first
+                // page becomes visible. OnPageAppearing dedupes on (key, name), so any
+                // race where the real event also fires right after attach produces a
+                // single StartView, not two.
+                var currentPage = ResolveCurrentVisiblePage(window);
+                if (currentPage != null)
+                {
+                    InternalLog.Log(
+                        "DdAutoViewTracker: Tracker attached after first page already visible; emitting synthetic view for current page.",
+                        SdkVerbosity.DEBUG);
+                    OnPageAppearing(application, currentPage);
+                }
             }
         }
+
+        /// <summary>
+        /// Resolve the page that is currently visible to the user in
+        /// <paramref name="window"/>. Prefers the topmost modal — that's what
+        /// MAUI's <see cref="Application.PageAppearing"/> would raise for if a
+        /// modal is showing. Falls back to drilling through container pages
+        /// (<see cref="Shell"/> / <see cref="NavigationPage"/> /
+        /// <see cref="TabbedPage"/> / <see cref="FlyoutPage"/>) so the
+        /// resolved page is the user-visible content page, not the container.
+        /// </summary>
+        internal static Page? ResolveCurrentVisiblePage(Window window)
+        {
+            var modalTop = window.Navigation?.ModalStack?.LastOrDefault();
+            if (modalTop != null)
+            {
+                return DrillIntoContainer(modalTop);
+            }
+            return window.Page is null ? null : DrillIntoContainer(window.Page);
+        }
+
+        internal static Page DrillIntoContainer(Page page) => page switch
+        {
+            Shell shell => shell.CurrentPage ?? page,
+            NavigationPage nav => nav.CurrentPage ?? page,
+            TabbedPage tabbed => tabbed.CurrentPage ?? page,
+            FlyoutPage flyout => DrillIntoContainer(flyout.Detail ?? page),
+            _ => page,
+        };
 
         // For testing / debugging
         internal string? LastViewKey => _lastViewKey;

@@ -29,33 +29,87 @@ Add the NuGet package to your MAUI `.csproj`:
 
 ### Initialization
 
-Initialize the SDK in your `MauiProgram.cs`:
+The SDK supports two initialization patterns. Pick whichever matches your app's hosting style — they are mutually exclusive but otherwise equivalent.
+
+#### Pattern 1 — Builder extensions (recommended for `MauiProgram.CreateMauiApp`)
+
+```csharp
+using DatadogSdk.Maui;
+using DatadogSdk.Maui.Configuration;
+using DatadogSdk.Maui.Hosting;
+
+public static MauiApp CreateMauiApp()
+{
+    var builder = MauiApp.CreateBuilder();
+    builder
+        .UseMauiApp<App>()
+        .UseDatadogSdk(new DdSdkConfiguration
+        {
+            ClientToken = "your-client-token",
+            Environment = "prod",
+            TrackingConsent = TrackingConsent.Granted,
+            Service = "my-maui-app",
+            Site = DatadogSite.Us1,
+            NativeCrashReportEnabled = true,
+        })
+        .UseDatadogLogs()
+        .UseDatadogTrace()
+        .UseDatadogRum(new DdRumConfiguration
+        {
+            ApplicationId = "your-rum-application-id",
+            SessionSampleRate = 100.0,
+            FirstPartyHosts = new List<FirstPartyHost>
+            {
+                new() { Match = "api.example.com", HeaderTypes = new List<TracingHeaderType> { TracingHeaderType.Datadog, TracingHeaderType.TraceContext } }
+            },
+        })
+        .UseDatadogSessionReplay(new SessionReplayConfiguration { ReplaySampleRate = 100.0 });
+
+    return builder.Build();
+}
+```
+
+The `UseDatadog*` extensions live in `DatadogSdk.Maui.Hosting`. Each feature's `Enable` runs synchronously on the chain; for RUM, the automatic page / action / resource trackers attach at the first post-launch lifecycle event (`FinishedLaunching` on iOS, `OnApplicationCreating` on Android) — by that point MAUI has resolved `IApplication` and the trackers can subscribe to the `Application` instance before the first page appears.
+
+#### Pattern 2 — Standalone calls
+
+For apps that already have a custom host pipeline, or that want to enable features lazily, call the static APIs directly:
 
 ```csharp
 using DatadogSdk.Maui;
 using DatadogSdk.Maui.Configuration;
 
-DdSdk.Initialize(new DdSdkConfiguration
+public static MauiApp CreateMauiApp()
 {
-    // Required
-    ClientToken = "your-client-token",
-    Environment = "prod",
-    TrackingConsent = TrackingConsent.Granted,
+    var builder = MauiApp.CreateBuilder();
+    builder.UseMauiApp<App>();
 
-    // Optional
-    Service = "my-maui-app",
-    Site = DatadogSite.Us1,
-    BatchSize = BatchSize.Medium,
-    UploadFrequency = UploadFrequency.Average,
-
-    // Distributed tracing (optional)
-    FirstPartyHosts = new List<FirstPartyHost>
+    DdSdk.Initialize(new DdSdkConfiguration
     {
-        new() { Match = "api.example.com", HeaderTypes = new List<TracingHeaderType> { TracingHeaderType.Datadog, TracingHeaderType.TraceContext } }
-    },
-    NativeCrashReportEnabled = true   // Enable native iOS/Android crash reporting
-});
+        ClientToken = "your-client-token",
+        Environment = "prod",
+        TrackingConsent = TrackingConsent.Granted,
+        // ...
+    });
+
+    return builder.Build();
+}
+
+public partial class MainPage : ContentPage
+{
+    public MainPage()
+    {
+        InitializeComponent();
+
+        DdLogs.Enable();
+        DdTrace.Enable();
+        DdRum.Enable(new DdRumConfiguration { ApplicationId = "your-rum-application-id" });
+        DdSessionReplay.Enable(new SessionReplayConfiguration { ReplaySampleRate = 100.0 });
+    }
+}
 ```
+
+Call `DdRum.Enable` from a page constructor (or any time `Application.Current` is already set) so its automatic page/action trackers can subscribe to MAUI's `Application` events.
 
 #### File-based Configuration
 

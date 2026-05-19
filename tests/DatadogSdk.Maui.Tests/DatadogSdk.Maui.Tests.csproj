@@ -61,5 +61,6 @@
   <!-- Test fixture files -->
   <ItemGroup>
     <Content Include="Fixtures\**\*.json" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="xunit.runner.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>
