@@ -19,6 +19,7 @@
   <ItemGroup>
     <Compile Include="../../bindings/DatadogSdk.Maui/DdSdk.cs" Link="Linked/DdSdk.cs" />
 <Compile Include="../../bindings/DatadogSdk.Maui/InternalLog.cs" Link="Linked/InternalLog.cs" />
+    <Compile Include="../../bindings/DatadogSdk.Maui/InternalTelemetry.cs" Link="Linked/InternalTelemetry.cs" />
     <Compile Include="../../bindings/DatadogSdk.Maui/Configuration/DdSdkConfiguration.cs" Link="Linked/Configuration/DdSdkConfiguration.cs" />
     <Compile Include="../../bindings/DatadogSdk.Maui/Configuration/DdLogsConfiguration.cs" Link="Linked/Configuration/DdLogsConfiguration.cs" />
     <Compile Include="../../bindings/DatadogSdk.Maui/Configuration/DdTraceConfiguration.cs" Link="Linked/Configuration/DdTraceConfiguration.cs" />

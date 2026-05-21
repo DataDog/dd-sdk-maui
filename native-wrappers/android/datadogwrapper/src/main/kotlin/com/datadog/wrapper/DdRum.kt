@@ -11,6 +11,7 @@ import com.datadog.android.Datadog
 import com.datadog.android.rum.GlobalRumMonitor
 import com.datadog.android.rum.Rum
 import com.datadog.android.rum.RumConfiguration
+import com.datadog.android.rum._RumInternalProxy
 import com.datadog.android.rum.RumActionType
 import com.datadog.android.rum.RumAttributes
 import com.datadog.android.rum.RumErrorSource
@@ -19,7 +20,7 @@ import com.datadog.android.rum.RumResourceMethod
 import com.datadog.android.rum.tracking.ActivityViewTrackingStrategy
 import com.datadog.android.rum.configuration.VitalsUpdateFrequency
 import com.datadog.android.rum.ExperimentalRumApi
-import com.datadog.android.rum.featureoperations.FailureReason
+import com.datadog.android.rum.operations.FailureReason
 
 class DdRum {
     companion object {
@@ -126,6 +127,20 @@ class DdRum {
                     builder.setTelemetrySampleRate(it.toFloat())
                 }
 
+                // Configuration telemetry sample rate (extra sampler, applied on top of
+                // telemetrySampleRate, controls the rate of `_dd.configuration` events).
+                // dd-sdk-android exposes no public setter, but the inner sampler reads
+                // its rate from RumConfiguration.additionalConfig at build time. The
+                // tag string is dd-sdk-android-internal (RumFeature.DD_TELEMETRY_CONFIG_SAMPLE_RATE_TAG);
+                // setting it via _RumInternalProxy.setAdditionalConfiguration is the
+                // same path dd-sdk-flutter uses for this override.
+                (configuration["configurationTelemetrySampleRate"] as? Number)?.let {
+                    _RumInternalProxy.setAdditionalConfiguration(
+                        builder,
+                        mapOf("_dd.telemetry.configuration_sample_rate" to it.toFloat())
+                    )
+                }
+
                 // Vitals update frequency
                 (configuration["vitalsUpdateFrequency"] as? String)?.let {
                     builder.setVitalsUpdateFrequency(mapVitalsUpdateFrequency(it))
@@ -177,6 +192,11 @@ class DdRum {
 
                 // Initial resource threshold (stored for resource tracking configuration)
                 initialResourceThreshold = (configuration["initialResourceThreshold"] as? Number)?.toDouble()
+
+                // Install the cross-platform telemetry-configuration mapper so any
+                // fields the C# layer accumulated via DdTelemetry.reportConfiguration
+                // are written into emitted TelemetryConfigurationEvents.
+                DdTelemetry.installConfigurationMapper(builder)
 
                 val rumConfig = builder.build()
                 Rum.enable(rumConfig, Datadog.getInstance())
@@ -372,7 +392,7 @@ class DdRum {
         @OptIn(ExperimentalRumApi::class)
         fun startOperation(name: String, operationKey: String?, context: Map<String, Any?>) {
             try {
-                GlobalRumMonitor.get().startFeatureOperation(
+                GlobalRumMonitor.get().startOperation(
                     name = name,
                     operationKey = operationKey,
                     attributes = context
@@ -386,7 +406,7 @@ class DdRum {
         @OptIn(ExperimentalRumApi::class)
         fun succeedOperation(name: String, operationKey: String?, context: Map<String, Any?>) {
             try {
-                GlobalRumMonitor.get().succeedFeatureOperation(
+                GlobalRumMonitor.get().succeedOperation(
                     name = name,
                     operationKey = operationKey,
                     attributes = context
@@ -400,7 +420,7 @@ class DdRum {
         @OptIn(ExperimentalRumApi::class)
         fun failOperation(name: String, operationKey: String?, reason: String, context: Map<String, Any?>) {
             try {
-                GlobalRumMonitor.get().failFeatureOperation(
+                GlobalRumMonitor.get().failOperation(
                     name = name,
                     operationKey = operationKey,
                     failureReason = mapFailureReason(reason),

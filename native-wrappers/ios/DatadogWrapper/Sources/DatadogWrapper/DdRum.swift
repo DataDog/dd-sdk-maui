@@ -145,6 +145,14 @@ public class DdRum: NSObject {
             rumConfig.telemetrySampleRate = Float(telemetrySampleRate)
         }
 
+        // Configuration telemetry sample rate (extra sampler, applied on top of
+        // telemetrySampleRate, controls the rate of `_dd.configuration` events).
+        // The setter lives on the `_internal` extension of RUM.Configuration — the
+        // same access point dd-sdk-flutter uses for the equivalent override.
+        if let configurationTelemetrySampleRate = config["configurationTelemetrySampleRate"] as? Double {
+            rumConfig._internal_mutation { $0.configurationTelemetrySampleRate = Float(configurationTelemetrySampleRate) }
+        }
+
         // Vitals update frequency
         if let vitalsStr = config["vitalsUpdateFrequency"] as? String {
             rumConfig.vitalsUpdateFrequency = mapVitalsUpdateFrequency(vitalsStr)

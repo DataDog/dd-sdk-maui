@@ -209,8 +209,51 @@ namespace DatadogSdk.Maui
 #endif
             }
 
+            if (sdkInitialized)
+            {
+                ReportInitializationTelemetry(config);
+            }
+
             InternalLog.Log($"DdSdk.Initialize completed: {sdkInitialized}", SdkVerbosity.INFO);
             return sdkInitialized;
+        }
+
+        private static void ReportInitializationTelemetry(DdSdkConfiguration config)
+        {
+            var fields = new Dictionary<string, object>
+            {
+                ["initializationType"] = "manual",
+                ["useProxy"] = config.ProxyConfiguration != null,
+                ["useFirstPartyHosts"] = config.FirstPartyHosts != null && config.FirstPartyHosts.Count > 0,
+                ["trackNativeErrors"] = config.NativeCrashReportEnabled,
+            };
+
+            var mauiVersion = GetMauiVersion();
+            if (mauiVersion != null)
+            {
+                fields["mauiVersion"] = mauiVersion;
+            }
+
+            InternalTelemetry.ReportConfiguration(fields);
+
+            // Visible at INFO verbosity so the caller can confirm the configuration
+            // telemetry call actually fired through the C# -> native bridge. The
+            // native SDK still gates emission on telemetry + configurationTelemetry
+            // samplers (see DdRumConfiguration.ConfigurationTelemetrySampleRate).
+            var summary = string.Join(", ", fields.Select(kvp => $"{kvp.Key}={kvp.Value}"));
+            InternalLog.Log($"DdSdk.ReportInitializationTelemetry sent: {summary}", SdkVerbosity.INFO);
+        }
+
+        private static string? GetMauiVersion()
+        {
+            try
+            {
+                return typeof(Microsoft.Maui.Controls.Application).Assembly.GetName().Version?.ToString();
+            }
+            catch
+            {
+                return null;
+            }
         }
 
         public static void SetTrackingConsent(TrackingConsent consent)
@@ -664,7 +707,7 @@ namespace DatadogSdk.Maui
 
             // Report cross-platform source and SDK version
             merged ??= new Dictionary<string, object>();
-            // merged["_dd.source"] = "maui"; // TO DO - Restore once source type is available on intake
+            merged["_dd.source"] = "maui";
             merged["_dd.sdk_version"] = GetSdkVersion();
 
             if (version != null)

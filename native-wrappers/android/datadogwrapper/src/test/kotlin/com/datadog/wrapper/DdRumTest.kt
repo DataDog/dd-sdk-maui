@@ -15,16 +15,18 @@ import com.datadog.android.rum.RumAttributes
 import com.datadog.android.rum.RumErrorSource
 import com.datadog.android.rum.RumMonitor
 import com.datadog.android.rum.RumConfiguration
+import com.datadog.android.rum._RumInternalProxy
 import com.datadog.android.rum.RumResourceKind
 import com.datadog.android.rum.RumResourceMethod
 import com.datadog.android.rum.configuration.VitalsUpdateFrequency
 import com.datadog.android.rum.ExperimentalRumApi
-import com.datadog.android.rum.featureoperations.FailureReason
+import com.datadog.android.rum.operations.FailureReason
 import com.datadog.android.rum.tracking.ActivityViewTrackingStrategy
 import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
 import io.mockk.mockkConstructor
+import io.mockk.mockkObject
 import io.mockk.mockkStatic
 import io.mockk.runs
 import io.mockk.unmockkAll
@@ -49,7 +51,13 @@ class DdRumTest {
         mockkStatic(Rum::class)
         mockkStatic(Datadog::class)
         mockkStatic(GlobalRumMonitor::class)
+        // _RumInternalProxy methods live on the Kotlin companion object, not as
+        // @JvmStatic on the class — so we have to mock the Companion singleton.
+        mockkObject(_RumInternalProxy.Companion)
         mockkConstructor(RumConfiguration.Builder::class)
+
+        every { _RumInternalProxy.setAdditionalConfiguration(any(), any()) } returns mockRumConfigBuilder
+        every { _RumInternalProxy.setTelemetryConfigurationEventMapper(any(), any()) } returns mockRumConfigBuilder
 
         every { Datadog.getInstance() } returns mockDatadogInstance
         every { anyConstructed<RumConfiguration.Builder>().setSessionSampleRate(any()) } returns mockRumConfigBuilder
@@ -121,6 +129,33 @@ class DdRumTest {
         ))
 
         verify { anyConstructed<RumConfiguration.Builder>().setTelemetrySampleRate(10.0f) }
+    }
+
+    @Test
+    fun `enableRum sets configurationTelemetrySampleRate via _RumInternalProxy`() {
+        // dd-sdk-android exposes no public setter for the inner configuration-telemetry
+        // sampler; the override path is _RumInternalProxy.setAdditionalConfiguration
+        // with the internal tag "_dd.telemetry.configuration_sample_rate".
+        DdRum.enableRum(mapOf(
+            "applicationId" to "app-id",
+            "configurationTelemetrySampleRate" to 100.0
+        ))
+
+        verify {
+            _RumInternalProxy.setAdditionalConfiguration(
+                any(),
+                mapOf("_dd.telemetry.configuration_sample_rate" to 100.0f)
+            )
+        }
+    }
+
+    @Test
+    fun `enableRum omits configurationTelemetrySampleRate override when unset`() {
+        DdRum.enableRum(mapOf("applicationId" to "app-id"))
+
+        verify(exactly = 0) {
+            _RumInternalProxy.setAdditionalConfiguration(any(), any())
+        }
     }
 
     // ── Vitals update frequency ──────────────────────────────
@@ -707,7 +742,7 @@ class DdRumTest {
         DdRum.startOperation("checkout", "op-1", mapOf("step" to "payment"))
 
         verify {
-            mockRumMonitor.startFeatureOperation(
+            mockRumMonitor.startOperation(
                 name = "checkout",
                 operationKey = "op-1",
                 attributes = match { it["step"] == "payment" }
@@ -724,7 +759,7 @@ class DdRumTest {
         DdRum.startOperation("checkout", null, emptyMap())
 
         verify {
-            mockRumMonitor.startFeatureOperation(
+            mockRumMonitor.startOperation(
                 name = "checkout",
                 operationKey = null,
                 attributes = any()
@@ -741,7 +776,7 @@ class DdRumTest {
         DdRum.succeedOperation("checkout", "op-1", mapOf("result" to "ok"))
 
         verify {
-            mockRumMonitor.succeedFeatureOperation(
+            mockRumMonitor.succeedOperation(
                 name = "checkout",
                 operationKey = "op-1",
                 attributes = match { it["result"] == "ok" }
@@ -758,7 +793,7 @@ class DdRumTest {
         DdRum.failOperation("checkout", "op-1", "error", mapOf("error_code" to 500))
 
         verify {
-            mockRumMonitor.failFeatureOperation(
+            mockRumMonitor.failOperation(
                 name = "checkout",
                 operationKey = "op-1",
                 failureReason = FailureReason.ERROR,
@@ -776,7 +811,7 @@ class DdRumTest {
         DdRum.failOperation("checkout", null, "abandoned", emptyMap())
 
         verify {
-            mockRumMonitor.failFeatureOperation(
+            mockRumMonitor.failOperation(
                 name = "checkout",
                 operationKey = null,
                 failureReason = FailureReason.ABANDONED,

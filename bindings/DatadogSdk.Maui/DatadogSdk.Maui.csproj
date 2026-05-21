@@ -11,12 +11,12 @@
     <PackageId>DatadogSdk.Maui</PackageId>
     <Version>0.1.0</Version>
     <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
-    <Authors>Your Name</Authors>
-    <Company>Your Company</Company>
+    <Authors>Datadog</Authors>
+    <Company>Datadog</Company>
     <Description>Datadog SDK bindings for .NET MAUI applications. Provides logging, RUM, and APM capabilities for iOS and Android.</Description>
-    <PackageProjectUrl>https://github.com/yourusername/dd-sdk-maui</PackageProjectUrl>
-    <RepositoryUrl>https://github.com/yourusername/dd-sdk-maui</RepositoryUrl>
-    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageProjectUrl>https://github.com/DataDog/dd-sdk-maui</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/DataDog/dd-sdk-maui</RepositoryUrl>
+    <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
     <PackageTags>datadog;maui;logging;monitoring;rum;apm;ios;android</PackageTags>
   </PropertyGroup>
 
@@ -50,6 +50,7 @@
     <PackageReference Include="GoogleGson" Version="2.13.1.1" />
     <PackageReference Include="Xamarin.AndroidX.Annotation" Version="1.9.1.5" />
     <PackageReference Include="Xamarin.AndroidX.Collection" Version="1.5.0.3" />
+    <PackageReference Include="Xamarin.AndroidX.Collection.Ktx" Version="1.5.0.3" />
     <PackageReference Include="Xamarin.AndroidX.Work.Runtime" Version="2.8.1" />
     <PackageReference Include="Square.OkIO" Version="3.6.0" />
   </ItemGroup>
