@@ -27,8 +27,8 @@
 		<ApplicationId>com.datadog.maui.test</ApplicationId>
 
 		<!-- Versions -->
-		<ApplicationDisplayVersion>1.0</ApplicationDisplayVersion>
-		<ApplicationVersion>1</ApplicationVersion>
+		<ApplicationDisplayVersion>1.0.2</ApplicationDisplayVersion>
+		<ApplicationVersion>2</ApplicationVersion>
 
 		<!-- Datadog symbol upload settings -->
 		<DatadogServiceName>datadog-maui-test</DatadogServiceName>
