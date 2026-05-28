@@ -1,10 +1,14 @@
 version: 2
 updates:
   - package-ecosystem: "nuget"
-    directory: "/"
+    directory: "/bindings/DatadogSdk.Maui"
     schedule:
       interval: "weekly"
-  - package-ecosystem: "github-actions"
-    directory: "/"
+  - package-ecosystem: "nuget"
+    directory: "/example"
+    schedule:
+      interval: "weekly"
+  - package-ecosystem: "nuget"
+    directory: "/tests/DatadogSdk.Maui.Tests"
     schedule:
       interval: "weekly"
