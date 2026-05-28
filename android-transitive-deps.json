@@ -107,6 +107,16 @@
         "DatadogSdk.Maui"
       ]
     },
+    "androidx.collection:collection-ktx": {
+      "maven_version": "1.4.5",
+      "nuget_name": "Xamarin.AndroidX.Collection.Ktx",
+      "nuget_version": "1.5.0.3",
+      "nuget_covers_maven": "1.5.0",
+      "maven_library_csproj": [],
+      "package_ref_csproj": [
+        "DatadogSdk.Maui"
+      ]
+    },
     "androidx.work:work-runtime": {
       "maven_version": "2.8.1",
       "nuget_name": "Xamarin.AndroidX.Work.Runtime",

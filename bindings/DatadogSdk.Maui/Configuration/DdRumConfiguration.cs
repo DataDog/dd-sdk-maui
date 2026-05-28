@@ -33,6 +33,16 @@ namespace DatadogSdk.Maui.Configuration
         public double TelemetrySampleRate { get; set; } = 20.0;
 
         /// <summary>
+        /// Percentage of configuration telemetry events to send, applied on top of
+        /// <see cref="TelemetrySampleRate"/> (0.0 to 100.0). Default: 20.0.
+        /// Honored on iOS (sets <c>RUM.Configuration.configurationTelemetrySampleRate</c>).
+        /// On Android 3.10.0 the native SDK exposes no public setter for this sampler,
+        /// so the value is reported in configuration telemetry but the actual sampler
+        /// stays at the native default (20%).
+        /// </summary>
+        public double ConfigurationTelemetrySampleRate { get; set; } = 20.0;
+
+        /// <summary>
         /// Percentage of traced resources to sample for distributed tracing (0.0 to 100.0). Default: 20.0.
         /// </summary>
         public double ResourceTraceSampleRate { get; set; } = 20.0;
@@ -169,6 +179,7 @@ namespace DatadogSdk.Maui.Configuration
                 ["applicationId"] = ApplicationId,
                 ["sessionSampleRate"] = SessionSampleRate,
                 ["telemetrySampleRate"] = TelemetrySampleRate,
+                ["configurationTelemetrySampleRate"] = ConfigurationTelemetrySampleRate,
                 ["resourceTraceSampleRate"] = ResourceTraceSampleRate,
                 ["trackFrustrations"] = TrackFrustrations,
                 ["trackBackgroundEvents"] = TrackBackgroundEvents,

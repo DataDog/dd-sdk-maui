@@ -164,6 +164,8 @@ namespace DatadogSdk.Maui
 
             // Start C# error tracking
             DdRumErrorTracking.StartTracking();
+
+            ReportEnableTelemetry(configuration);
         }
 
         /// <summary>
@@ -202,6 +204,36 @@ namespace DatadogSdk.Maui
                 resourceTracker.Start();
                 InternalLog.Log("DdRum: Automatic resource tracking enabled", SdkVerbosity.INFO);
             }
+        }
+
+        private static void ReportEnableTelemetry(DdRumConfiguration config)
+        {
+            var fields = new Dictionary<string, object>
+            {
+                ["sessionSampleRate"] = (long)config.SessionSampleRate,
+                ["telemetrySampleRate"] = (long)config.TelemetrySampleRate,
+                ["telemetryConfigurationSampleRate"] = (long)config.ConfigurationTelemetrySampleRate,
+                ["traceSampleRate"] = (long)config.ResourceTraceSampleRate,
+                ["trackFrustrations"] = config.TrackFrustrations,
+                ["trackBackgroundEvents"] = config.TrackBackgroundEvents,
+                ["trackNativeViews"] = config.NativeViewTracking,
+                ["trackUserInteractions"] = config.AutomaticActionTracking,
+                ["trackResources"] = config.AutomaticResourceTracking,
+                ["trackViewsManually"] = !config.AutomaticViewTracking,
+                ["useFirstPartyHosts"] = config.FirstPartyHosts != null && config.FirstPartyHosts.Count > 0,
+            };
+
+            var longTasksEnabled = config.NativeLongTaskThresholdMs > 0;
+            fields["trackLongTask"] = longTasksEnabled;
+            fields["trackNativeLongTasks"] = longTasksEnabled;
+
+            if (config.AppHangThreshold.HasValue)
+            {
+                fields["appHangThreshold"] = (long)(config.AppHangThreshold.Value * 1000);
+            }
+
+            InternalTelemetry.ReportConfiguration(fields);
+            InternalLog.Log($"DdRum.ReportEnableTelemetry sent", SdkVerbosity.INFO);
         }
 
         /// <summary>
@@ -247,6 +279,7 @@ namespace DatadogSdk.Maui
                 catch (Exception ex)
                 {
                     InternalLog.Log($"DdRum.AddError: ErrorEventMapper threw an exception, sending original error. {ex.Message}", SdkVerbosity.ERROR);
+                    InternalTelemetry.Error("DdRum.AddError: ErrorEventMapper threw", ex);
                 }
             }
 
@@ -361,6 +394,7 @@ namespace DatadogSdk.Maui
                 catch (Exception ex)
                 {
                     InternalLog.Log($"DdRum.AddAction: ActionEventMapper threw an exception, sending original action. {ex.Message}", SdkVerbosity.ERROR);
+                    InternalTelemetry.Error("DdRum.AddAction: ActionEventMapper threw", ex);
                 }
             }
 
@@ -427,6 +461,7 @@ namespace DatadogSdk.Maui
                 catch (Exception ex)
                 {
                     InternalLog.Log($"DdRum.StopResource: ResourceEventMapper threw: {ex.Message}", SdkVerbosity.ERROR);
+                    InternalTelemetry.Error("DdRum.StopResource: ResourceEventMapper threw", ex);
                 }
             }
 

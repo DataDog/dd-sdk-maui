@@ -117,14 +117,14 @@ class RealRumModule: RumModuleProtocol {
     }
 
     func startFeatureOperation(name: String, operationKey: String?, attributes: [AttributeKey: AttributeValue]) {
-        RUMMonitor.shared().startFeatureOperation(name: name, operationKey: operationKey, attributes: attributes)
+        RUMMonitor.shared().startOperation(name: name, operationKey: operationKey, attributes: attributes, options: nil)
     }
 
     func succeedFeatureOperation(name: String, operationKey: String?, attributes: [AttributeKey: AttributeValue]) {
-        RUMMonitor.shared().succeedFeatureOperation(name: name, operationKey: operationKey, attributes: attributes)
+        RUMMonitor.shared().succeedOperation(name: name, operationKey: operationKey, attributes: attributes)
     }
 
     func failFeatureOperation(name: String, operationKey: String?, reason: RUMFeatureOperationFailureReason, attributes: [AttributeKey: AttributeValue]) {
-        RUMMonitor.shared().failFeatureOperation(name: name, operationKey: operationKey, reason: reason, attributes: attributes)
+        RUMMonitor.shared().failOperation(name: name, operationKey: operationKey, reason: reason, attributes: attributes)
     }
 }

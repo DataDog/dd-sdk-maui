@@ -1,0 +1,73 @@
+<Project>
+
+  <!--
+    The .NET Android binding tooling re-packs transitive Maven native libraries
+    into the consuming project's output AAR. For projects that don't own these
+    binaries (the wrapper binding and the top-level Maui package), this produces
+    duplicate `jni/**` entries downstream and triggers XA4301 warnings in the
+    consumer APK build. The canonical copy lives in the binding that declares
+    the AndroidMavenLibrary; this target strips the redundant copies from any
+    AAR that imports this file.
+
+    Pattern is intentionally narrow: we only strip the specific file names we
+    know to be transitively bundled. If a new native library starts showing up
+    as XA4301 noise, surface it as a fresh warning so we can decide whether to
+    add it here rather than silently dropping it.
+  -->
+
+  <UsingTask TaskName="StripJniFromAar"
+             TaskFactory="RoslynCodeTaskFactory"
+             AssemblyFile="$(MSBuildToolsPath)\Microsoft.Build.Tasks.Core.dll">
+    <ParameterGroup>
+      <AarPath ParameterType="System.String" Required="true" />
+    </ParameterGroup>
+    <Task>
+      <Using Namespace="System.IO.Compression" />
+      <Using Namespace="System.Collections.Generic" />
+      <Code Type="Fragment" Language="cs">
+<![CDATA[
+// Known transitive native libs to strip. Keep this list narrow: anything not
+// listed here will continue to surface as XA4301 warnings, which is the signal
+// to decide explicitly whether to add it.
+var knownTransitiveLibs = new HashSet<string>(System.StringComparer.Ordinal)
+{
+    "libdatadog-ndk.so",
+};
+
+using (var archive = ZipFile.Open(AarPath, ZipArchiveMode.Update))
+{
+    var toRemove = new List<ZipArchiveEntry>();
+    foreach (var entry in archive.Entries)
+    {
+        if (entry.FullName.StartsWith("jni/", System.StringComparison.Ordinal)
+            && knownTransitiveLibs.Contains(System.IO.Path.GetFileName(entry.FullName)))
+        {
+            toRemove.Add(entry);
+        }
+    }
+    foreach (var entry in toRemove)
+    {
+        Log.LogMessage(MessageImportance.Normal, "Stripping " + entry.FullName + " from " + AarPath);
+        entry.Delete();
+    }
+}
+]]>
+      </Code>
+    </Task>
+  </UsingTask>
+
+  <!--
+    Hooks after `_CreateAar` (the .NET Android target that bundles the AAR from
+    EmbeddedNativeLibrary items). `Build` alone isn't enough — `dotnet pack`
+    can re-run `_CreateAar` after `Build`, re-introducing the JNI entries.
+    Also runs before `_IncludeAarInNuGetPackage` to guarantee the stripped AAR
+    is the one packed into the NuGet.
+  -->
+  <Target Name="StripTransitiveJniFromOutputAar"
+          AfterTargets="_CreateAar"
+          BeforeTargets="_IncludeAarInNuGetPackage"
+          Condition="$(TargetFramework.Contains('-android'))">
+    <StripJniFromAar AarPath="$(_AarOutputPath)" Condition="Exists('$(_AarOutputPath)')" />
+  </Target>
+
+</Project>

@@ -13,6 +13,8 @@
 # Files modified by --ios:
 #   versions.properties
 #   native-wrappers/ios/DatadogWrapper/Package.swift
+#   native-wrappers/ios/DatadogWrapper/Package.resolved
+#     (regenerated via `swift package update dd-sdk-ios`)
 #
 # Files modified by --android:
 #   versions.properties
@@ -22,6 +24,11 @@
 #   bindings/DatadogSdk.Android.Logs/DatadogSdk.Android.Logs.csproj
 #   bindings/DatadogSdk.Android.Trace/DatadogSdk.Android.Trace.csproj
 #   bindings/DatadogSdk.Android.Rum/DatadogSdk.Android.Rum.csproj
+#   bindings/DatadogSdk.Android.SessionReplay/DatadogSdk.Android.SessionReplay.csproj
+# Plus, on --android, `resolve-android-deps.sh` runs and may modify:
+#   android-transitive-deps.json
+#   any csproj listed in package_ref_csproj / maven_library_csproj when a
+#     PackageReference or AndroidMavenLibrary version needs updating
 
 set -e
 
@@ -122,7 +129,7 @@ echo ""
 
 replace_in_file() {
     local file="$1"
-    local regex="$2"
+    local regex="$2"   # e.g.  s|FROM|TO|g  — substitution count must be > 0
     local label="${3:-$file}"
 
     if [ ! -f "$file" ]; then
@@ -130,7 +137,17 @@ replace_in_file() {
         return 1
     fi
 
-    perl -pi -e "$regex" "$file"
+    # Run the substitution in-place and exit non-zero when no matches were
+    # made, so anchor drift (e.g. file already at a newer version than what
+    # versions.properties claims) does not silently pass.
+    if ! perl -i -pe '
+        BEGIN { our $count = 0 }
+        $count += '"$regex"';
+        END { exit($count > 0 ? 0 : 2) }
+    ' "$file"; then
+        log_error "$label — regex matched 0 occurrences (file unchanged)"
+        return 1
+    fi
     log_info "$label"
 }
 
@@ -150,9 +167,25 @@ if [ -n "$NEW_IOS" ]; then
             "versions.properties (IOS_NATIVE_VERSION)"
 
         # Package.swift: .package(url: "...", from: "X.Y.Z")
+        # Match any semver-shaped value so this still works when Package.swift
+        # has drifted from versions.properties (e.g. a previous bump touched
+        # Package.swift but not IOS_NATIVE_VERSION).
         replace_in_file "$SCRIPT_DIR/native-wrappers/ios/DatadogWrapper/Package.swift" \
-            "s|(from: \")${ESC_IOS}(\")|\${1}${NEW_IOS}\${2}|g" \
+            "s|(from: \")[0-9][0-9A-Za-z.\\-]*(\")|\${1}${NEW_IOS}\${2}|g" \
             "native-wrappers/ios/DatadogWrapper/Package.swift"
+
+        # Drive SwiftPM to re-pin dd-sdk-ios in Package.resolved. Without this
+        # the next iOS build keeps using the cached resolution and silently
+        # builds against the previous SDK version.
+        IOS_PKG_DIR="$SCRIPT_DIR/native-wrappers/ios/DatadogWrapper"
+        if command -v swift >/dev/null 2>&1; then
+            log_info "Re-resolving SwiftPM dependencies..."
+            if ! (cd "$IOS_PKG_DIR" && swift package update dd-sdk-ios); then
+                log_warning "swift package update failed — run it manually in $IOS_PKG_DIR before building"
+            fi
+        else
+            log_warning "swift not on PATH — run 'swift package update dd-sdk-ios' in $IOS_PKG_DIR before building"
+        fi
     fi
 fi
 
@@ -171,9 +204,11 @@ if [ -n "$NEW_ANDROID" ]; then
             "s|^ANDROID_NATIVE_VERSION=${ESC_ANDROID}$|ANDROID_NATIVE_VERSION=${NEW_ANDROID}|" \
             "versions.properties (ANDROID_NATIVE_VERSION)"
 
-        # build.gradle.kts
+        # build.gradle.kts — match any semver, not just the recorded old one,
+        # so drift between versions.properties and build.gradle.kts doesn't
+        # cause the bump to silently no-op.
         replace_in_file "$SCRIPT_DIR/native-wrappers/android/datadogwrapper/build.gradle.kts" \
-            "s|(com\.datadoghq:dd-sdk-android-[a-z-]+:)${ESC_ANDROID}|\${1}${NEW_ANDROID}|g" \
+            "s|(com\.datadoghq:dd-sdk-android-[a-z-]+:)[0-9][0-9A-Za-z.\\-]*|\${1}${NEW_ANDROID}|g" \
             "native-wrappers/android/datadogwrapper/build.gradle.kts"
 
         # Android binding csproj files (AndroidMavenLibrary Version=)
@@ -186,7 +221,7 @@ if [ -n "$NEW_ANDROID" ]; then
             "bindings/DatadogSdk.Android.SessionReplay/DatadogSdk.Android.SessionReplay.csproj"; do
 
             replace_in_file "$SCRIPT_DIR/$rel_path" \
-                "s|(Include=\"com\.datadoghq:[^\"]+\"\s+Version=\")${ESC_ANDROID}(\")|\${1}${NEW_ANDROID}\${2}|g" \
+                "s|(Include=\"com\.datadoghq:[^\"]+\"\s+Version=\")[0-9][0-9A-Za-z.\\-]*(\")|\${1}${NEW_ANDROID}\${2}|g" \
                 "$rel_path"
         done
     fi

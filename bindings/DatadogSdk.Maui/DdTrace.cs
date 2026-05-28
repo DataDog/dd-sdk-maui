@@ -29,7 +29,19 @@ namespace DatadogSdk.Maui
             var customEndpoint = configuration?.CustomEndpoint;
 
             NativeDdTrace.EnableTrace(customEndpoint);
+
+            ReportEnableTelemetry();
+
             InternalLog.Log("DdTrace.Enable completed", SdkVerbosity.DEBUG);
+        }
+
+        private static void ReportEnableTelemetry()
+        {
+            InternalTelemetry.ReportConfiguration(new Dictionary<string, object>
+            {
+                ["useTracing"] = true,
+                ["tracerAPI"] = "DatadogTrace",
+            });
         }
 
         /// <summary>

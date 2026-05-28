@@ -14,6 +14,7 @@
     <ObjcBindingApiDefinition Include="ApiDefinition.Trace.cs" />
     <ObjcBindingApiDefinition Include="ApiDefinition.Rum.cs" />
     <ObjcBindingApiDefinition Include="ApiDefinition.SessionReplay.cs" />
+    <ObjcBindingApiDefinition Include="ApiDefinition.Telemetry.cs" />
     <ObjcBindingCoreSource Include="StructsAndEnums.cs" />
   </ItemGroup>
 
