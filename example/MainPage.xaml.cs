@@ -4,8 +4,8 @@
  * Copyright 2026-Present Datadog, Inc.
  */
 
-using DatadogSdk.Maui;
-using DatadogSdk.Maui.Configuration;
+using Datadog.Maui;
+using Datadog.Maui.Configuration;
 
 namespace example;
 

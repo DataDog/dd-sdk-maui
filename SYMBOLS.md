@@ -1,6 +1,6 @@
 # Symbol Upload for Crash Symbolication
 
-The `DatadogSdk.Maui` NuGet package includes an MSBuild target that automatically uploads debug symbols to Datadog after `dotnet publish`. This enables server-side symbolication of native crashes reported by the SDK.
+The `Datadog.Maui` NuGet package includes an MSBuild target that automatically uploads debug symbols to Datadog after `dotnet publish`. This enables server-side symbolication of native crashes reported by the SDK.
 
 ## Prerequisites
 
@@ -118,7 +118,7 @@ The example app's `publish.sh` calls this automatically after uploading app symb
 
 ## How it works
 
-The `DatadogSdk.Maui` NuGet package ships a `.targets` file (`DatadogSdk.Maui.targets`) under `buildTransitive/`. MSBuild automatically imports it into any project that references the package — no manual setup required.
+The `Datadog.Maui` NuGet package ships a `.targets` file (`Datadog.Maui.targets`) under `buildTransitive/`. MSBuild automatically imports it into any project that references the package — no manual setup required.
 
 The targets file defines three MSBuild targets that run after `dotnet publish`:
 

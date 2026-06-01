@@ -2,18 +2,18 @@ version: 2
 updates:
   - package-ecosystem: "nuget"
     directories:
-      - "/bindings/DatadogSdk.Maui"
-      - "/bindings/DatadogSdk.Android.Binding"
-      - "/bindings/DatadogSdk.Android.Core"
-      - "/bindings/DatadogSdk.Android.Internal"
-      - "/bindings/DatadogSdk.Android.Logs"
-      - "/bindings/DatadogSdk.Android.Rum"
-      - "/bindings/DatadogSdk.Android.SessionReplay"
-      - "/bindings/DatadogSdk.Android.Trace"
+      - "/bindings/Datadog.Maui"
+      - "/bindings/Datadog.Android.Binding"
+      - "/bindings/Datadog.Android.Core"
+      - "/bindings/Datadog.Android.Internal"
+      - "/bindings/Datadog.Android.Logs"
+      - "/bindings/Datadog.Android.Rum"
+      - "/bindings/Datadog.Android.SessionReplay"
+      - "/bindings/Datadog.Android.Trace"
       - "/example"
-      - "/tests/DatadogSdk.Maui.Tests"
+      - "/tests/Datadog.Maui.Tests"
     schedule:
       interval: "weekly"
     ignore:
-      - dependency-name: "DatadogSdk.*"
+      - dependency-name: "Datadog.*"
 

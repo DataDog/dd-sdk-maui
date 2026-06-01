@@ -7,11 +7,11 @@
       "nuget_version": "4.12.0",
       "nuget_covers_maven": "4.12.0",
       "maven_library_csproj": [
-        "DatadogSdk.Android.Core"
+        "Datadog.Android.Core"
       ],
       "package_ref_csproj": [
-        "DatadogSdk.Android.Core",
-        "DatadogSdk.Maui"
+        "Datadog.Android.Core",
+        "Datadog.Maui"
       ]
     },
     "com.squareup.okio:okio": {
@@ -20,10 +20,10 @@
       "nuget_version": "3.6.0",
       "nuget_covers_maven": "3.6.0",
       "maven_library_csproj": [
-        "DatadogSdk.Android.Core"
+        "Datadog.Android.Core"
       ],
       "package_ref_csproj": [
-        "DatadogSdk.Maui"
+        "Datadog.Maui"
       ]
     },
     "com.squareup.okio:okio-jvm": {
@@ -31,7 +31,7 @@
       "nuget_name": null,
       "nuget_version": null,
       "maven_library_csproj": [
-        "DatadogSdk.Android.Core"
+        "Datadog.Android.Core"
       ],
       "package_ref_csproj": []
     },
@@ -40,7 +40,7 @@
       "nuget_name": null,
       "nuget_version": null,
       "maven_library_csproj": [
-        "DatadogSdk.Android.Core"
+        "Datadog.Android.Core"
       ],
       "package_ref_csproj": []
     },
@@ -49,7 +49,7 @@
       "nuget_name": null,
       "nuget_version": null,
       "maven_library_csproj": [
-        "DatadogSdk.Android.Core"
+        "Datadog.Android.Core"
       ],
       "package_ref_csproj": []
     },
@@ -60,8 +60,8 @@
       "nuget_covers_maven": "2.13.1",
       "maven_library_csproj": [],
       "package_ref_csproj": [
-        "DatadogSdk.Android.Core",
-        "DatadogSdk.Maui"
+        "Datadog.Android.Core",
+        "Datadog.Maui"
       ]
     },
     "org.jetbrains.kotlin:kotlin-stdlib": {
@@ -71,10 +71,10 @@
       "nuget_covers_maven": "2.2.0",
       "maven_library_csproj": [],
       "package_ref_csproj": [
-        "DatadogSdk.Android.Internal",
-        "DatadogSdk.Android.Core",
-        "DatadogSdk.Android.Binding",
-        "DatadogSdk.Maui"
+        "Datadog.Android.Internal",
+        "Datadog.Android.Core",
+        "Datadog.Android.Binding",
+        "Datadog.Maui"
       ]
     },
     "org.jetbrains.kotlin:kotlin-reflect": {
@@ -84,7 +84,7 @@
       "nuget_covers_maven": "2.2.0",
       "maven_library_csproj": [],
       "package_ref_csproj": [
-        "DatadogSdk.Maui"
+        "Datadog.Maui"
       ]
     },
     "androidx.annotation:annotation": {
@@ -94,7 +94,7 @@
       "nuget_covers_maven": "1.9.1",
       "maven_library_csproj": [],
       "package_ref_csproj": [
-        "DatadogSdk.Maui"
+        "Datadog.Maui"
       ]
     },
     "androidx.collection:collection": {
@@ -104,7 +104,7 @@
       "nuget_covers_maven": "1.5.0",
       "maven_library_csproj": [],
       "package_ref_csproj": [
-        "DatadogSdk.Maui"
+        "Datadog.Maui"
       ]
     },
     "androidx.collection:collection-ktx": {
@@ -114,7 +114,7 @@
       "nuget_covers_maven": "1.5.0",
       "maven_library_csproj": [],
       "package_ref_csproj": [
-        "DatadogSdk.Maui"
+        "Datadog.Maui"
       ]
     },
     "androidx.work:work-runtime": {
@@ -124,7 +124,7 @@
       "nuget_covers_maven": "2.8.1",
       "maven_library_csproj": [],
       "package_ref_csproj": [
-        "DatadogSdk.Maui"
+        "Datadog.Maui"
       ]
     },
     "org.jetbrains.kotlin:kotlin-stdlib-common": {

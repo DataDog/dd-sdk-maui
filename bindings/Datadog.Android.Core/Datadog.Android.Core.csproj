@@ -1,0 +1,39 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFrameworks>net9.0-android;net10.0-android</TargetFrameworks>
+    <SupportedOSPlatformVersion>23</SupportedOSPlatformVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AndroidClassParser>class-parse</AndroidClassParser>
+    <!-- Suppress XA4241/XA4242: Java transitive deps are satisfied via NuGet; verification not needed -->
+    <NoWarn>$(NoWarn);XA4241;XA4242</NoWarn>
+    <Version>0.1.0</Version>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- dd-sdk-android-core from Maven Central -->
+    <AndroidMavenLibrary Include="com.datadoghq:dd-sdk-android-core" Version="3.10.0" VerifyDependencies="false" />
+
+    <!-- Transitive dependencies - don't bind, just package -->
+    <AndroidMavenLibrary Include="com.squareup.okhttp3:okhttp" Version="4.12.0" Bind="false" VerifyDependencies="false" />
+    <AndroidMavenLibrary Include="com.squareup.okio:okio" Version="3.6.0" Bind="false" VerifyDependencies="false" />
+    <AndroidMavenLibrary Include="com.squareup.okio:okio-jvm" Version="3.6.0" Bind="false" VerifyDependencies="false" />
+    <AndroidMavenLibrary Include="com.lyft.kronos:kronos-android" Version="0.0.1-alpha11" Bind="false" VerifyDependencies="false" />
+    <AndroidMavenLibrary Include="com.lyft.kronos:kronos-java" Version="0.0.1-alpha11" Bind="false" VerifyDependencies="false" />
+
+    <!-- Metadata transformations -->
+    <TransformFile Include="Transforms\Metadata.xml" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Reference internal binding project -->
+    <ProjectReference Include="..\Datadog.Android.Internal\Datadog.Android.Internal.csproj" />
+
+    <!-- Required for Kotlin-based libraries -->
+    <PackageReference Include="Xamarin.Kotlin.StdLib" Version="2.2.0.1" />
+
+    <!-- NuGet packages for transitive dependencies -->
+    <PackageReference Include="Square.OkHttp3" Version="4.12.0" />
+    <PackageReference Include="GoogleGson" Version="2.13.1.1" />
+  </ItemGroup>
+</Project>

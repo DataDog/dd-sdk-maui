@@ -36,7 +36,7 @@ This document provides a comprehensive technical specification for the Datadog S
 │         Consumer Application (.NET MAUI)        │
 │              example/example.csproj             │
 │                                                 │
-│  using DatadogSdk.Maui;                         │
+│  using Datadog.Maui;                         │
 │  DdSdk.Initialize(config);                      │
 │  DdLogs.Info("message");                        │
 │  DdRum.Enable(rumConfig);                       │
@@ -44,8 +44,8 @@ This document provides a comprehensive technical specification for the Datadog S
                       │ PackageReference
                       ↓
 ┌─────────────────────────────────────────────────┐
-│     C# Intermediary Layer (DatadogSdk.Maui)     │
-│     bindings/DatadogSdk.Maui/...csproj          │
+│     C# Intermediary Layer (Datadog.Maui)     │
+│     bindings/Datadog.Maui/...csproj          │
 │                                                 │
 │  - Unified cross-platform API (DdSdk, DdLogs,   │
 │    DdTrace, DdRum)                              │
@@ -103,14 +103,14 @@ This document provides a comprehensive technical specification for the Datadog S
    - Handles marshaling between .NET and native types
 
 3. **C# Intermediary Layer**: Unified cross-platform API
-   - Provides `DdSdk`, `DdLogs` classes in the `DatadogSdk.Maui` namespace
+   - Provides `DdSdk`, `DdLogs` classes in the `Datadog.Maui` namespace
    - Consumers use a single API with no `#if` platform directives
    - Internal debug logging via `Console.WriteLine` when verbosity is `Debug`
    - Handles platform differences (e.g. `Dictionary` → `NSDictionary` on iOS)
    - Platform branching (`#if ANDROID` / `#elif IOS`) is contained within this layer
 
 4. **Meta-package**: NuGet distribution
-   - Single NuGet package (`DatadogSdk.Maui`) for consumers
+   - Single NuGet package (`Datadog.Maui`) for consumers
    - Bundles the C# layer + platform-specific binding references
    - Consumer apps only need one package reference
 
@@ -251,7 +251,7 @@ public class DdSdkNativeWrapper: NSObject {
 7. Copy XCFramework to bindings directory:
    ```bash
    cp -R build/DatadogWrapper.xcframework \
-     ../../bindings/DatadogSdk.iOS.Binding/NativeReference/
+     ../../bindings/Datadog.iOS.Binding/NativeReference/
    ```
 
 **Output**: `DatadogWrapper.xcframework` with structure:
@@ -271,14 +271,14 @@ DatadogWrapper.xcframework/
 
 ### iOS C# Binding
 
-**Location**: `bindings/DatadogSdk.iOS.Binding/`
+**Location**: `bindings/Datadog.iOS.Binding/`
 
 **Technology**: Xamarin.iOS binding project
 
 **Key Files**:
 - `ApiDefinition.cs` - Interface definitions for native APIs
 - `StructsAndEnums.cs` - Supporting types
-- `DatadogSdk.iOS.Binding.csproj` - Project file with NativeReference
+- `Datadog.iOS.Binding.csproj` - Project file with NativeReference
 
 **ApiDefinition.cs Structure**:
 ```csharp
@@ -286,7 +286,7 @@ using System;
 using Foundation;
 using ObjCRuntime;
 
-namespace DatadogSdk.iOS.Binding
+namespace Datadog.iOS.Binding
 {
     [BaseType(typeof(NSObject))]
     interface DatadogWrapper
@@ -469,36 +469,36 @@ datadogwrapper-release.aar (ZIP archive)
 **Solution**: Multi-project approach
 
 **Projects** (in dependency order):
-1. **DatadogSdk.Android.Internal** - Binds `dd-sdk-android-internal` AAR
-2. **DatadogSdk.Android.Core** - Binds `dd-sdk-android-core` AAR
-3. **DatadogSdk.Android.Logs** - Binds `dd-sdk-android-logs` AAR
-4. **DatadogSdk.Android.Trace** - Binds `dd-sdk-android-trace` AAR (with `trace-api`, `trace-internal`, `jctools-core`, `re2j` as `Bind="false"` runtime deps)
-5. **DatadogSdk.Android.Rum** - Binds `dd-sdk-android-rum` AAR (with `metrics-performance`, `dd-sdk-android-ndk` as `Bind="false"` runtime deps)
-6. **DatadogSdk.Android.Binding** - Binds `datadogwrapper-release.aar`
+1. **Datadog.Android.Internal** - Binds `dd-sdk-android-internal` AAR
+2. **Datadog.Android.Core** - Binds `dd-sdk-android-core` AAR
+3. **Datadog.Android.Logs** - Binds `dd-sdk-android-logs` AAR
+4. **Datadog.Android.Trace** - Binds `dd-sdk-android-trace` AAR (with `trace-api`, `trace-internal`, `jctools-core`, `re2j` as `Bind="false"` runtime deps)
+5. **Datadog.Android.Rum** - Binds `dd-sdk-android-rum` AAR (with `metrics-performance`, `dd-sdk-android-ndk` as `Bind="false"` runtime deps)
+6. **Datadog.Android.Binding** - Binds `datadogwrapper-release.aar`
 
 **Key Pattern**: Core SDK bindings are **PackageReferences**, not ProjectReferences.
 
-**DatadogSdk.Android.Internal.csproj**:
+**Datadog.Android.Internal.csproj**:
 ```xml
 <ItemGroup>
   <AndroidMavenLibrary Include="com.datadoghq:dd-sdk-android-internal" Version="<ANDROID_NATIVE_VERSION>" />
 </ItemGroup>
 ```
 
-**DatadogSdk.Android.Core.csproj**:
+**Datadog.Android.Core.csproj**:
 ```xml
 <ItemGroup>
-  <PackageReference Include="DatadogSdk.Android.Internal" Version="0.1.0" />
+  <PackageReference Include="Datadog.Android.Internal" Version="0.1.0" />
   <AndroidMavenLibrary Include="com.datadoghq:dd-sdk-android-core" Version="<ANDROID_NATIVE_VERSION>" />
 </ItemGroup>
 ```
 
-**DatadogSdk.Android.Binding.csproj**:
+**Datadog.Android.Binding.csproj**:
 ```xml
 <ItemGroup>
   <!-- Binding references -->
-  <PackageReference Include="DatadogSdk.Android.Logs" Version="<SDK_VERSION>" />
-  <PackageReference Include="DatadogSdk.Android.Trace" Version="<SDK_VERSION>" />
+  <PackageReference Include="Datadog.Android.Logs" Version="<SDK_VERSION>" />
+  <PackageReference Include="Datadog.Android.Trace" Version="<SDK_VERSION>" />
 
   <!-- Wrapper AAR -->
   <AndroidLibrary Include="Jars\datadogwrapper-release.aar" />
@@ -512,7 +512,7 @@ Remove duplicate types from transitive dependencies:
 <metadata>
   <!-- Rename package to .NET convention -->
   <attr path="/api/package[@name='com.datadog.wrapper']"
-        name="managedName">DatadogSdk.Android.Binding</attr>
+        name="managedName">Datadog.Android.Binding</attr>
 
   <!-- Remove dd-sdk-android packages (already bound separately) -->
   <remove-node path="/api/package[starts-with(@name, 'com.datadog.android')]" />
@@ -524,9 +524,9 @@ Remove duplicate types from transitive dependencies:
 
 Android bindings auto-generate C# from Java/Kotlin bytecode.
 
-**Example Output** (`obj/Release/net10.0-android/generated/src/DatadogSdk.Android.Binding.DatadogWrapper.cs`):
+**Example Output** (`obj/Release/net10.0-android/generated/src/Datadog.Android.Binding.DatadogWrapper.cs`):
 ```csharp
-namespace DatadogSdk.Android.Binding {
+namespace Datadog.Android.Binding {
 
     [Register("com/datadog/wrapper/DatadogWrapper", DoNotGenerateAcw=true)]
     public sealed partial class DatadogWrapper : Java.Lang.Object {
@@ -548,16 +548,16 @@ namespace DatadogSdk.Android.Binding {
 }
 ```
 
-## C# Intermediary Layer (DatadogSdk.Maui)
+## C# Intermediary Layer (Datadog.Maui)
 
-**Location**: `bindings/DatadogSdk.Maui/`
+**Location**: `bindings/Datadog.Maui/`
 
 **Purpose**: Unified cross-platform API + NuGet package for .NET MAUI applications
 
 **Key Files**:
 ```
-DatadogSdk.Maui/
-├── DatadogSdk.Maui.csproj      # Multi-target project (iOS + Android)
+Datadog.Maui/
+├── Datadog.Maui.csproj      # Multi-target project (iOS + Android)
 ├── Configuration/              # Configuration namespace
 │   ├── DdSdkConfiguration.cs   # Main configuration class
 │   ├── FileBasedConfiguration.cs # JSON config parser (ParseJsonConfig)
@@ -579,10 +579,10 @@ DatadogSdk.Maui/
 
 ### DdSdkConfiguration
 
-Configuration object passed to `DdSdk.Initialize()`. Located in `DatadogSdk.Maui.Configuration` namespace:
+Configuration object passed to `DdSdk.Initialize()`. Located in `Datadog.Maui.Configuration` namespace:
 
 ```csharp
-namespace DatadogSdk.Maui.Configuration
+namespace Datadog.Maui.Configuration
 {
     public class DdSdkConfiguration
     {
@@ -709,10 +709,10 @@ When `Verbosity` is `DEBUG`, the SDK logs all C# layer calls via `Console.WriteL
 
 ### DdLogsConfiguration
 
-Configuration object for the Logs module. Located in `DatadogSdk.Maui.Configuration` namespace:
+Configuration object for the Logs module. Located in `Datadog.Maui.Configuration` namespace:
 
 ```csharp
-namespace DatadogSdk.Maui.Configuration
+namespace Datadog.Maui.Configuration
 {
     public class DdLogsConfiguration
     {
@@ -747,10 +747,10 @@ public static void LogWithAttributes(string level, string message, Dictionary<st
 
 ### DdTraceConfiguration
 
-Configuration object for the Trace module. Located in `DatadogSdk.Maui.Configuration` namespace:
+Configuration object for the Trace module. Located in `Datadog.Maui.Configuration` namespace:
 
 ```csharp
-namespace DatadogSdk.Maui.Configuration
+namespace Datadog.Maui.Configuration
 {
     public class DdTraceConfiguration
     {
@@ -785,19 +785,19 @@ Type marshaling: on Android, `context` passes as `Map<String, String>` directly;
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFrameworks>net10.0-ios;net10.0-android</TargetFrameworks>
-    <RootNamespace>DatadogSdk.Maui</RootNamespace>
-    <PackageId>DatadogSdk.Maui</PackageId>
+    <RootNamespace>Datadog.Maui</RootNamespace>
+    <PackageId>Datadog.Maui</PackageId>
     <Version>0.0.1</Version>
   </PropertyGroup>
 
   <!-- iOS binding -->
   <ItemGroup Condition="$(TargetFramework.Contains('-ios'))">
-    <PackageReference Include="DatadogSdk.iOS.Binding" Version="<SDK_VERSION>" />
+    <PackageReference Include="Datadog.iOS.Binding" Version="<SDK_VERSION>" />
   </ItemGroup>
 
   <!-- Android binding + runtime dependencies -->
   <ItemGroup Condition="$(TargetFramework.Contains('-android'))">
-    <PackageReference Include="DatadogSdk.Android.Binding" Version="<SDK_VERSION>" />
+    <PackageReference Include="Datadog.Android.Binding" Version="<SDK_VERSION>" />
     <!-- Kotlin, OkHttp, Gson, AndroidX dependencies -->
   </ItemGroup>
 </Project>
@@ -807,7 +807,7 @@ Type marshaling: on Android, `context` passes as `Map<String, String>` directly;
 ```xml
 <!-- Consumer app only needs one package -->
 <ItemGroup>
-  <PackageReference Include="DatadogSdk.Maui" Version="<SDK_VERSION>" />
+  <PackageReference Include="Datadog.Maui" Version="<SDK_VERSION>" />
 </ItemGroup>
 ```
 
@@ -829,14 +829,14 @@ Type marshaling: on Android, `context` passes as `Map<String, String>` directly;
    └─> dotnet build + pack → NuGet (.nupkg)
 
 4. Android C# Bindings (sequential)
-   ├─> DatadogSdk.Android.Internal → NuGet
-   ├─> DatadogSdk.Android.Core → NuGet
-   ├─> DatadogSdk.Android.Logs → NuGet
-   ├─> DatadogSdk.Android.Trace → NuGet
-   └─> DatadogSdk.Android.Binding → NuGet
+   ├─> Datadog.Android.Internal → NuGet
+   ├─> Datadog.Android.Core → NuGet
+   ├─> Datadog.Android.Logs → NuGet
+   ├─> Datadog.Android.Trace → NuGet
+   └─> Datadog.Android.Binding → NuGet
 
 5. Meta-package
-   └─> DatadogSdk.Maui → NuGet
+   └─> Datadog.Maui → NuGet
 ```
 
 **Output**: All NuGet packages in `./local-packages/`
@@ -852,7 +852,7 @@ Type marshaling: on Android, `context` passes as `Map<String, String>` directly;
 
 **Internal Steps** (always runs):
 1. Clean `bin/` and `obj/` directories
-2. Clear NuGet global cache for `DatadogSdk.*` packages
+2. Clear NuGet global cache for `Datadog.*` packages
 3. `dotnet restore`
 4. `dotnet build -f net10.0-{platform} --no-restore`
 5. If `--run`: `dotnet build -t:Run -f net10.0-{platform} --no-restore`
@@ -902,12 +902,12 @@ Android runtime dependencies (OkHttp, Gson, Kotlin stdlib, AndroidX) must be exp
 
 Two supported patterns, mutually exclusive but otherwise equivalent. See the README's `### Initialization` section for the user-facing description.
 
-**Pattern 1 — Builder extensions** (recommended; lives in `DatadogSdk.Maui.Hosting`):
+**Pattern 1 — Builder extensions** (recommended; lives in `Datadog.Maui.Hosting`):
 
 ```csharp
 builder
     .UseMauiApp<App>()
-    .UseDatadogSdk(new DdSdkConfiguration { /* ... */ })
+    .UseDatadog(new DdSdkConfiguration { /* ... */ })
     .UseDatadogLogs()
     .UseDatadogTrace()
     .UseDatadogRum(new DdRumConfiguration { /* ... */ })
@@ -919,8 +919,8 @@ Implementation: each `Use*` extension calls the corresponding static `Initialize
 **Pattern 2 — Standalone calls**:
 
 ```csharp
-using DatadogSdk.Maui;
-using DatadogSdk.Maui.Configuration;
+using Datadog.Maui;
+using Datadog.Maui.Configuration;
 
 // In MauiProgram.cs — works on both iOS and Android
 DdSdk.Initialize(new DdSdkConfiguration
@@ -1001,8 +1001,8 @@ Account information is attached to all events sent by the SDK. Stored locally an
 ### Logging
 
 ```csharp
-using DatadogSdk.Maui;
-using DatadogSdk.Maui.Configuration;
+using Datadog.Maui;
+using Datadog.Maui.Configuration;
 
 // Enable logs module with default configuration
 DdLogs.Enable();
@@ -1030,8 +1030,8 @@ DdLogs.LogWithAttributes("info", "Order placed", new Dictionary<string, string>
 ### Tracing
 
 ```csharp
-using DatadogSdk.Maui;
-using DatadogSdk.Maui.Configuration;
+using Datadog.Maui;
+using Datadog.Maui.Configuration;
 
 // Enable trace module
 DdTrace.Enable(new DdTraceConfiguration
@@ -1068,8 +1068,8 @@ When `SdkVerbosity.DEBUG` is set, all calls are logged to the console and the na
 ### RUM
 
 ```csharp
-using DatadogSdk.Maui;
-using DatadogSdk.Maui.Configuration;
+using Datadog.Maui;
+using Datadog.Maui.Configuration;
 
 // Enable RUM module
 DdRum.Enable(new DdRumConfiguration

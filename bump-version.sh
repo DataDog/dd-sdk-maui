@@ -16,10 +16,10 @@
 #
 # Files modified:
 #   versions.properties
-#   bindings/DatadogSdk.*/DatadogSdk.*.csproj   — <Version> tag
-#   bindings/DatadogSdk.Android.Binding/*.csproj — PackageReference to DatadogSdk.Android.Logs
-#   bindings/DatadogSdk.Maui/*.csproj            — PackageReferences to iOS/Android bindings
-#   example/example.csproj                       — PackageReference to DatadogSdk.Maui
+#   bindings/Datadog.*/Datadog.*.csproj   — <Version> tag
+#   bindings/Datadog.Android.Binding/*.csproj — PackageReference to Datadog.Android.Logs
+#   bindings/Datadog.Maui/*.csproj            — PackageReferences to iOS/Android bindings
+#   example/example.csproj                       — PackageReference to Datadog.Maui
 
 set -e
 
@@ -144,15 +144,15 @@ replace_in_file "$VERSIONS_FILE" \
 log_section "Binding .csproj <Version> tags"
 
 BINDING_CSPROJ_FILES=(
-    "bindings/DatadogSdk.iOS.Binding/DatadogSdk.iOS.Binding.csproj"
-    "bindings/DatadogSdk.Android.Internal/DatadogSdk.Android.Internal.csproj"
-    "bindings/DatadogSdk.Android.Core/DatadogSdk.Android.Core.csproj"
-    "bindings/DatadogSdk.Android.Logs/DatadogSdk.Android.Logs.csproj"
-    "bindings/DatadogSdk.Android.Trace/DatadogSdk.Android.Trace.csproj"
-    "bindings/DatadogSdk.Android.Rum/DatadogSdk.Android.Rum.csproj"
-    "bindings/DatadogSdk.Android.SessionReplay/DatadogSdk.Android.SessionReplay.csproj"
-    "bindings/DatadogSdk.Android.Binding/DatadogSdk.Android.Binding.csproj"
-    "bindings/DatadogSdk.Maui/DatadogSdk.Maui.csproj"
+    "bindings/Datadog.iOS.Binding/Datadog.iOS.Binding.csproj"
+    "bindings/Datadog.Android.Internal/Datadog.Android.Internal.csproj"
+    "bindings/Datadog.Android.Core/Datadog.Android.Core.csproj"
+    "bindings/Datadog.Android.Logs/Datadog.Android.Logs.csproj"
+    "bindings/Datadog.Android.Trace/Datadog.Android.Trace.csproj"
+    "bindings/Datadog.Android.Rum/Datadog.Android.Rum.csproj"
+    "bindings/Datadog.Android.SessionReplay/Datadog.Android.SessionReplay.csproj"
+    "bindings/Datadog.Android.Binding/Datadog.Android.Binding.csproj"
+    "bindings/Datadog.Maui/Datadog.Maui.csproj"
 )
 
 for rel_path in "${BINDING_CSPROJ_FILES[@]}"; do
@@ -161,27 +161,27 @@ for rel_path in "${BINDING_CSPROJ_FILES[@]}"; do
         "$rel_path"
 done
 
-# ── 3. DatadogSdk.* PackageReference versions ────────────────────────────────
+# ── 3. Datadog.* PackageReference versions ────────────────────────────────
 
 log_section "Internal PackageReference versions"
 
 CROSS_REF_FILES=(
-    "bindings/DatadogSdk.Android.Binding/DatadogSdk.Android.Binding.csproj"
-    "bindings/DatadogSdk.Maui/DatadogSdk.Maui.csproj"
+    "bindings/Datadog.Android.Binding/Datadog.Android.Binding.csproj"
+    "bindings/Datadog.Maui/Datadog.Maui.csproj"
 )
 
 for rel_path in "${CROSS_REF_FILES[@]}"; do
     replace_in_file "$SCRIPT_DIR/$rel_path" \
-        "s|(Include=\"DatadogSdk\.[^\"]*\"\s+Version=\")${ESC_CURRENT}(\")|\${1}${NEW_VERSION}\${2}|g" \
+        "s|(Include=\"Datadog\.[^\"]*\"\s+Version=\")${ESC_CURRENT}(\")|\${1}${NEW_VERSION}\${2}|g" \
         "$rel_path (cross-references)"
 done
 
-# ── 4. Example app DatadogSdk.Maui PackageReference ─────────────────────────
+# ── 4. Example app Datadog.Maui PackageReference ─────────────────────────
 
 log_section "Example app PackageReference"
 
 replace_in_file "$SCRIPT_DIR/example/example.csproj" \
-    "s|(Include=\"DatadogSdk\.Maui\"\s+Version=\")${ESC_CURRENT}(\")|\${1}${NEW_VERSION}\${2}|g" \
+    "s|(Include=\"Datadog\.Maui\"\s+Version=\")${ESC_CURRENT}(\")|\${1}${NEW_VERSION}\${2}|g" \
     "example/example.csproj"
 
 # ── 5. Version tracking table ────────────────────────────────────────────────

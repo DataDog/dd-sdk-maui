@@ -23,12 +23,12 @@
 # Files modified by --android:
 #   versions.properties
 #   native-wrappers/android/datadogwrapper/build.gradle.kts
-#   bindings/DatadogSdk.Android.Internal/DatadogSdk.Android.Internal.csproj
-#   bindings/DatadogSdk.Android.Core/DatadogSdk.Android.Core.csproj
-#   bindings/DatadogSdk.Android.Logs/DatadogSdk.Android.Logs.csproj
-#   bindings/DatadogSdk.Android.Trace/DatadogSdk.Android.Trace.csproj
-#   bindings/DatadogSdk.Android.Rum/DatadogSdk.Android.Rum.csproj
-#   bindings/DatadogSdk.Android.SessionReplay/DatadogSdk.Android.SessionReplay.csproj
+#   bindings/Datadog.Android.Internal/Datadog.Android.Internal.csproj
+#   bindings/Datadog.Android.Core/Datadog.Android.Core.csproj
+#   bindings/Datadog.Android.Logs/Datadog.Android.Logs.csproj
+#   bindings/Datadog.Android.Trace/Datadog.Android.Trace.csproj
+#   bindings/Datadog.Android.Rum/Datadog.Android.Rum.csproj
+#   bindings/Datadog.Android.SessionReplay/Datadog.Android.SessionReplay.csproj
 # Plus, on --android, `resolve-android-deps.sh` runs and may modify:
 #   android-transitive-deps.json
 #   any csproj listed in package_ref_csproj / maven_library_csproj when a
@@ -217,12 +217,12 @@ if [ -n "$NEW_ANDROID" ]; then
 
         # Android binding csproj files (AndroidMavenLibrary Version=)
         for rel_path in \
-            "bindings/DatadogSdk.Android.Internal/DatadogSdk.Android.Internal.csproj" \
-            "bindings/DatadogSdk.Android.Core/DatadogSdk.Android.Core.csproj" \
-            "bindings/DatadogSdk.Android.Logs/DatadogSdk.Android.Logs.csproj" \
-            "bindings/DatadogSdk.Android.Trace/DatadogSdk.Android.Trace.csproj" \
-            "bindings/DatadogSdk.Android.Rum/DatadogSdk.Android.Rum.csproj" \
-            "bindings/DatadogSdk.Android.SessionReplay/DatadogSdk.Android.SessionReplay.csproj"; do
+            "bindings/Datadog.Android.Internal/Datadog.Android.Internal.csproj" \
+            "bindings/Datadog.Android.Core/Datadog.Android.Core.csproj" \
+            "bindings/Datadog.Android.Logs/Datadog.Android.Logs.csproj" \
+            "bindings/Datadog.Android.Trace/Datadog.Android.Trace.csproj" \
+            "bindings/Datadog.Android.Rum/Datadog.Android.Rum.csproj" \
+            "bindings/Datadog.Android.SessionReplay/Datadog.Android.SessionReplay.csproj"; do
 
             replace_in_file "$SCRIPT_DIR/$rel_path" \
                 "s|(Include=\"com\.datadoghq:[^\"]+\"\s+Version=\")[0-9][0-9A-Za-z.\\-]*(\")|\${1}${NEW_ANDROID}\${2}|g" \

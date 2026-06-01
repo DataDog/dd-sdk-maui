@@ -104,8 +104,8 @@ fi
 log_section "Cleaning Example App"
 log_info "Removing bin and obj directories..."
 rm -rf bin obj
-log_info "Clearing NuGet global cache for DatadogSdk packages..."
-rm -rf ~/.nuget/packages/datadogsdk.*
+log_info "Clearing NuGet global cache for Datadog packages..."
+rm -rf ~/.nuget/packages/datadog.*
 log_info "Clean complete"
 
 # ============================================================================

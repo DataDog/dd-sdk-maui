@@ -118,7 +118,7 @@ if [ "$RUN_MAUI" = true ]; then
     log_section "C# Tests (xUnit)"
 
     log_info "Running dotnet test (net${DOTNET_VERSION}.0)..."
-    if dotnet test "$SCRIPT_DIR/tests/DatadogSdk.Maui.Tests/" -f "net${DOTNET_VERSION}.0"; then
+    if dotnet test "$SCRIPT_DIR/tests/Datadog.Maui.Tests/" -f "net${DOTNET_VERSION}.0"; then
         MAUI_RESULT=0
         log_info "C# tests passed"
     else

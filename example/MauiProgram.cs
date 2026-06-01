@@ -4,9 +4,9 @@
  * Copyright 2026-Present Datadog, Inc.
  */
 
-using DatadogSdk.Maui;
-using DatadogSdk.Maui.Configuration;
-using DatadogSdk.Maui.Hosting;
+using Datadog.Maui;
+using Datadog.Maui.Configuration;
+using Datadog.Maui.Hosting;
 using Microsoft.Extensions.Logging;
 
 namespace example;
@@ -35,7 +35,7 @@ public static class MauiProgram
         var applicationId = config["Datadog"]!["ApplicationId"]!.ToString();
 
         builder
-            .UseDatadogSdk(new DdSdkConfiguration
+            .UseDatadog(new DdSdkConfiguration
             {
                 ClientToken = clientToken,
                 Environment = environment,

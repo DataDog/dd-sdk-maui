@@ -116,7 +116,7 @@ fi
 
 # ── 4. Summary ────────────────────────────────────────────────────────────────
 
-log_section "Release summary — DatadogSdk.Maui $SDK_VERSION"
+log_section "Release summary — Datadog.Maui $SDK_VERSION"
 
 if [ "$DRY_RUN" = false ]; then
     echo ""
@@ -125,7 +125,7 @@ if [ "$DRY_RUN" = false ]; then
 
     TOTAL_SIZE=0
 
-    for pkg in "$SCRIPT_DIR/local-packages/"DatadogSdk.*.nupkg; do
+    for pkg in "$SCRIPT_DIR/local-packages/"Datadog.*.nupkg; do
         if [ -f "$pkg" ]; then
             size=$(du -sh "$pkg" 2>/dev/null | cut -f1)
             printf "  ${GREEN}✓${NC}  %-55s %s\n" "$(basename "$pkg")" "$size"

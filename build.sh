@@ -92,7 +92,7 @@ fi
 # Clean stale local packages and NuGet cache so multi-target rebuilds are picked up
 rm -rf local-packages
 mkdir -p local-packages
-rm -rf ~/.nuget/packages/datadogsdk.*
+rm -rf ~/.nuget/packages/datadog.*
 
 # ============================================================================
 # iOS Native Wrapper
@@ -132,7 +132,7 @@ log_info "Building Android AAR..."
 # Copy AAR to bindings
 log_info "Copying AAR to bindings..."
 cp datadogwrapper/build/outputs/aar/datadogwrapper-release.aar \
-   "$SCRIPT_DIR/bindings/DatadogSdk.Android.Binding/Jars/"
+   "$SCRIPT_DIR/bindings/Datadog.Android.Binding/Jars/"
 
 log_info "Android native wrapper built successfully"
 
@@ -141,7 +141,7 @@ log_info "Android native wrapper built successfully"
 # ============================================================================
 log_section "Building iOS Binding"
 
-cd "$SCRIPT_DIR/bindings/DatadogSdk.iOS.Binding"
+cd "$SCRIPT_DIR/bindings/Datadog.iOS.Binding"
 
 # Clean and build
 log_info "Cleaning iOS binding..."
@@ -160,17 +160,17 @@ log_info "iOS binding built successfully"
 
 # ============================================================================
 # Android Bindings — dependency chain (Internal → Core → Logs)
-# DatadogSdk.Android.Binding is built separately after ProGuard extraction
+# Datadog.Android.Binding is built separately after ProGuard extraction
 # ============================================================================
 log_section "Building Android Bindings"
 
 ANDROID_DEPS=(
-    "DatadogSdk.Android.Internal"
-    "DatadogSdk.Android.Core"
-    "DatadogSdk.Android.Logs"
-    "DatadogSdk.Android.Trace"
-    "DatadogSdk.Android.Rum"
-    "DatadogSdk.Android.SessionReplay"
+    "Datadog.Android.Internal"
+    "Datadog.Android.Core"
+    "Datadog.Android.Logs"
+    "Datadog.Android.Trace"
+    "Datadog.Android.Rum"
+    "Datadog.Android.SessionReplay"
 )
 
 for BINDING in "${ANDROID_DEPS[@]}"; do
@@ -197,13 +197,13 @@ done
 # ============================================================================
 log_section "Extracting and merging ProGuard rules"
 
-PROGUARD_OUT="$SCRIPT_DIR/bindings/DatadogSdk.Android.Binding/proguard/datadog-merged.pro"
-INTERNAL_BIN="$SCRIPT_DIR/bindings/DatadogSdk.Android.Internal/bin/Release/net10.0-android"
-CORE_BIN="$SCRIPT_DIR/bindings/DatadogSdk.Android.Core/bin/Release/net10.0-android"
-LOGS_BIN="$SCRIPT_DIR/bindings/DatadogSdk.Android.Logs/bin/Release/net10.0-android"
-TRACE_BIN="$SCRIPT_DIR/bindings/DatadogSdk.Android.Trace/bin/Release/net10.0-android"
-RUM_BIN="$SCRIPT_DIR/bindings/DatadogSdk.Android.Rum/bin/Release/net10.0-android"
-SESSION_REPLAY_BIN="$SCRIPT_DIR/bindings/DatadogSdk.Android.SessionReplay/bin/Release/net10.0-android"
+PROGUARD_OUT="$SCRIPT_DIR/bindings/Datadog.Android.Binding/proguard/datadog-merged.pro"
+INTERNAL_BIN="$SCRIPT_DIR/bindings/Datadog.Android.Internal/bin/Release/net10.0-android"
+CORE_BIN="$SCRIPT_DIR/bindings/Datadog.Android.Core/bin/Release/net10.0-android"
+LOGS_BIN="$SCRIPT_DIR/bindings/Datadog.Android.Logs/bin/Release/net10.0-android"
+TRACE_BIN="$SCRIPT_DIR/bindings/Datadog.Android.Trace/bin/Release/net10.0-android"
+RUM_BIN="$SCRIPT_DIR/bindings/Datadog.Android.Rum/bin/Release/net10.0-android"
+SESSION_REPLAY_BIN="$SCRIPT_DIR/bindings/Datadog.Android.SessionReplay/bin/Release/net10.0-android"
 
 log_info "Starting from wrapper consumer-rules.pro..."
 echo "# Auto-generated file - Do not edit" > "$PROGUARD_OUT"
@@ -234,14 +234,14 @@ for aar in \
     fi
 done
 
-log_info "ProGuard rules merged → bindings/DatadogSdk.Android.Binding/proguard/datadog-merged.pro"
+log_info "ProGuard rules merged → bindings/Datadog.Android.Binding/proguard/datadog-merged.pro"
 
 # ============================================================================
 # Android Binding — wrapper (built last so it packs the merged ProGuard rules)
 # ============================================================================
-log_info "Building DatadogSdk.Android.Binding..."
+log_info "Building Datadog.Android.Binding..."
 
-cd "$SCRIPT_DIR/bindings/DatadogSdk.Android.Binding"
+cd "$SCRIPT_DIR/bindings/Datadog.Android.Binding"
 
 rm -rf bin obj
 for TFM in net9.0-android net10.0-android; do
@@ -250,14 +250,14 @@ done
 dotnet pack -c Release
 cp bin/Release/*.nupkg "$SCRIPT_DIR/local-packages/"
 
-log_info "DatadogSdk.Android.Binding built successfully"
+log_info "Datadog.Android.Binding built successfully"
 
 # ============================================================================
 # Meta-package
 # ============================================================================
-log_section "Building Meta-package (DatadogSdk.Maui)"
+log_section "Building Meta-package (Datadog.Maui)"
 
-cd "$SCRIPT_DIR/bindings/DatadogSdk.Maui"
+cd "$SCRIPT_DIR/bindings/Datadog.Maui"
 
 # Clean
 log_info "Cleaning meta-package..."

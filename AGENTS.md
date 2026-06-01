@@ -9,7 +9,7 @@ This document provides context and instructions for AI agents working on the Dat
 **Current Status**: Phase 3 In Progress (Core SDK + Logs + RUM Configuration & Enablement)
 - ✅ iOS native wrapper with XCFramework bindings
 - ✅ Android native wrapper with multi-project NuGet bindings
-- ✅ Unified meta-package (DatadogSdk.Maui)
+- ✅ Unified meta-package (Datadog.Maui)
 - ✅ Full `DdSdkConfiguration` object (TrackingConsent, BatchSize, BatchProcessingLevel, UploadFrequency, Site, Service, Version/VersionSuffix, Verbosity, AdditionalConfiguration)
 - ✅ Runtime `SetTrackingConsent` API
 - ✅ `DdLogsConfiguration` with `CustomEndpoint` support
@@ -28,7 +28,7 @@ Native Wrapper (Swift / Kotlin)
     ↓
 C# Bindings (Xamarin.iOS / Android bindings)
     ↓
-Meta-package (DatadogSdk.Maui) - platform unification
+Meta-package (Datadog.Maui) - platform unification
     ↓
 Consumer App (.NET MAUI)
 ```
@@ -107,24 +107,24 @@ dd-sdk-maui/
 │                   └── DdRumTest.kt
 │
 ├── bindings/                      # C# binding projects
-│   ├── DatadogSdk.iOS.Binding/
+│   ├── Datadog.iOS.Binding/
 │   │   ├── ApiDefinition.Core.cs  # iOS core binding interface
 │   │   ├── ApiDefinition.Logs.cs  # iOS logs binding interface
 │   │   └── NativeReference/
 │   │       └── DatadogWrapper.xcframework/   # XCFramework binary
 │   │
-│   ├── DatadogSdk.Android.Internal/    # dd-sdk-android-internal bindings
-│   ├── DatadogSdk.Android.Core/        # dd-sdk-android-core bindings
-│   ├── DatadogSdk.Android.Logs/        # dd-sdk-android-logs bindings
-│   ├── DatadogSdk.Android.Rum/         # dd-sdk-android-rum AAR binding
-│   ├── DatadogSdk.Android.Binding/     # Kotlin wrapper bindings
+│   ├── Datadog.Android.Internal/    # dd-sdk-android-internal bindings
+│   ├── Datadog.Android.Core/        # dd-sdk-android-core bindings
+│   ├── Datadog.Android.Logs/        # dd-sdk-android-logs bindings
+│   ├── Datadog.Android.Rum/         # dd-sdk-android-rum AAR binding
+│   ├── Datadog.Android.Binding/     # Kotlin wrapper bindings
 │   │   ├── Jars/
 │   │   │   └── datadogwrapper-release.aar
 │   │   └── Transforms/
 │   │       ├── Metadata.xml      # Binding fixups
 │   │       └── proguard.txt      # R8/ProGuard rules
 │   │
-│   └── DatadogSdk.Maui/          # Meta-package (unified)
+│   └── Datadog.Maui/          # Meta-package (unified)
 │       ├── Configuration/         # Configuration namespace
 │       │   ├── DdSdkConfiguration.cs
 │       │   ├── FileBasedConfiguration.cs  # JSON config parser
@@ -147,7 +147,7 @@ dd-sdk-maui/
 │       └── InternalLog.cs         # SDK-internal console logging
 │
 ├── tests/                         # C# unit tests
-│   └── DatadogSdk.Maui.Tests/
+│   └── Datadog.Maui.Tests/
 │       ├── DdSdkConfigurationTests.cs    # SDK init via test bridge (INativeBridge)
 │       ├── DdLogsConfigurationTests.cs
 │       ├── DdRumConfigurationTests.cs
@@ -173,9 +173,9 @@ dd-sdk-maui/
 │               └── network_security_config.xml  # Allows cleartext HTTP
 │
 └── local-packages/                # Local NuGet package output
-    ├── DatadogSdk.iOS.Binding.0.0.1.nupkg
-    ├── DatadogSdk.Android.*.nupkg
-    └── DatadogSdk.Maui.0.0.1.nupkg
+    ├── Datadog.iOS.Binding.0.0.1.nupkg
+    ├── Datadog.Android.*.nupkg
+    └── Datadog.Maui.0.0.1.nupkg
 ```
 
 ## Common Workflows
@@ -192,7 +192,7 @@ vim Sources/DatadogWrapper/DatadogWrapper.swift
 # Build XCFramework
 cd .. && ./build.sh
 
-# XCFramework copied to bindings/DatadogSdk.iOS.Binding/NativeReference/
+# XCFramework copied to bindings/Datadog.iOS.Binding/NativeReference/
 ```
 
 **Android:**
@@ -207,14 +207,14 @@ vim datadogwrapper/src/main/kotlin/com/datadog/wrapper/DatadogWrapper.kt
 
 # Copy to bindings manually or use root build.sh
 cp datadogwrapper/build/outputs/aar/datadogwrapper-release.aar \
-   ../../bindings/DatadogSdk.Android.Binding/Jars/
+   ../../bindings/Datadog.Android.Binding/Jars/
 ```
 
 ### 2. Updating C# Bindings
 
 **iOS binding changes:**
 ```bash
-cd bindings/DatadogSdk.iOS.Binding
+cd bindings/Datadog.iOS.Binding
 
 # Edit ApiDefinition.cs to match new native APIs
 vim ApiDefinition.cs
@@ -227,7 +227,7 @@ cp bin/Release/*.nupkg ../../local-packages/
 
 **Android binding changes:**
 ```bash
-cd bindings/DatadogSdk.Android.Binding
+cd bindings/Datadog.Android.Binding
 
 # If needed, update Metadata.xml to fix binding issues
 vim Transforms/Metadata.xml
@@ -354,7 +354,7 @@ class DatadogWrapper {
 ```xml
 <!-- Rename package to .NET convention -->
 <attr path="/api/package[@name='com.datadog.wrapper']"
-      name="managedName">DatadogSdk.Android.Binding</attr>
+      name="managedName">Datadog.Android.Binding</attr>
 
 <!-- Remove duplicate types from transitive dependencies -->
 <remove-node path="/api/package[starts-with(@name, 'com.datadog.android')]" />
@@ -368,7 +368,7 @@ class DatadogWrapper {
 **Android Transitive Dependencies:**
 
 Android runtime dependencies (OkHttp, Gson, Kotlin, AndroidX) are declared in two places:
-1. `AndroidMavenLibrary` entries in `DatadogSdk.Android.Core.csproj` — use Maven versions directly
+1. `AndroidMavenLibrary` entries in `Datadog.Android.Core.csproj` — use Maven versions directly
 2. `PackageReference` entries in multiple `.csproj` files — use NuGet versions (which may differ from Maven versions)
 
 The mapping between Maven artifacts and NuGet packages is tracked in `android-transitive-deps.json`. Key fields:
@@ -556,16 +556,16 @@ cd example && ./build.sh --ios --run
 cd example && ./build.sh --android --run
 
 # Check XCFramework symbols
-nm -gU bindings/DatadogSdk.iOS.Binding/NativeReference/DatadogWrapper.xcframework/ios-arm64/DatadogWrapper.framework/DatadogWrapper
+nm -gU bindings/Datadog.iOS.Binding/NativeReference/DatadogWrapper.xcframework/ios-arm64/DatadogWrapper.framework/DatadogWrapper
 
 # Inspect Android AAR contents
-unzip -l bindings/DatadogSdk.Android.Binding/Jars/datadogwrapper-release.aar
+unzip -l bindings/Datadog.Android.Binding/Jars/datadogwrapper-release.aar
 
 # View generated Android binding code
-ls bindings/DatadogSdk.Android.Binding/obj/Release/net10.0-android/generated/src/
+ls bindings/Datadog.Android.Binding/obj/Release/net10.0-android/generated/src/
 
 # Run C# unit tests directly
-dotnet test tests/DatadogSdk.Maui.Tests/
+dotnet test tests/Datadog.Maui.Tests/
 
 # Run Android unit tests directly
 cd native-wrappers/android && ./gradlew :datadogwrapper:test
