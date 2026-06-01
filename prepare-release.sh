@@ -136,6 +136,7 @@ if [ "$DRY_RUN" = false ]; then
     log_info "Release build complete for version $SDK_VERSION"
     echo ""
     echo "To publish to NuGet.org:"
+    echo -e "  ${YELLOW}NUGET_API_KEY=<YOUR_API_KEY> ./publish.sh${NC}"
     echo -e "  ${YELLOW}./publish.sh --api-key <YOUR_API_KEY>${NC}"
 else
     echo -e "${YELLOW}Dry-run complete — no packages were built.${NC}"
