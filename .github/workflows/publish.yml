@@ -32,8 +32,6 @@ jobs:
       - name: Install MAUI workloads
         run: dotnet workload install maui --skip-manifest-update
 
-      - name: Install Android SDK platform 35
-        run: sdkmanager --install "platforms;android-35"
 
       - name: Install datadog-ci
         run: npm install -g @datadog/datadog-ci@5.18.0
