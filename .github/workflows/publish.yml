@@ -37,7 +37,13 @@ jobs:
         run: npm install -g @datadog/datadog-ci@5.18.0
 
       - name: Prepare release packages
-        run: ./prepare-release.sh --skip-tests
+        run: ./prepare-release.sh
+
+      - name: Upload packages as artifacts
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4
+        with:
+          name: nuget-packages
+          path: local-packages/*.nupkg
 
       - name: NuGet login (OIDC → temp API key)
         if: ${{ !inputs.dry_run }}
