@@ -85,8 +85,8 @@ EOF
 echo "Building Android APK (Release)..."
 cd "$SHOPIST_DIR"
 
-# Clear NuGet cache for DatadogSdk packages to ensure local versions are used
-rm -rf ~/.nuget/packages/datadogsdk.*
+# Clear NuGet cache for Datadog packages to ensure local versions are used
+rm -rf ~/.nuget/packages/datadog.*
 
 dotnet publish Shopist.csproj \
     -f net10.0-android \

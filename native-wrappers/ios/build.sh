@@ -71,7 +71,7 @@ if [ -f "./build/DatadogWrapper.xcframework/Info.plist" ]; then
   # Copy XCFramework to bindings directory
   echo ""
   echo "📋 Copying XCFramework to bindings..."
-  BINDINGS_DIR="$SCRIPT_DIR/../../bindings/DatadogSdk.iOS.Binding/NativeReference"
+  BINDINGS_DIR="$SCRIPT_DIR/../../bindings/Datadog.iOS.Binding/NativeReference"
   rm -rf "$BINDINGS_DIR/DatadogWrapper.xcframework"
   cp -R ./build/DatadogWrapper.xcframework "$BINDINGS_DIR/"
   echo "📋 Copied to $BINDINGS_DIR/DatadogWrapper.xcframework"

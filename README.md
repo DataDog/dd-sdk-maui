@@ -24,7 +24,7 @@ To integrate the Datadog SDK into your .NET MAUI application, see the setup inst
 Add the NuGet package to your MAUI `.csproj`:
 
 ```xml
-<PackageReference Include="DatadogSdk.Maui" Version="0.0.1" />
+<PackageReference Include="Datadog.Maui" Version="0.0.1" />
 ```
 
 ### Initialization
@@ -34,16 +34,16 @@ The SDK supports two initialization patterns. Pick whichever matches your app's 
 #### Pattern 1 — Builder extensions (recommended for `MauiProgram.CreateMauiApp`)
 
 ```csharp
-using DatadogSdk.Maui;
-using DatadogSdk.Maui.Configuration;
-using DatadogSdk.Maui.Hosting;
+using Datadog.Maui;
+using Datadog.Maui.Configuration;
+using Datadog.Maui.Hosting;
 
 public static MauiApp CreateMauiApp()
 {
     var builder = MauiApp.CreateBuilder();
     builder
         .UseMauiApp<App>()
-        .UseDatadogSdk(new DdSdkConfiguration
+        .UseDatadog(new DdSdkConfiguration
         {
             ClientToken = "your-client-token",
             Environment = "prod",
@@ -69,15 +69,15 @@ public static MauiApp CreateMauiApp()
 }
 ```
 
-The `UseDatadog*` extensions live in `DatadogSdk.Maui.Hosting`. Each feature's `Enable` runs synchronously on the chain; for RUM, the automatic page / action / resource trackers attach at the first post-launch lifecycle event (`FinishedLaunching` on iOS, `OnApplicationCreating` on Android) — by that point MAUI has resolved `IApplication` and the trackers can subscribe to the `Application` instance before the first page appears.
+The `UseDatadog*` extensions live in `Datadog.Maui.Hosting`. Each feature's `Enable` runs synchronously on the chain; for RUM, the automatic page / action / resource trackers attach at the first post-launch lifecycle event (`FinishedLaunching` on iOS, `OnApplicationCreating` on Android) — by that point MAUI has resolved `IApplication` and the trackers can subscribe to the `Application` instance before the first page appears.
 
 #### Pattern 2 — Standalone calls
 
 For apps that already have a custom host pipeline, or that want to enable features lazily, call the static APIs directly:
 
 ```csharp
-using DatadogSdk.Maui;
-using DatadogSdk.Maui.Configuration;
+using Datadog.Maui;
+using Datadog.Maui.Configuration;
 
 public static MauiApp CreateMauiApp()
 {
@@ -168,8 +168,8 @@ DdSdk.SetTrackingConsent(TrackingConsent.Granted);
 Route all SDK traffic through a proxy:
 
 ```csharp
-using DatadogSdk.Maui;
-using DatadogSdk.Maui.Configuration;
+using Datadog.Maui;
+using Datadog.Maui.Configuration;
 
 DdSdk.Initialize(new DdSdkConfiguration
 {
@@ -271,8 +271,8 @@ DdSdk.ClearAccountInfo();
 ### Logs
 
 ```csharp
-using DatadogSdk.Maui;
-using DatadogSdk.Maui.Configuration;
+using Datadog.Maui;
+using Datadog.Maui.Configuration;
 
 // Enable with default Datadog endpoint
 DdLogs.Enable();
@@ -292,8 +292,8 @@ DdLogs.Error("Error message");
 ### Traces
 
 ```csharp
-using DatadogSdk.Maui;
-using DatadogSdk.Maui.Configuration;
+using Datadog.Maui;
+using Datadog.Maui.Configuration;
 
 // Enable with default Datadog endpoint
 DdTrace.Enable();
@@ -481,8 +481,8 @@ If you encounter issues while using the SDK, check the existing [GitHub Issues](
 You can also enable verbose SDK logging to help diagnose issues:
 
 ```csharp
-using DatadogSdk.Maui;
-using DatadogSdk.Maui.Configuration;
+using Datadog.Maui;
+using Datadog.Maui.Configuration;
 
 DdSdk.Initialize(new DdSdkConfiguration
 {

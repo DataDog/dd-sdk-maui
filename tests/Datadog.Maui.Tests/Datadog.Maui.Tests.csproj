@@ -1,0 +1,67 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFrameworks>net9.0;net10.0</TargetFrameworks>
+    <RootNamespace>Datadog.Maui.Tests</RootNamespace>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.*" />
+    <PackageReference Include="xunit" Version="2.*" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.*" />
+    <PackageReference Include="Microsoft.Maui.Controls" Version="9.0.0" Condition="$(TargetFramework.StartsWith('net9.0'))" />
+    <PackageReference Include="Microsoft.Maui.Controls" Version="10.0.0" Condition="$(TargetFramework.StartsWith('net10.0'))" />
+  </ItemGroup>
+
+  <!-- Link source files from Datadog.Maui for testing -->
+  <ItemGroup>
+    <Compile Include="../../bindings/Datadog.Maui/DdSdk.cs" Link="Linked/DdSdk.cs" />
+    <Compile Include="../../bindings/Datadog.Maui/InternalLog.cs" Link="Linked/InternalLog.cs" />
+    <Compile Include="../../bindings/Datadog.Maui/InternalTelemetry.cs" Link="Linked/InternalTelemetry.cs" />
+    <Compile Include="../../bindings/Datadog.Maui/Configuration/DdSdkConfiguration.cs" Link="Linked/Configuration/DdSdkConfiguration.cs" />
+    <Compile Include="../../bindings/Datadog.Maui/Configuration/DdLogsConfiguration.cs" Link="Linked/Configuration/DdLogsConfiguration.cs" />
+    <Compile Include="../../bindings/Datadog.Maui/Configuration/DdTraceConfiguration.cs" Link="Linked/Configuration/DdTraceConfiguration.cs" />
+    <Compile Include="../../bindings/Datadog.Maui/Configuration/DdRumConfiguration.cs" Link="Linked/Configuration/DdRumConfiguration.cs" />
+    <Compile Include="../../bindings/Datadog.Maui/Configuration/VitalsUpdateFrequency.cs" Link="Linked/Configuration/VitalsUpdateFrequency.cs" />
+    <Compile Include="../../bindings/Datadog.Maui/Configuration/TracingHeaderType.cs" Link="Linked/Configuration/TracingHeaderType.cs" />
+    <Compile Include="../../bindings/Datadog.Maui/Configuration/FirstPartyHost.cs" Link="Linked/Configuration/FirstPartyHost.cs" />
+    <Compile Include="../../bindings/Datadog.Maui/Configuration/DatadogSite.cs" Link="Linked/Configuration/DatadogSite.cs" />
+    <Compile Include="../../bindings/Datadog.Maui/Configuration/TrackingConsent.cs" Link="Linked/Configuration/TrackingConsent.cs" />
+    <Compile Include="../../bindings/Datadog.Maui/Configuration/BatchSize.cs" Link="Linked/Configuration/BatchSize.cs" />
+    <Compile Include="../../bindings/Datadog.Maui/Configuration/UploadFrequency.cs" Link="Linked/Configuration/UploadFrequency.cs" />
+    <Compile Include="../../bindings/Datadog.Maui/Configuration/BatchProcessingLevel.cs" Link="Linked/Configuration/BatchProcessingLevel.cs" />
+    <Compile Include="../../bindings/Datadog.Maui/Configuration/FileBasedConfiguration.cs" Link="Linked/Configuration/FileBasedConfiguration.cs" />
+    <Compile Include="../../bindings/Datadog.Maui/Configuration/ProxyType.cs" Link="Linked/Configuration/ProxyType.cs" />
+    <Compile Include="../../bindings/Datadog.Maui/Configuration/ProxyConfiguration.cs" Link="Linked/Configuration/ProxyConfiguration.cs" />
+    <Compile Include="../../bindings/Datadog.Maui/Configuration/DdUserInfo.cs" Link="Linked/Configuration/DdUserInfo.cs" />
+    <Compile Include="../../bindings/Datadog.Maui/Configuration/DdAccountInfo.cs" Link="Linked/Configuration/DdAccountInfo.cs" />
+    <Compile Include="../../bindings/Datadog.Maui/DdRum.cs" Link="Linked/DdRum.cs" />
+    <Compile Include="../../bindings/Datadog.Maui/Configuration/DdRumErrorEvent.cs" Link="Linked/Configuration/DdRumErrorEvent.cs" />
+    <Compile Include="../../bindings/Datadog.Maui/Configuration/RumActionType.cs" Link="Linked/Configuration/RumActionType.cs" />
+    <Compile Include="../../bindings/Datadog.Maui/Configuration/RumResourceMethod.cs" Link="Linked/Configuration/RumResourceMethod.cs" />
+    <Compile Include="../../bindings/Datadog.Maui/Configuration/RumResourceKind.cs" Link="Linked/Configuration/RumResourceKind.cs" />
+    <Compile Include="../../bindings/Datadog.Maui/Configuration/RumErrorSource.cs" Link="Linked/Configuration/RumErrorSource.cs" />
+    <Compile Include="../../bindings/Datadog.Maui/Configuration/OperationFailure.cs" Link="Linked/Configuration/OperationFailure.cs" />
+    <Compile Include="../../bindings/Datadog.Maui/DdRumErrorTracking.cs" Link="Linked/DdRumErrorTracking.cs" />
+    <Compile Include="../../bindings/Datadog.Maui/Configuration/DdRumActionEvent.cs" Link="Linked/Configuration/DdRumActionEvent.cs" />
+    <Compile Include="../../bindings/Datadog.Maui/AutoTracking/ActionTargetResolver.cs" Link="Linked/AutoTracking/ActionTargetResolver.cs" />
+    <Compile Include="../../bindings/Datadog.Maui/AutoTracking/DdAutoViewTracker.cs" Link="Linked/AutoTracking/DdAutoViewTracker.cs" />
+    <Compile Include="../../bindings/Datadog.Maui/AutoTracking/DdAutoActionTracker.cs" Link="Linked/AutoTracking/DdAutoActionTracker.cs" />
+    <Compile Include="../../bindings/Datadog.Maui/Configuration/DdRumResourceEvent.cs" Link="Linked/Configuration/DdRumResourceEvent.cs" />
+    <Compile Include="../../bindings/Datadog.Maui/AutoTracking/ResourceKindResolver.cs" Link="Linked/AutoTracking/ResourceKindResolver.cs" />
+    <Compile Include="../../bindings/Datadog.Maui/AutoTracking/DdAutoResourceTracker.cs" Link="Linked/AutoTracking/DdAutoResourceTracker.cs" />
+    <Compile Include="../../bindings/Datadog.Maui/DdSessionReplay.cs" Link="Linked/DdSessionReplay.cs" />
+    <Compile Include="../../bindings/Datadog.Maui/Configuration/SessionReplayConfiguration.cs" Link="Linked/Configuration/SessionReplayConfiguration.cs" />
+    <Compile Include="../../bindings/Datadog.Maui/Configuration/TextAndInputPrivacy.cs" Link="Linked/Configuration/TextAndInputPrivacy.cs" />
+    <Compile Include="../../bindings/Datadog.Maui/Configuration/ImagePrivacy.cs" Link="Linked/Configuration/ImagePrivacy.cs" />
+    <Compile Include="../../bindings/Datadog.Maui/Configuration/TouchPrivacy.cs" Link="Linked/Configuration/TouchPrivacy.cs" />
+  </ItemGroup>
+
+  <!-- Test fixture files -->
+  <ItemGroup>
+    <Content Include="Fixtures\**\*.json" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="xunit.runner.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+</Project>

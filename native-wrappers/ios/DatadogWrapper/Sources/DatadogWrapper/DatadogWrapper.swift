@@ -220,15 +220,15 @@ public class DdSdkNativeWrapper: NSObject {
     // MARK: - Tracking Consent
 
     // Dependencies - injectable for testing
-    private static var datadogCore: DatadogSdkProtocol = RealDatadogSdk()
+    private static var datadogCore: DatadogProtocol = RealDatadog()
 
-    static func setDatadogCore(_ core: DatadogSdkProtocol) {
+    static func setDatadogCore(_ core: DatadogProtocol) {
         datadogCore = core
     }
 
     // Reset to production dependencies (for test cleanup)
     static func resetDependencies() {
-        datadogCore = RealDatadogSdk()
+        datadogCore = RealDatadog()
         firstPartyHosts = nil
     }
 

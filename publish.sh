@@ -19,12 +19,12 @@
 #   -h, --help         Show this help message
 #
 # Publish order (dependency order — each package must exist before its dependents):
-#   1. DatadogSdk.Android.Internal
-#   2. DatadogSdk.iOS.Binding
-#   3. DatadogSdk.Android.Core
-#   4. DatadogSdk.Android.Logs
-#   5. DatadogSdk.Android.Binding
-#   6. DatadogSdk.Maui
+#   1. Datadog.Android.Internal
+#   2. Datadog.iOS.Binding
+#   3. Datadog.Android.Core
+#   4. Datadog.Android.Logs
+#   5. Datadog.Android.Binding
+#   6. Datadog.Maui
 
 set -e
 
@@ -118,22 +118,22 @@ source "$SCRIPT_DIR/versions.properties"
 # dependencies already in the registry.
 
 PACKAGES=(
-    "DatadogSdk.Android.Internal.${SDK_VERSION}.nupkg"
-    "DatadogSdk.iOS.Binding.${SDK_VERSION}.nupkg"
-    "DatadogSdk.Android.Core.${SDK_VERSION}.nupkg"
-    "DatadogSdk.Android.Logs.${SDK_VERSION}.nupkg"
-    "DatadogSdk.Android.Trace.${SDK_VERSION}.nupkg"
-    "DatadogSdk.Android.Rum.${SDK_VERSION}.nupkg"
-    "DatadogSdk.Android.SessionReplay.${SDK_VERSION}.nupkg"
-    "DatadogSdk.Android.Binding.${SDK_VERSION}.nupkg"
-    "DatadogSdk.Maui.${SDK_VERSION}.nupkg"
+    "Datadog.Android.Internal.${SDK_VERSION}.nupkg"
+    "Datadog.iOS.Binding.${SDK_VERSION}.nupkg"
+    "Datadog.Android.Core.${SDK_VERSION}.nupkg"
+    "Datadog.Android.Logs.${SDK_VERSION}.nupkg"
+    "Datadog.Android.Trace.${SDK_VERSION}.nupkg"
+    "Datadog.Android.Rum.${SDK_VERSION}.nupkg"
+    "Datadog.Android.SessionReplay.${SDK_VERSION}.nupkg"
+    "Datadog.Android.Binding.${SDK_VERSION}.nupkg"
+    "Datadog.Maui.${SDK_VERSION}.nupkg"
 )
 
 # ── Banner ────────────────────────────────────────────────────────────────────
 
 echo ""
 echo -e "${BLUE}┌─────────────────────────────────────────────────────┐${NC}"
-echo -e "${BLUE}│  Publishing DatadogSdk.Maui ${SDK_VERSION} to NuGet${NC}"
+echo -e "${BLUE}│  Publishing Datadog.Maui ${SDK_VERSION} to NuGet${NC}"
 echo -e "${BLUE}└─────────────────────────────────────────────────────┘${NC}"
 echo ""
 echo -e "  Source: ${YELLOW}$SOURCE${NC}"
@@ -201,7 +201,7 @@ else
     log_info "All ${#PACKAGES[@]} packages published successfully at version $SDK_VERSION"
     echo ""
     echo -e "Users can now add the SDK with:"
-    echo -e "  ${YELLOW}dotnet add package DatadogSdk.Maui${NC}"
+    echo -e "  ${YELLOW}dotnet add package Datadog.Maui${NC}"
 fi
 
 # ── Upload SDK framework symbols ─────────────────────────────────────────────

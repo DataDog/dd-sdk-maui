@@ -185,12 +185,12 @@ dd-sdk-maui/
 │               └── DdRum.kt           # RUM API
 │
 ├── bindings/                   # C# binding projects
-│   ├── DatadogSdk.iOS.Binding/
-│   ├── DatadogSdk.Android.*/  # 4+ Android binding projects
-│   │   └── DatadogSdk.Android.Logs/  # Android Logs AAR binding
-│   │   └── DatadogSdk.Android.Trace/  # Android Trace AAR binding
-│   │   └── DatadogSdk.Android.Rum/  # Android RUM AAR binding
-│   └── DatadogSdk.Maui/       # C# intermediary layer + meta-package
+│   ├── Datadog.iOS.Binding/
+│   ├── Datadog.Android.*/  # 4+ Android binding projects
+│   │   └── Datadog.Android.Logs/  # Android Logs AAR binding
+│   │   └── Datadog.Android.Trace/  # Android Trace AAR binding
+│   │   └── Datadog.Android.Rum/  # Android RUM AAR binding
+│   └── Datadog.Maui/       # C# intermediary layer + meta-package
 │       ├── DdSdkConfiguration.cs  # Configuration object
 │       ├── DdSdk.cs               # SDK init (unified API)
 │       ├── DdLogs.cs              # Logging (unified API)
@@ -224,7 +224,7 @@ The iOS build script (`native-wrappers/ios/build.sh`):
 2. Builds Swift code for iOS simulator (arm64 + x86_64)
 3. Creates fat binary for simulator
 4. Packages as XCFramework
-5. Copies to `bindings/DatadogSdk.iOS.Binding/NativeReference/`
+5. Copies to `bindings/Datadog.iOS.Binding/NativeReference/`
 
 **Output**: `DatadogWrapper.xcframework` (~11MB)
 
@@ -234,34 +234,34 @@ cd native-wrappers/android
 ./gradlew clean                              # Clean previous build
 ./gradlew :datadogwrapper:assembleRelease   # Build AAR
 cp datadogwrapper/build/outputs/aar/datadogwrapper-release.aar \
-   ../../bindings/DatadogSdk.Android.Binding/Jars/
+   ../../bindings/Datadog.Android.Binding/Jars/
 ```
 
 **Output**: `datadogwrapper-release.aar` (~8KB)
 
 #### Step 3: iOS C# Binding
 ```bash
-cd bindings/DatadogSdk.iOS.Binding
+cd bindings/Datadog.iOS.Binding
 rm -rf bin obj                  # Clean
 dotnet build -c Release         # Build binding
 dotnet pack -c Release          # Create NuGet package
 cp bin/Release/*.nupkg ../../local-packages/
 ```
 
-**Output**: `DatadogSdk.iOS.Binding.0.0.1.nupkg`
+**Output**: `Datadog.iOS.Binding.0.0.1.nupkg`
 
 #### Step 4: Android C# Bindings (4 projects)
 
 Builds in dependency order:
-1. **DatadogSdk.Android.Internal** - Internal APIs binding
-2. **DatadogSdk.Android.Core** - Core SDK binding (depends on Internal)
-3. **DatadogSdk.Android.Logs** - Logs module binding (depends on Core)
-4. **DatadogSdk.Android.Trace** - Trace module binding (depends on Core)
-5. **DatadogSdk.Android.Binding** - Wrapper binding (depends on all above)
+1. **Datadog.Android.Internal** - Internal APIs binding
+2. **Datadog.Android.Core** - Core SDK binding (depends on Internal)
+3. **Datadog.Android.Logs** - Logs module binding (depends on Core)
+4. **Datadog.Android.Trace** - Trace module binding (depends on Core)
+5. **Datadog.Android.Binding** - Wrapper binding (depends on all above)
 
 Each project:
 ```bash
-cd bindings/DatadogSdk.Android.{Project}
+cd bindings/Datadog.Android.{Project}
 rm -rf bin obj
 dotnet build -c Release
 dotnet pack -c Release
@@ -272,14 +272,14 @@ cp bin/Release/*.nupkg ../../local-packages/
 
 #### Step 5: Meta-package
 ```bash
-cd bindings/DatadogSdk.Maui
+cd bindings/Datadog.Maui
 rm -rf bin obj
 dotnet build -c Release
 dotnet pack -c Release
 cp bin/Release/*.nupkg ../../local-packages/
 ```
 
-**Output**: `DatadogSdk.Maui.0.0.1.nupkg` (aggregates iOS + Android bindings)
+**Output**: `Datadog.Maui.0.0.1.nupkg` (aggregates iOS + Android bindings)
 
 ### Example Build Script (`./example/build.sh`)
 
@@ -313,7 +313,7 @@ Options:
 1. **Clean** (always):
    ```bash
    rm -rf bin obj                          # Remove build artifacts + stale NuGet restore data
-   rm -rf ~/.nuget/packages/datadogsdk.*   # Clear NuGet global cache for our packages
+   rm -rf ~/.nuget/packages/datadog.*   # Clear NuGet global cache for our packages
    ```
 
 2. **Restore packages**:
@@ -380,10 +380,10 @@ cd example
 **iOS only**:
 ```bash
 cd native-wrappers/ios && ./build.sh
-cd ../../bindings/DatadogSdk.iOS.Binding
+cd ../../bindings/Datadog.iOS.Binding
 dotnet pack -c Release
 cp bin/Release/*.nupkg ../../local-packages/
-cd ../../bindings/DatadogSdk.Maui
+cd ../../bindings/Datadog.Maui
 dotnet pack -c Release
 cp bin/Release/*.nupkg ../../local-packages/
 cd ../../example
@@ -395,11 +395,11 @@ cd ../../example
 cd native-wrappers/android
 ./gradlew :datadogwrapper:assembleRelease
 cp datadogwrapper/build/outputs/aar/datadogwrapper-release.aar \
-   ../../bindings/DatadogSdk.Android.Binding/Jars/
-cd ../../bindings/DatadogSdk.Android.Binding
+   ../../bindings/Datadog.Android.Binding/Jars/
+cd ../../bindings/Datadog.Android.Binding
 dotnet pack -c Release
 cp bin/Release/*.nupkg ../../local-packages/
-cd ../DatadogSdk.Maui
+cd ../Datadog.Maui
 dotnet pack -c Release
 cp bin/Release/*.nupkg ../../local-packages/
 cd ../../example
@@ -445,13 +445,13 @@ Run the C# unit tests to verify SDK behavior:
 
 ```bash
 # Run all tests
-dotnet test tests/DatadogSdk.Maui.Tests
+dotnet test tests/Datadog.Maui.Tests
 
 # Run with verbose output
-dotnet test tests/DatadogSdk.Maui.Tests -v detailed
+dotnet test tests/Datadog.Maui.Tests -v detailed
 
 # Run specific test class
-dotnet test tests/DatadogSdk.Maui.Tests --filter "FullyQualifiedName~DdSdkConfigurationTests"
+dotnet test tests/Datadog.Maui.Tests --filter "FullyQualifiedName~DdSdkConfigurationTests"
 ```
 
 **Test coverage:**
@@ -497,12 +497,12 @@ dotnet build -v detailed
 
 **Check XCFramework symbols** (iOS):
 ```bash
-nm -gU bindings/DatadogSdk.iOS.Binding/NativeReference/DatadogWrapper.xcframework/ios-arm64/DatadogWrapper.framework/DatadogWrapper
+nm -gU bindings/Datadog.iOS.Binding/NativeReference/DatadogWrapper.xcframework/ios-arm64/DatadogWrapper.framework/DatadogWrapper
 ```
 
 **Inspect AAR contents** (Android):
 ```bash
-unzip -l bindings/DatadogSdk.Android.Binding/Jars/datadogwrapper-release.aar
+unzip -l bindings/Datadog.Android.Binding/Jars/datadogwrapper-release.aar
 ```
 
 ## Common Tasks
@@ -528,7 +528,7 @@ fun logCritical(message: String) {
 
 #### 2. Update iOS C# Binding
 
-**iOS** (`bindings/DatadogSdk.iOS.Binding/ApiDefinition.cs`):
+**iOS** (`bindings/Datadog.iOS.Binding/ApiDefinition.cs`):
 ```csharp
 [Static]
 [Export("logCritical:")]
@@ -539,7 +539,7 @@ void LogCritical(string message);
 
 #### 3. Add to C# Intermediary Layer
 
-**`bindings/DatadogSdk.Maui/DdLogs.cs`**:
+**`bindings/Datadog.Maui/DdLogs.cs`**:
 ```csharp
 public static void Critical(string message)
 {
@@ -577,7 +577,7 @@ This script updates `versions.properties`, `Package.swift`, `build.gradle.kts`, 
 
 **Android transitive dependencies**: When bumping the Android SDK, the script automatically runs `resolve-android-deps.sh` which:
 1. Resolves the full Gradle dependency tree
-2. Auto-updates `AndroidMavenLibrary` versions in `DatadogSdk.Android.Core.csproj`
+2. Auto-updates `AndroidMavenLibrary` versions in `Datadog.Android.Core.csproj`
 3. Warns if any NuGet `PackageReference` versions need manual updating (e.g., `Xamarin.Kotlin.StdLib`, `GoogleGson`)
 
 If you see NuGet warnings, check [nuget.org](https://www.nuget.org) for a compatible release and update the version in the relevant `.csproj` files and `android-transitive-deps.json`.
@@ -631,7 +631,7 @@ $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses
 
 **Debug**:
 ```bash
-nm -gU bindings/DatadogSdk.iOS.Binding/NativeReference/DatadogWrapper.xcframework/ios-arm64/DatadogWrapper.framework/DatadogWrapper | grep initialize
+nm -gU bindings/Datadog.iOS.Binding/NativeReference/DatadogWrapper.xcframework/ios-arm64/DatadogWrapper.framework/DatadogWrapper | grep initialize
 ```
 
 ### Android Build Fails with "duplicate type"
@@ -640,7 +640,7 @@ nm -gU bindings/DatadogSdk.iOS.Binding/NativeReference/DatadogWrapper.xcframewor
 
 **Solution**: Use PackageReference in `.csproj`:
 ```xml
-<PackageReference Include="DatadogSdk.Android.Core" Version="0.0.1" />
+<PackageReference Include="Datadog.Android.Core" Version="0.0.1" />
 ```
 
 ### Example App Doesn't Reflect Changes

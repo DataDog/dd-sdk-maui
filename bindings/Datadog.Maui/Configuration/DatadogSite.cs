@@ -1,0 +1,19 @@
+/*
+ * Unless explicitly stated otherwise all files in this repository are licensed under the Apache License Version 2.0.
+ * This product includes software developed at Datadog (https://www.datadoghq.com/).
+ * Copyright 2026-Present Datadog, Inc.
+ */
+
+namespace Datadog.Maui.Configuration
+{
+    public enum DatadogSite
+    {
+        Us1,
+        Us3,
+        Us5,
+        Eu1,
+        Ap1,
+        Ap2,
+        Us1Fed
+    }
+}

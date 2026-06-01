@@ -1,10 +1,10 @@
 <Solution>
   <Project Path="example/example.csproj" />
-  <Project Path="bindings/DatadogSdk.Maui/DatadogSdk.Maui.csproj" />
-  <Project Path="bindings/DatadogSdk.iOS.Binding/DatadogSdk.iOS.Binding.csproj" />
-  <Project Path="bindings/DatadogSdk.Android.Binding/DatadogSdk.Android.Binding.csproj" />
-  <Project Path="bindings/DatadogSdk.Android.Core/DatadogSdk.Android.Core.csproj" />
-  <Project Path="bindings/DatadogSdk.Android.Internal/DatadogSdk.Android.Internal.csproj" />
-  <Project Path="bindings/DatadogSdk.Android.Logs/DatadogSdk.Android.Logs.csproj" />
-  <Project Path="tests/DatadogSdk.Maui.Tests/DatadogSdk.Maui.Tests.csproj" />
+  <Project Path="bindings/Datadog.Maui/Datadog.Maui.csproj" />
+  <Project Path="bindings/Datadog.iOS.Binding/Datadog.iOS.Binding.csproj" />
+  <Project Path="bindings/Datadog.Android.Binding/Datadog.Android.Binding.csproj" />
+  <Project Path="bindings/Datadog.Android.Core/Datadog.Android.Core.csproj" />
+  <Project Path="bindings/Datadog.Android.Internal/Datadog.Android.Internal.csproj" />
+  <Project Path="bindings/Datadog.Android.Logs/Datadog.Android.Logs.csproj" />
+  <Project Path="tests/Datadog.Maui.Tests/Datadog.Maui.Tests.csproj" />
 </Solution>

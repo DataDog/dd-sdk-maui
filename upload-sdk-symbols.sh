@@ -62,7 +62,7 @@ if [ -z "$DATADOG_API_KEY" ]; then
 fi
 log_info "DATADOG_API_KEY is set"
 
-DSYM_DIR="bindings/DatadogSdk.iOS.Binding/NativeReference/dSYMs"
+DSYM_DIR="bindings/Datadog.iOS.Binding/NativeReference/dSYMs"
 
 if [ ! -d "$DSYM_DIR" ]; then
     log_error "dSYMs not found at $DSYM_DIR. Run ./build.sh first."
