@@ -51,6 +51,10 @@ public static MauiApp CreateMauiApp()
             Service = "my-maui-app",
             Site = DatadogSite.Us1,
             NativeCrashReportEnabled = true,
+            FirstPartyHosts = new List<FirstPartyHost>
+            {
+                new() { Match = "api.example.com", HeaderTypes = new List<TracingHeaderType> { TracingHeaderType.Datadog, TracingHeaderType.TraceContext } }
+            },
         })
         .UseDatadogLogs()
         .UseDatadogTrace()
@@ -58,10 +62,6 @@ public static MauiApp CreateMauiApp()
         {
             ApplicationId = "your-rum-application-id",
             SessionSampleRate = 100.0,
-            FirstPartyHosts = new List<FirstPartyHost>
-            {
-                new() { Match = "api.example.com", HeaderTypes = new List<TracingHeaderType> { TracingHeaderType.Datadog, TracingHeaderType.TraceContext } }
-            },
         })
         .UseDatadogSessionReplay(new SessionReplayConfiguration { ReplaySampleRate = 100.0 });
 

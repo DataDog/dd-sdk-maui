@@ -277,6 +277,18 @@ public class DdSdkConfigurationTests : IDisposable
         Assert.Equal("error", bridge.Verbosity);
     }
 
+    // --- Tracing header type conversion --------------------------------------
+
+    [Theory]
+    [InlineData(TracingHeaderType.Datadog, "datadog")]
+    [InlineData(TracingHeaderType.B3, "b3")]
+    [InlineData(TracingHeaderType.B3Multi, "b3multi")]
+    [InlineData(TracingHeaderType.TraceContext, "tracecontext")]
+    public void ConvertTracingHeaderType_MapsCorrectly(TracingHeaderType input, string expected)
+    {
+        Assert.Equal(expected, DdSdk.ConvertTracingHeaderType(input));
+    }
+
     // --- First-party hosts ---------------------------------------------------
 
     [Fact]

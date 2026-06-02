@@ -5,7 +5,6 @@
  */
 
 using System.Diagnostics.CodeAnalysis;
-using System.Text.Json;
 using Microsoft.Maui.Controls;
 
 namespace Datadog.Maui.Configuration
@@ -112,11 +111,6 @@ namespace Datadog.Maui.Configuration
         /// </summary>
         public string? CustomEndpoint { get; set; }
 
-        /// <summary>
-        /// List of first-party hosts for distributed tracing. Optional.
-        /// </summary>
-        public List<FirstPartyHost>? FirstPartyHosts { get; set; }
-
         // Event mappers
         /// <summary>
         /// Mapper for RUM error events. Return the modified event to send it, or null to drop it.
@@ -218,25 +212,5 @@ namespace Datadog.Maui.Configuration
             _ => "average"
         };
 
-        internal static string ConvertTracingHeaderType(TracingHeaderType headerType) => headerType switch
-        {
-            TracingHeaderType.Datadog => "datadog",
-            TracingHeaderType.B3 => "b3",
-            TracingHeaderType.B3Multi => "b3multi",
-            TracingHeaderType.TraceContext => "tracecontext",
-            _ => "datadog"
-        };
-
-        [RequiresUnreferencedCode("Calls System.Text.Json.JsonSerializer.Serialize<TValue>(TValue, JsonSerializerOptions)")]
-        internal static string SerializeFirstPartyHosts(List<FirstPartyHost> hosts)
-        {
-            var serializable = hosts.Select(h => new
-            {
-                match = h.Match,
-                headerTypes = h.HeaderTypes.Select(ConvertTracingHeaderType).ToList()
-            }).ToList();
-
-            return JsonSerializer.Serialize(serializable);
-        }
     }
 }
