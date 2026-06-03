@@ -96,6 +96,9 @@ public partial class MainPage : ContentPage
             // POST request
             var content = new StringContent("{\"title\":\"test\",\"body\":\"hello\",\"userId\":1}", System.Text.Encoding.UTF8, "application/json");
             await client.PostAsync("https://jsonplaceholder.typicode.com/posts", content);
+
+            // GET request
+            await client.GetAsync("https://www.datadoghq.com/");
         }
         catch (Exception ex)
         {

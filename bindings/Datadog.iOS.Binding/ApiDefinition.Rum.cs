@@ -67,6 +67,11 @@ namespace Datadog.iOS.Binding
         [Export("stopSession")]
         void StopSession();
 
+        [Static]
+        [Export("getCurrentSessionId")]
+        [return: NullAllowed]
+        string GetCurrentSessionId();
+
         // View Attributes
         [Static]
         [Export("addViewAttribute:value:")]

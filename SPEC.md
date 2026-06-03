@@ -630,7 +630,7 @@ namespace Datadog.Maui.Configuration
 - `Verbosity` - SDK logging level for debugging
 - `AdditionalConfiguration` - Pass-through dictionary for platform-specific or internal keys
 - `ProxyConfiguration` - Proxy configuration object (type, address, port, optional username/password)
-- `FirstPartyHosts` - List of first-party hosts for distributed tracing. On Android, applied at core SDK init via `Configuration.Builder.setFirstPartyHostsWithHeaderType()`. On iOS, stored during init and applied when RUM is enabled via `RUM.Configuration.urlSessionTracking`.
+- `FirstPartyHosts` - List of first-party hosts for distributed tracing. When RUM automatic resource tracking is enabled (the default), the C# `DdAutoResourceTracker` injects tracing headers directly into outgoing `HttpClient` requests whose host matches any configured entry (exact domain or subdomain), then attaches `_dd.trace_id`, `_dd.span_id`, and `_dd.rule_psr` to the corresponding RUM resource event. This mirrors the React Native JS-layer approach and works on both iOS and Android without requiring the native OkHttp `DatadogInterceptor` (which cannot be bound). On Android, `Configuration.Builder.setFirstPartyHostsWithHeaderType()` is still called at init for core-level configuration. On iOS, `urlSessionTracking` is configured WITH `firstPartyHostsTracing` even when C# auto-tracking is on — the native URLSession swizzler (`TracingURLSessionHandler`) explicitly skips headers already present on the request (`do not overwrite existing header`), so it leaves C#-injected trace IDs on HttpClient requests untouched while still injecting headers into native URLSession traffic from platform code or third-party dependencies.
 
 **Reserved `AdditionalConfiguration` keys**:
 
@@ -1165,7 +1165,7 @@ The SDK automatically tracks MAUI page navigations and user interactions when en
 - Action tracking: per-control event binders for Button, ImageButton, Switch, CheckBox, RadioButton, Picker, Stepper, DatePicker, TapGestureRecognizer, SwipeGestureRecognizer. Hooked via `Application.DescendantAdded` / `DescendantRemoved`.
   - Button and ImageButton fire `AddAction` from `Pressed` (not `Clicked`). Pressed runs before any user-attached `Clicked` handler, so the native call happens before a `Clicked`-driven navigation can shift the active view. Trade-off: an abandoned press (drag-off before release) is recorded as a tap.
   - Tap and Swipe gestures still fire on completion (`Tapped` / `Swiped`); navigation triggered from those handlers is bucketed under the destination view rather than the source view. Documented limitation.
-- Resource tracking: `DiagnosticListener` subscription to `HttpHandlerDiagnosticListener` intercepts all HttpClient requests. Derives resource kind from Content-Type header. Filters out Datadog intake URLs. Adds `x-datadog-tracked-by: maui` header to prevent iOS native SDK double-tracking.
+- Resource tracking: `DiagnosticListener` subscription to `HttpHandlerDiagnosticListener` intercepts all HttpClient requests. Derives resource kind from Content-Type header. Adds `x-datadog-tracked-by: maui` header to prevent iOS native URLSession swizzler from creating a duplicate RUM resource. For requests whose host matches a configured `FirstPartyHost`, injects distributed tracing headers (`x-datadog-trace-id`, `traceparent`, `b3`, etc.) before the request leaves the device, and attaches `_dd.trace_id`, `_dd.span_id`, and `_dd.rule_psr` to the corresponding `StopResource` call. Sampling uses a Knuth-factor algorithm seeded by the current RUM session ID (`DdRum.GetCurrentSessionId()`), falling back to the trace ID's low bits when the session ID is unavailable.
 - Relies on implicit view stop (new `StartView` auto-stops previous on the native SDK)
 - 10ms debounce on action tracking to prevent duplicate events
 
@@ -1230,7 +1230,7 @@ The SDK automatically tracks MAUI page navigations and user interactions when en
 - ✅ `DdRumConfiguration` with all RUM parameters
 - ✅ `DdRum.Enable()` wired to native iOS and Android
 - ✅ Native crash reporting (iOS: CrashReporting, Android: NdkCrashReports)
-- ✅ First-party hosts for distributed tracing (iOS)
+- ✅ First-party hosts configuration (`DdSdkConfiguration.FirstPartyHosts`)
 - ✅ Vitals, view tracking, interaction tracking, long tasks configuration
 - ✅ Unit tests at all three layers
 - ✅ `DdRum.AddError()` for manual error reporting
@@ -1247,14 +1247,18 @@ The SDK automatically tracks MAUI page navigations and user interactions when en
 - ✅ `ErrorEventMapper` for modifying or dropping error events before they are sent
 - ✅ On Android, `JavaProxyThrowable` unwrapping to extract original C# exception details
 
-### Phase 5: Tracing & APM (Complete — Manual Spans)
+### Phase 5: Tracing & APM (Complete)
 - ✅ Manual span creation with `DdTrace.StartSpan` / `FinishSpan`
 - ✅ Parent-child span nesting (iOS: `childOf` + `setActive()`, Android: `activateSpan` + scope)
 - ✅ Thread-safe span state management
 - ✅ Custom endpoint configuration
 - ✅ Unit tests at all three layers
-- Distributed tracing (planned)
-- Network request tracing (planned)
+- ✅ Distributed tracing header injection via C# `DdAutoResourceTracker` (iOS + Android)
+- ✅ RUM-to-APM correlation: `_dd.trace_id` / `_dd.span_id` attached to RUM resource events
+- ✅ Knuth-factor sampler seeded by RUM session ID for consistent per-session sampling
+- ✅ Subdomain-aware first-party host matching (matches `api.example.com` when `Match = "example.com"`)
+- ✅ All four propagation formats: Datadog, W3C TraceContext, B3, B3Multi
+- 🔲 `baggage` header injection (RUM session ID, user ID, account ID) for Datadog/W3C requests — requires `DdRum.GetCurrentSessionId()` to be wired to user/account info as well
 
 ### Phase 6: Advanced Features (Planned)
 - Global context attributes

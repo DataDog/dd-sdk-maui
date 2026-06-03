@@ -53,6 +53,10 @@
     <Compile Include="../../bindings/Datadog.Maui/Configuration/DdRumResourceEvent.cs" Link="Linked/Configuration/DdRumResourceEvent.cs" />
     <Compile Include="../../bindings/Datadog.Maui/AutoTracking/ResourceKindResolver.cs" Link="Linked/AutoTracking/ResourceKindResolver.cs" />
     <Compile Include="../../bindings/Datadog.Maui/AutoTracking/DdAutoResourceTracker.cs" Link="Linked/AutoTracking/DdAutoResourceTracker.cs" />
+    <Compile Include="../../bindings/Datadog.Maui/AutoTracking/FirstPartyHostMatcher.cs" Link="Linked/AutoTracking/FirstPartyHostMatcher.cs" />
+    <Compile Include="../../bindings/Datadog.Maui/AutoTracking/DistributedTracingSampler.cs" Link="Linked/AutoTracking/DistributedTracingSampler.cs" />
+    <Compile Include="../../bindings/Datadog.Maui/AutoTracking/TracingHeaderWriter.cs" Link="Linked/AutoTracking/TracingHeaderWriter.cs" />
+    <Compile Include="../../bindings/Datadog.Maui/AutoTracking/TracingContext.cs" Link="Linked/AutoTracking/TracingContext.cs" />
     <Compile Include="../../bindings/Datadog.Maui/DdSessionReplay.cs" Link="Linked/DdSessionReplay.cs" />
     <Compile Include="../../bindings/Datadog.Maui/Configuration/SessionReplayConfiguration.cs" Link="Linked/Configuration/SessionReplayConfiguration.cs" />
     <Compile Include="../../bindings/Datadog.Maui/Configuration/TextAndInputPrivacy.cs" Link="Linked/Configuration/TextAndInputPrivacy.cs" />

@@ -10,8 +10,8 @@ let package = Package(
     name: "DatadogWrapper",
     platforms: [
         .iOS(.v12),
-        // macOS is required to run unit tests locally via `swift test`
-        .macOS(.v12)
+        // macOS is required to run unit tests locally via `swift test`.
+        .macOS("12.6")
     ],
     products: [
         .library(

@@ -7,7 +7,7 @@
 - **Core SDK**: Initialize Datadog with full configuration support, including runtime tracking consent updates, global attributes, user info, and account info.
 - **Logs**: Send logs from your .NET MAUI application to Datadog with support for debug, info, warn, and error levels, plus custom attributes.
 - **Traces**: Manual span tracking with support for nested parent-child relationships, custom context attributes, and configurable endpoints.
-- **RUM (Real User Monitoring)**: Full RUM tracking API including views, actions, resources, operations, timings, and session management. Configure session sampling, vitals monitoring, native view/interaction tracking, crash reporting, and first-party hosts for distributed tracing.
+- **RUM (Real User Monitoring)**: Full RUM tracking API including views, actions, resources, operations, timings, and session management. Configure session sampling, vitals monitoring, native view/interaction tracking, crash reporting, and distributed tracing with RUM-to-APM correlation.
 - **Error Tracking**: Automatic C# error and crash tracking. When RUM is enabled, unhandled exceptions and unobserved task exceptions are automatically captured and reported to Datadog. You can also manually report errors using `DdRum.AddError()`.
 
 ## Requirements
@@ -149,10 +149,44 @@ DdSdk.Initialize(config);
 - `Version` - Application version
 - `VersionSuffix` - Version suffix
 - `Verbosity` - SDK logging level
-- `FirstPartyHosts` - List of first-party hosts for distributed tracing
+- `FirstPartyHosts` - List of first-party hosts for distributed tracing. When set, the SDK automatically injects tracing headers (`x-datadog-trace-id`, `traceparent`, etc.) into outgoing `HttpClient` requests whose host matches any entry (including subdomains). The RUM resource event is annotated with `_dd.trace_id` and `_dd.span_id`, enabling click-through to the corresponding APM trace in the Datadog UI.
 - `NativeCrashReportEnabled` - Enable native iOS/Android crash reporting (default: `false`)
 - `AdditionalConfiguration` - Additional configuration dictionary
 - `ProxyConfiguration` - Proxy configuration object (see Proxy Configuration section)
+
+### Distributed Tracing (RUM-to-APM Correlation)
+
+Configure `FirstPartyHosts` on `DdSdkConfiguration` to enable distributed tracing for outgoing HTTP requests. The SDK injects tracing headers into every `HttpClient` request whose host matches a configured entry (exact match or any subdomain), enabling click-through from a RUM resource to its backend APM trace in the Datadog UI.
+
+```csharp
+FirstPartyHosts = new List<FirstPartyHost>
+{
+    new()
+    {
+        Match = "api.mybackend.com",
+        HeaderTypes = new List<TracingHeaderType>
+        {
+            TracingHeaderType.Datadog,      // x-datadog-trace-id / x-datadog-parent-id
+            TracingHeaderType.TraceContext, // traceparent / tracestate (W3C)
+        }
+    }
+},
+```
+
+`ResourceTraceSampleRate` on `DdRumConfiguration` controls what percentage of matched requests are actually traced (default: 20%). Sampling uses a Knuth-factor algorithm seeded by the RUM session ID to keep the sampling decision consistent within a session.
+
+**Supported header formats:**
+
+| `TracingHeaderType` | Headers injected |
+|---|---|
+| `Datadog` | `x-datadog-trace-id`, `x-datadog-parent-id`, `x-datadog-sampling-priority`, `x-datadog-tags`, `x-datadog-origin` |
+| `TraceContext` | `traceparent`, `tracestate` (W3C standard) |
+| `B3` | `b3` (single-header) |
+| `B3Multi` | `X-B3-TraceId`, `X-B3-SpanId`, `X-B3-Sampled` |
+
+Each host can have multiple header types if your backend supports more than one propagation format.
+
+When a request is traced, the RUM resource event automatically receives `_dd.trace_id` and `_dd.span_id` attributes. In the Datadog RUM Explorer, traced resources show a **View Trace** button that opens the corresponding backend APM span.
 
 ### Tracking Consent
 
