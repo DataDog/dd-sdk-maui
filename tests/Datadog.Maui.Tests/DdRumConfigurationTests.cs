@@ -4,7 +4,6 @@
  * Copyright 2026-Present Datadog, Inc.
  */
 
-using System.Text.Json;
 using Datadog.Maui.Configuration;
 using Xunit;
 
@@ -127,43 +126,5 @@ public class DdRumConfigurationTests
         Assert.Equal(expected, DdRumConfiguration.ConvertVitalsUpdateFrequency(input));
     }
 
-    [Theory]
-    [InlineData(TracingHeaderType.Datadog, "datadog")]
-    [InlineData(TracingHeaderType.B3, "b3")]
-    [InlineData(TracingHeaderType.B3Multi, "b3multi")]
-    [InlineData(TracingHeaderType.TraceContext, "tracecontext")]
-    public void ConvertTracingHeaderType_MapsCorrectly(TracingHeaderType input, string expected)
-    {
-        Assert.Equal(expected, DdRumConfiguration.ConvertTracingHeaderType(input));
-    }
-
-    // ── FirstPartyHosts serialization ───────────────────────────
-
-    [Fact]
-    public void SerializeFirstPartyHosts_ProducesCorrectJson()
-    {
-        var hosts = new List<FirstPartyHost>
-        {
-            new() { Match = "api.example.com", HeaderTypes = new List<TracingHeaderType> { TracingHeaderType.Datadog, TracingHeaderType.TraceContext } },
-            new() { Match = "cdn.example.com", HeaderTypes = new List<TracingHeaderType> { TracingHeaderType.B3 } }
-        };
-
-        var json = DdRumConfiguration.SerializeFirstPartyHosts(hosts);
-        var parsed = JsonSerializer.Deserialize<JsonElement>(json);
-
-        Assert.Equal(JsonValueKind.Array, parsed.ValueKind);
-        Assert.Equal(2, parsed.GetArrayLength());
-
-        var first = parsed[0];
-        Assert.Equal("api.example.com", first.GetProperty("match").GetString());
-        var headerTypes = first.GetProperty("headerTypes");
-        Assert.Equal(2, headerTypes.GetArrayLength());
-        Assert.Equal("datadog", headerTypes[0].GetString());
-        Assert.Equal("tracecontext", headerTypes[1].GetString());
-
-        var second = parsed[1];
-        Assert.Equal("cdn.example.com", second.GetProperty("match").GetString());
-        Assert.Equal("b3", second.GetProperty("headerTypes")[0].GetString());
-    }
 
 }

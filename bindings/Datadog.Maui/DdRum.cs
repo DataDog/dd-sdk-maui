@@ -220,7 +220,7 @@ namespace Datadog.Maui
                 ["trackUserInteractions"] = config.AutomaticActionTracking,
                 ["trackResources"] = config.AutomaticResourceTracking,
                 ["trackViewsManually"] = !config.AutomaticViewTracking,
-                ["useFirstPartyHosts"] = config.FirstPartyHosts != null && config.FirstPartyHosts.Count > 0,
+                ["useFirstPartyHosts"] = DdSdk.Configuration?.FirstPartyHosts != null && DdSdk.Configuration.FirstPartyHosts.Count > 0,
             };
 
             var longTasksEnabled = config.NativeLongTaskThresholdMs > 0;

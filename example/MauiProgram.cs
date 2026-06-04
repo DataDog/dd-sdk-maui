@@ -44,6 +44,10 @@ public static class MauiProgram
                 TrackingConsent = TrackingConsent.Granted,
                 Verbosity = SdkVerbosity.DEBUG,
                 UploadFrequency = UploadFrequency.Frequent,
+                FirstPartyHosts = new List<FirstPartyHost>
+                {
+                    new() { Match = "datadoghq.com", HeaderTypes = new List<TracingHeaderType> { TracingHeaderType.Datadog, TracingHeaderType.TraceContext } }
+                },
             })
             .UseDatadogLogs(new DdLogsConfiguration { })
             .UseDatadogTrace(new DdTraceConfiguration { })
@@ -58,10 +62,6 @@ public static class MauiProgram
                 TrackMemoryWarnings = true,
                 NativeLongTaskThresholdMs = 200.0,
                 VitalsUpdateFrequency = VitalsUpdateFrequency.Average,
-                FirstPartyHosts = new List<FirstPartyHost>
-                {
-                    new() { Match = "datadoghq.com", HeaderTypes = new List<TracingHeaderType> { TracingHeaderType.Datadog, TracingHeaderType.TraceContext } }
-                },
                 ErrorEventMapper = e =>
                 {
                     e.Context["processedByErrorMapper"] = true;

@@ -855,10 +855,19 @@ namespace Datadog.Maui
             foreach (var host in hosts)
             {
                 var headerTypes = string.Join(",",
-                    host.HeaderTypes.Select(DdRumConfiguration.ConvertTracingHeaderType));
+                    host.HeaderTypes.Select(ConvertTracingHeaderType));
                 dict[host.Match] = headerTypes;
             }
             return dict;
         }
+
+        internal static string ConvertTracingHeaderType(TracingHeaderType headerType) => headerType switch
+        {
+            TracingHeaderType.Datadog => "datadog",
+            TracingHeaderType.B3 => "b3",
+            TracingHeaderType.B3Multi => "b3multi",
+            TracingHeaderType.TraceContext => "tracecontext",
+            _ => "datadog"
+        };
     }
 }
