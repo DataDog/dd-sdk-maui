@@ -201,9 +201,13 @@ namespace Datadog.Maui.AutoTracking
             if (Shell.Current?.CurrentPage == page)
             {
                 // _pendingShellLocation is the resolved absolute destination of the in-flight
-                // navigation, computed in OnShellNavigating. We don't fall back to
-                // CurrentState.Location because it always lags PageAppearing by one nav step.
-                string? pendingClean = CleanRoute(_pendingShellLocation);
+                // navigation, computed in OnShellNavigating. It is set before Shell.Navigated
+                // fires, so it correctly reflects the destination even when Shell.CurrentState
+                // hasn't ticked forward yet. However, on some platforms Shell.Navigated fires
+                // before Application.PageAppearing, which clears _pendingShellLocation. In that
+                // case Shell.CurrentState.Location is already at the destination and we use it.
+                string? pendingClean = CleanRoute(_pendingShellLocation)
+                    ?? CleanRoute(Shell.Current?.CurrentState?.Location?.ToString());
                 if (pendingClean != null)
                 {
                     return pendingClean;
