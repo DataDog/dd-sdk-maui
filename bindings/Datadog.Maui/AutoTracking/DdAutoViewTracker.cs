@@ -73,6 +73,10 @@ namespace Datadog.Maui.AutoTracking
                 case Shell shell:
                     shell.Navigating += OnShellNavigating;
                     shell.Navigated += OnShellNavigated;
+                    // Seed the base for relative-target resolution. The Shell may have already
+                    // navigated to its initial route before this DescendantAdded fires, so
+                    // capture whatever location it has now — same logic as WalkExistingWindows.
+                    _lastResolvedShellLocation ??= shell.CurrentState?.Location?.ToString();
                     break;
             }
         }
