@@ -23,15 +23,22 @@ namespace Datadog.Maui.AutoTracking
         private string? _lastViewKey;
         private string? _lastViewName;
 
-        // Resolved absolute destination route for the in-flight navigation, computed in
-        // Shell.Navigating by combining the (possibly relative) Target.Location with the last
-        // post-navigation location. Cleared on Shell.Navigated. Read by ResolveViewName at
-        // PageAppearing time, since CurrentState.Location lags one step behind PageAppearing.
+        // Resolved absolute destination route for the in-flight Shell navigation, computed in
+        // Shell.Navigating. Consumed and cleared by ResolveViewName at PageAppearing time.
+        // On Android (normal ordering) Shell.Navigated fires after PageAppearing, so this is
+        // still set when PageAppearing fires and is used directly.
         private string? _pendingShellLocation;
 
         // Last resolved absolute location captured on Shell.Navigated. Used as the base for
         // resolving relative targets (".." / "DetailPage") against in the next Navigating.
         private string? _lastResolvedShellLocation;
+
+        // Set only when Shell.Navigated fires before PageAppearing (platform-dependent ordering,
+        // e.g. some iOS configurations). In that case _pendingShellLocation is already null when
+        // PageAppearing fires, so this flag signals that we should fall back to
+        // Shell.CurrentState.Location. Never set in the normal ordering (PageAppearing before
+        // Navigated), so it never bleeds into a subsequent NavigationPage.PushAsync.
+        private bool _pendingShellNavigated;
 
         internal DdAutoViewTracker(
             Func<Page, string?>? viewNamePredicate,
@@ -89,8 +96,19 @@ namespace Datadog.Maui.AutoTracking
 
         private void OnShellNavigated(object? sender, ShellNavigatedEventArgs e)
         {
-            _pendingShellLocation = null;
             _lastResolvedShellLocation = e.Current?.Location?.ToString();
+            if (_pendingShellLocation != null)
+            {
+                // Shell.Navigated fired before PageAppearing (platform-dependent ordering).
+                // PageAppearing hasn't consumed _pendingShellLocation yet, so clear it and
+                // set the flag — ResolveViewName will fall back to CurrentState.Location.
+                _pendingShellLocation = null;
+                _pendingShellNavigated = true;
+            }
+            // If _pendingShellLocation is null, PageAppearing already consumed and cleared it
+            // (normal ordering: PageAppearing fires before Navigated). Do NOT set
+            // _pendingShellNavigated here — that would leave a stale flag that bleeds into
+            // the next NavigationPage.PushAsync.
         }
 
         /// <summary>
@@ -198,16 +216,16 @@ namespace Datadog.Maui.AutoTracking
                 if (custom != null) return custom;
             }
 
-            if (Shell.Current?.CurrentPage == page)
+            if (_pendingShellLocation != null || _pendingShellNavigated)
             {
-                // _pendingShellLocation is the resolved absolute destination of the in-flight
-                // navigation, computed in OnShellNavigating. It is set before Shell.Navigated
-                // fires, so it correctly reflects the destination even when Shell.CurrentState
-                // hasn't ticked forward yet. However, on some platforms Shell.Navigated fires
-                // before Application.PageAppearing, which clears _pendingShellLocation. In that
-                // case Shell.CurrentState.Location is already at the destination and we use it.
+                // _pendingShellLocation holds the pre-computed destination (normal ordering:
+                // PageAppearing fires before Navigated). When Navigated fires first it is null,
+                // but _pendingShellNavigated is true and CurrentState.Location is already at the
+                // destination, so we fall back to that.
                 string? pendingClean = CleanRoute(_pendingShellLocation)
-                    ?? CleanRoute(Shell.Current?.CurrentState?.Location?.ToString());
+                    ?? (_pendingShellNavigated ? CleanRoute(Shell.Current?.CurrentState?.Location?.ToString()) : null);
+                _pendingShellLocation = null;
+                _pendingShellNavigated = false;
                 if (pendingClean != null)
                 {
                     return pendingClean;
