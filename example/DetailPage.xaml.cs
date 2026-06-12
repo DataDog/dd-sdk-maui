@@ -8,6 +8,7 @@ using Datadog.Maui;
 
 namespace example;
 
+[DdView("Custom Detail Title")]
 public partial class DetailPage : ContentPage
 {
     public DetailPage()

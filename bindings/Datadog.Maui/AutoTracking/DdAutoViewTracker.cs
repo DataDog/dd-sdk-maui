@@ -203,36 +203,41 @@ namespace Datadog.Maui.AutoTracking
 
         /// <summary>
         /// Resolve a human-readable view name.
-        /// Priority: custom predicate → Shell route (when applicable) → Page class name.
+        /// Priority: custom predicate → [DdView] attribute → Shell route (when applicable) → Page class name.
         /// Internal MAUI-generated routes (e.g. "D_FAULT_NavDetailPage6", which appear
         /// when pages are pushed via Navigation.PushAsync inside a Shell app) are skipped
         /// so we fall back to the cleaner page class name.
         /// </summary>
-        private string ResolveViewName(Page page)
+        internal string ResolveViewName(Page page)
         {
-            if (_viewNamePredicate != null)
-            {
-                var custom = _viewNamePredicate(page);
-                if (custom != null) return custom;
-            }
+            string? shellName = null;
+            string? viewName = null;
 
+            // Resolve and consume pending Shell state unconditionally so it never bleeds
+            // into a subsequent navigation, even when a higher-priority source wins.
             if (_pendingShellLocation != null || _pendingShellNavigated)
             {
-                // _pendingShellLocation holds the pre-computed destination (normal ordering:
-                // PageAppearing fires before Navigated). When Navigated fires first it is null,
-                // but _pendingShellNavigated is true and CurrentState.Location is already at the
-                // destination, so we fall back to that.
-                string? pendingClean = CleanRoute(_pendingShellLocation)
+                shellName = CleanRoute(_pendingShellLocation)
                     ?? (_pendingShellNavigated ? CleanRoute(Shell.Current?.CurrentState?.Location?.ToString()) : null);
                 _pendingShellLocation = null;
                 _pendingShellNavigated = false;
-                if (pendingClean != null)
-                {
-                    return pendingClean;
-                }
             }
 
-            return page.GetType().Name;
+            if (_viewNamePredicate != null)
+            {
+                viewName = _viewNamePredicate(page);
+            }
+
+            if (viewName == null
+                && Attribute.GetCustomAttribute(page.GetType(), typeof(DdViewAttribute), inherit: false) is DdViewAttribute ddView
+                && !string.IsNullOrEmpty(ddView.ViewName))
+            {
+                viewName = ddView.ViewName;
+            }
+
+            viewName ??= shellName ?? page.GetType().Name;
+
+            return viewName;
         }
 
         /// <summary>
