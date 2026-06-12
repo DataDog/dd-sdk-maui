@@ -466,7 +466,18 @@ DdRum.Enable(new DdRumConfiguration
 });
 ```
 
-**View naming priority:** Custom `ViewNamePredicate` → resolved Shell route (forward navs and back navs both produce absolute paths like `MainPage/DetailPage`) → Page class name. Pages pushed via `Navigation.PushAsync` (which Shell internally assigns synthetic `D_FAULT_…` routes) fall through to the page class name.
+**View naming priority:** Custom `ViewNamePredicate` → `[DdView]` attribute → resolved Shell route (forward navs and back navs both produce absolute paths like `MainPage/DetailPage`) → Page class name. Pages pushed via `Navigation.PushAsync` (which Shell internally assigns synthetic `D_FAULT_…` routes) fall through to the page class name.
+
+**Naming a view with `[DdView]`:** Annotate any `ContentPage` subclass with `[DdView("My Name")]` to give it a fixed RUM view name, regardless of routing or class name:
+
+```csharp
+using Datadog.Maui;
+
+[DdView("Detail Screen")]
+public partial class DetailPage : ContentPage { ... }
+```
+
+The attribute takes priority over the Shell route but loses to a `ViewNamePredicate` that returns a non-null value, so it can still be overridden programmatically.
 
 **Setting view attributes from page code:** call `DdRum.AddViewAttribute(...)` from `OnNavigatedTo` (not the constructor or `OnAppearing`). The SDK's `StartView` for the destination has already fired by the time `OnNavigatedTo` runs, so the attribute attaches to the new view rather than the previous one.
 
