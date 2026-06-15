@@ -93,12 +93,12 @@ namespace Datadog.Maui.AutoTracking
             return entries;
         }
 
-        // ^(.*\.)*(host1$|host2$|...)
+        // ^([^.]+\.)*(host1$|host2$|...)
         // Matches "example.com" and "api.example.com" but not "notexample.com".
         private static string BuildPattern(List<string> hosts)
         {
             var alternatives = string.Join("|", hosts.Select(h => Regex.Escape(h) + "$"));
-            return $@"^(.*\.)*({alternatives})";
+            return $@"^([^.]+\.)*({alternatives})";
         }
     }
 }

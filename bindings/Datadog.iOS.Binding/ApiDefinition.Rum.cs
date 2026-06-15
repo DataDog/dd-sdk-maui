@@ -70,7 +70,7 @@ namespace Datadog.iOS.Binding
         [Static]
         [Export("getCurrentSessionId")]
         [return: NullAllowed]
-        string GetCurrentSessionId();
+        string? GetCurrentSessionId();
 
         // View Attributes
         [Static]
