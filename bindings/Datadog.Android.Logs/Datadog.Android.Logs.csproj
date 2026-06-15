@@ -7,7 +7,7 @@
     <AndroidClassParser>class-parse</AndroidClassParser>
     <!-- Suppress XA4241/XA4242: Java transitive deps are satisfied via NuGet; verification not needed -->
     <NoWarn>$(NoWarn);XA4241;XA4242</NoWarn>
-    <Version>0.1.0</Version>
+    <Version>0.2.0</Version>
   </PropertyGroup>
 
   <ItemGroup>

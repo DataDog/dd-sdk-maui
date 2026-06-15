@@ -80,7 +80,7 @@
 
 	<!-- Datadog SDK for .NET MAUI (unified package for iOS and Android) -->
 	<ItemGroup>
-		<PackageReference Include="Datadog.Maui" Version="0.1.0" />
+		<PackageReference Include="Datadog.Maui" Version="0.2.0" />
 	</ItemGroup>
 
 </Project>

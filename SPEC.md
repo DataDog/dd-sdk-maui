@@ -488,7 +488,7 @@ datadogwrapper-release.aar (ZIP archive)
 **Datadog.Android.Core.csproj**:
 ```xml
 <ItemGroup>
-  <PackageReference Include="Datadog.Android.Internal" Version="0.1.0" />
+  <PackageReference Include="Datadog.Android.Internal" Version="0.2.0" />
   <AndroidMavenLibrary Include="com.datadoghq:dd-sdk-android-core" Version="<ANDROID_NATIVE_VERSION>" />
 </ItemGroup>
 ```
