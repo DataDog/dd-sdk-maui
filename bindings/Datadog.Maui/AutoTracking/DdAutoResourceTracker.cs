@@ -15,10 +15,16 @@ namespace Datadog.Maui.AutoTracking
     /// <summary>
     /// Automatically tracks HTTP requests as RUM resources via DiagnosticListener.
     /// Subscribes to HttpHandlerDiagnosticListener which fires for all HttpClient requests.
+    ///
+    /// For first-party hosts (configured via DdSdkConfiguration.FirstPartyHosts) this class
+    /// also injects distributed tracing headers and attaches the trace/span IDs to the RUM
+    /// resource event, enabling RUM-to-APM click-through in the Datadog UI.
     /// </summary>
     internal class DdAutoResourceTracker : IObserver<DiagnosticListener>, IObserver<KeyValuePair<string, object?>>
     {
         private readonly List<IDisposable> _subscriptions = new();
+        private readonly FirstPartyHostMatcher _hostMatcher;
+        internal double ResourceTraceSampleRate { get; private set; }
 
         // Cache PropertyInfo per payload type for reflection on internal sealed types.
         // Each diagnostic event has a different payload type (ActivityStartData, ActivityStopData, etc.)
@@ -28,8 +34,14 @@ namespace Datadog.Maui.AutoTracking
         // Key for storing resource tracking key in HttpRequestMessage.Options
         private static readonly HttpRequestOptionsKey<string> ResourceKeyOption = new("dd-resource-key");
         private static readonly HttpRequestOptionsKey<bool> TrackedByMauiOption = new("dd-tracked-by-maui");
+        // Key for storing the distributed tracing context so OnRequestStop can emit the IDs.
+        private static readonly HttpRequestOptionsKey<TracingContext?> TracingContextOption = new("dd-tracing-context");
 
-        internal DdAutoResourceTracker() { }
+        internal DdAutoResourceTracker(double resourceTraceSampleRate)
+        {
+            ResourceTraceSampleRate = Math.Clamp(resourceTraceSampleRate, 0.0, 100.0);
+            _hostMatcher = new FirstPartyHostMatcher(DdSdk.Configuration?.FirstPartyHosts);
+        }
 
         /// <summary>
         /// Start tracking HTTP requests by subscribing to DiagnosticListener.
@@ -99,11 +111,31 @@ namespace Datadog.Maui.AutoTracking
             request.Options.Set(ResourceKeyOption, key);
             request.Options.Set(TrackedByMauiOption, true);
 
-            // Add marker header so iOS native SDK skips duplicate tracking
+            // Add marker header so iOS native SDK skips duplicate RUM resource tracking.
+            // The native URLSession swizzler still runs but will drop the native RUM resource
+            // via resourceAttributesProvider, leaving the C# resource as the sole event.
             request.Headers.TryAddWithoutValidation("x-datadog-tracked-by", "maui");
 
-            var method = MapHttpMethod(request.Method);
+            // Distributed tracing header injection for first-party hosts.
+            var headerTypes = _hostMatcher.GetHeaderTypes(request.RequestUri);
+            if (headerTypes != null)
+            {
+                var ctx = TracingContext.Generate();
+                var sessionId = DdRum.GetCurrentSessionId();
+                var isSampled = DistributedTracingSampler.ShouldSample(
+                    ResourceTraceSampleRate, sessionId, ctx.TraceIdLow);
+                ctx = ctx.WithSampled(isSampled);
 
+                TracingHeaderWriter.Write(request, ctx, headerTypes);
+                request.Options.Set(TracingContextOption, (TracingContext?)ctx);
+
+                InternalLog.Log(
+                    $"DdAutoResourceTracker: Injected tracing headers for {request.RequestUri.Host} " +
+                    $"(sampled={isSampled}, traceId={ctx.TraceIdPaddedHex})",
+                    SdkVerbosity.DEBUG);
+            }
+
+            var method = MapHttpMethod(request.Method);
             DdRum.StartResource(key, method, request.RequestUri.ToString());
         }
 
@@ -126,6 +158,14 @@ namespace Datadog.Maui.AutoTracking
             {
                 ["_dd.resource.source_type"] = "maui"
             };
+
+            if (request.Options.TryGetValue(TracingContextOption, out var tracingCtx) && tracingCtx.HasValue)
+            {
+                var ctx = tracingCtx.Value;
+                additionalAttributes["_dd.trace_id"] = ctx.TraceIdPaddedHex;
+                additionalAttributes["_dd.span_id"] = ctx.SpanIdDecimal;
+                additionalAttributes["_dd.rule_psr"] = ResourceTraceSampleRate / 100.0;
+            }
 
             // Attach error context set by OnRequestException (for failed requests)
             if (request.Options.TryGetValue(new HttpRequestOptionsKey<string>("dd-error-message"), out var errorMessage))

@@ -304,7 +304,11 @@ final class DdRumTests: XCTestCase {
         XCTAssertNotNil(mockRumModule.capturedConfig?.urlSessionTracking)
     }
 
-    func testEnableRum_withoutStoredFirstPartyHosts_doesNotSetUrlSessionTracking() {
+    func testEnableRum_withoutStoredFirstPartyHosts_setsUrlSessionTrackingForResourceDrop() {
+        // When C# auto-resource-tracking is enabled (default), urlSessionTracking is always
+        // configured so the resourceAttributesProvider can drop native URLSession resources
+        // already tracked by the C# DiagnosticListener layer — even if no first-party hosts
+        // are configured (and thus no distributed tracing headers will be injected).
         DdSdkNativeWrapper.firstPartyHosts = nil
 
         let config: NSDictionary = [
@@ -313,7 +317,7 @@ final class DdRumTests: XCTestCase {
 
         DdRum.enableRum(configuration: config)
 
-        XCTAssertNil(mockRumModule.capturedConfig?.urlSessionTracking)
+        XCTAssertNotNil(mockRumModule.capturedConfig?.urlSessionTracking)
     }
 
     func testEnableRum_firstPartyHosts_withAutoResourceTrackingOff_stillSetsUrlSessionTracking() {

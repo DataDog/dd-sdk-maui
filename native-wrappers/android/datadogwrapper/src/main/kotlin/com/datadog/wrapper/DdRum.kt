@@ -21,6 +21,7 @@ import com.datadog.android.rum.tracking.ActivityViewTrackingStrategy
 import com.datadog.android.rum.configuration.VitalsUpdateFrequency
 import com.datadog.android.rum.ExperimentalRumApi
 import com.datadog.android.rum.operations.FailureReason
+import com.datadog.android.rum.RumSessionListener
 
 class DdRum {
     companion object {
@@ -28,9 +29,16 @@ class DdRum {
         var initialResourceThreshold: Double? = null
             private set
 
+        // Cached session ID, updated via RumSessionListener.
+        // Read synchronously by the C# layer for distributed tracing sampling.
+        @Volatile
+        var cachedSessionId: String? = null
+            private set
+
         // For testing: reset static state between tests
         internal fun resetForTesting() {
             initialResourceThreshold = null
+            cachedSessionId = null
         }
 
         // -- Mapping helpers --
@@ -198,12 +206,25 @@ class DdRum {
                 // are written into emitted TelemetryConfigurationEvents.
                 DdTelemetry.installConfigurationMapper(builder)
 
+                // Cache session ID whenever a new RUM session starts so the C# layer
+                // can use it for deterministic distributed-tracing sampling (Knuth factor).
+                builder.setSessionListener(object : RumSessionListener {
+                    override fun onSessionStarted(sessionId: String, isDiscarded: Boolean) {
+                        cachedSessionId = sessionId
+                    }
+                })
+
                 val rumConfig = builder.build()
                 Rum.enable(rumConfig, Datadog.getInstance())
             } catch (e: Exception) {
                 Log.e("DatadogWrapper", "DdRum.enableRum failed", e)
             }
         }
+
+        // -- Session ID --
+
+        @JvmStatic
+        fun getCurrentSessionId(): String? = cachedSessionId
 
         // -- Add Error --
 

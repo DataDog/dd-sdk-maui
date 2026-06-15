@@ -81,6 +81,8 @@ internal class MockRumBridge : DdRum.IRumBridge
         => AddViewLoadingTimeCalls.Add(overwrite);
     public void StopSession()
         => StopSessionCallCount++;
+    public string? SessionIdToReturn { get; set; }
+    public string? GetCurrentSessionId() => SessionIdToReturn;
     public void AddViewAttribute(string key, object value)
         => AddViewAttributeCalls.Add((key, value));
     public void RemoveViewAttribute(string key)

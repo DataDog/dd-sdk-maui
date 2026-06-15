@@ -18,6 +18,23 @@ public class DdRum: NSObject {
     // Stored for future resource tracking configuration
     static var initialResourceThreshold: Double? = nil
 
+    // Cached session ID, updated via onSessionStart callback (RUM queue) and read
+    // synchronously by the C# layer on the network thread — protect with a lock.
+    private static let sessionIdLock = NSLock()
+    private static var _cachedSessionId: String? = nil
+    static var cachedSessionId: String? {
+        get {
+            sessionIdLock.lock()
+            defer { sessionIdLock.unlock() }
+            return _cachedSessionId
+        }
+        set {
+            sessionIdLock.lock()
+            defer { sessionIdLock.unlock() }
+            _cachedSessionId = newValue
+        }
+    }
+
     // For testing: inject dependencies
     static func setRumModule(_ module: RumModuleProtocol) {
         rumModule = module
@@ -27,6 +44,7 @@ public class DdRum: NSObject {
     static func resetDependencies() {
         rumModule = RealRumModule()
         initialResourceThreshold = nil
+        cachedSessionId = nil
     }
 
     // MARK: - Mapping helpers
@@ -205,14 +223,13 @@ public class DdRum: NSObject {
             rumConfig.customEndpoint = url
         }
 
-        // First party hosts (stored during SDK initialization) + resource trace sample rate
+        // URLSession tracking configuration.
+        let automaticResourceTrackingEnabled = config["automaticResourceTracking"] as? Bool ?? true
+
         if let hosts = DdSdkNativeWrapper.firstPartyHosts {
             let resourceTraceSampleRate = config["resourceTraceSampleRate"] as? Double ?? 20.0
-            let automaticResourceTracking = config["automaticResourceTracking"] as? Bool ?? true
 
-            if automaticResourceTracking {
-                // When C# automatic resource tracking is enabled, use a resourceAttributesProvider
-                // to drop requests already tracked at the C# layer (identified by x-datadog-tracked-by: maui header).
+            if automaticResourceTrackingEnabled {
                 rumConfig.urlSessionTracking = .init(
                     firstPartyHostsTracing: .traceWithHeaders(
                         hostsWithHeaders: hosts,
@@ -226,8 +243,6 @@ public class DdRum: NSObject {
                     }
                 )
             } else {
-                // Auto resource tracking is off, but first-party host tracing is still needed
-                // for distributed tracing header injection (RUM↔APM correlation).
                 rumConfig.urlSessionTracking = .init(
                     firstPartyHostsTracing: .traceWithHeaders(
                         hostsWithHeaders: hosts,
@@ -235,14 +250,22 @@ public class DdRum: NSObject {
                     )
                 )
             }
+        } else if automaticResourceTrackingEnabled {
+            rumConfig.urlSessionTracking = .init(
+                resourceAttributesProvider: { request, _, _, _ in
+                    if request.value(forHTTPHeaderField: "x-datadog-tracked-by") == "maui" {
+                        return ["_dd.resource.drop_resource": true]
+                    }
+                    return nil
+                }
+            )
         }
 
         // Initial resource threshold (stored for resource tracking configuration)
         initialResourceThreshold = config["initialResourceThreshold"] as? Double
 
         // Drop native resources that were already tracked at the C# level
-        let automaticResourceTracking = config["automaticResourceTracking"] as? Bool ?? true
-        if automaticResourceTracking {
+        if automaticResourceTrackingEnabled {
             rumConfig.resourceEventMapper = { resourceEvent in
                 if resourceEvent.context?.contextInfo["_dd.resource.drop_resource"] != nil {
                     return nil
@@ -251,11 +274,24 @@ public class DdRum: NSObject {
             }
         }
 
+        // Cache session ID whenever a new RUM session starts so the C# layer can
+        // use it for deterministic distributed-tracing sampling (Knuth factor).
+        rumConfig.onSessionStart = { sessionId, _ in
+            DdRum.cachedSessionId = sessionId
+        }
+
         rumModule.enable(with: rumConfig)
 
         if DdSdkNativeWrapper.nativeCrashReportEnabled {
             CrashReporting.enable()
         }
+    }
+
+    // MARK: - Session ID
+
+    @objc(getCurrentSessionId)
+    public static func getCurrentSessionId() -> String? {
+        return cachedSessionId
     }
 
     // MARK: - Add Error

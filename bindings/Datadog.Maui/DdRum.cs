@@ -42,6 +42,7 @@ namespace Datadog.Maui
 
             // Session
             void StopSession();
+            string? GetCurrentSessionId();
 
             // View Attributes
             void AddViewAttribute(string key, object value);
@@ -200,7 +201,7 @@ namespace Datadog.Maui
 
             if (configuration.AutomaticResourceTracking)
             {
-                resourceTracker = new DdAutoResourceTracker();
+                resourceTracker = new DdAutoResourceTracker(configuration.ResourceTraceSampleRate);
                 resourceTracker.Start();
                 InternalLog.Log("DdRum: Automatic resource tracking enabled", SdkVerbosity.INFO);
             }
@@ -518,6 +519,24 @@ namespace Datadog.Maui
             NativeDdRum.StopSession();
 #elif IOS
             NativeDdRum.StopSession();
+#endif
+        }
+
+        /// <summary>
+        /// Returns the current RUM session ID, or null if no session is active yet.
+        /// Populated via the native session-start callback after RUM.Enable() is called.
+        /// Used by distributed tracing sampling to achieve consistent per-session sampling.
+        /// </summary>
+        public static string? GetCurrentSessionId()
+        {
+            if (testBridge is not null) return testBridge.GetCurrentSessionId();
+
+#if ANDROID
+            return NativeDdRum.CurrentSessionId;
+#elif IOS
+            return NativeDdRum.GetCurrentSessionId();
+#else
+            return null;
 #endif
         }
 
