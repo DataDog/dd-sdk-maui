@@ -12,7 +12,7 @@
 
     <!-- Package metadata -->
     <PackageId>Datadog.Maui</PackageId>
-    <Version>0.1.0</Version>
+    <Version>0.2.0</Version>
     <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
     <Authors>Datadog</Authors>
     <Company>Datadog</Company>
@@ -40,12 +40,12 @@
 
   <!-- iOS platform dependencies -->
   <ItemGroup Condition="$(TargetFramework.Contains('-ios'))">
-    <PackageReference Include="Datadog.iOS.Binding" Version="0.1.0" />
+    <PackageReference Include="Datadog.iOS.Binding" Version="0.2.0" />
   </ItemGroup>
 
   <!-- Android platform dependencies -->
   <ItemGroup Condition="$(TargetFramework.Contains('-android'))">
-    <PackageReference Include="Datadog.Android.Binding" Version="0.1.0" />
+    <PackageReference Include="Datadog.Android.Binding" Version="0.2.0" />
     <!-- Runtime dependencies for Android -->
     <PackageReference Include="Xamarin.Kotlin.StdLib" Version="2.2.0.1" />
     <PackageReference Include="Xamarin.Kotlin.Reflect" Version="2.2.0.1" />
