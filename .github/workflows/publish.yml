@@ -45,6 +45,12 @@ jobs:
           name: nuget-packages
           path: local-packages/*.nupkg
 
+      - name: Upload dSYMs as artifacts
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4  # v5
+        with:
+          name: dsyms
+          path: bindings/Datadog.iOS.Binding/NativeReference/dSYMs/
+
       - name: NuGet login (OIDC → temp API key)
         if: ${{ !inputs.dry_run }}
         uses: NuGet/login@8d196754b4036150537f80ac539e15c2f1028841  # v1.2.0
