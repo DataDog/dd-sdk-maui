@@ -1,8 +1,0 @@
-{
-  "subdomain": "mobile-integration",
-  "failOnCriticalErrors": true,
-  "files": ["**/android.tests.json"],
-  "defaultTestOverrides": {
-    "mobileApplicationVersionFilePath": "e2e/output/com.datadog.shopist.maui-Signed.apk"
-  }
-}

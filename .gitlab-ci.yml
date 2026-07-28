@@ -2,7 +2,6 @@ stages:
   - build
   - verify
   - test
-  - build-and-upload
 
 variables:
   DEVELOP_BRANCH: 'develop'
@@ -110,38 +109,3 @@ test:maui-net9:
   timeout: 15m
   script:
     - ./check.sh --maui --net9
-
-# ============================================================================
-# E2E: Build Shopist MAUI app with SDK and upload to Synthetics
-# Runs on merges to the integration branch, or manually via BUILD_E2E=true
-# ============================================================================
-e2e:build-and-upload:
-  stage: build-and-upload
-  rules:
-    - if: $BUILD_E2E == "true"
-    - if: $CI_COMMIT_BRANCH == "develop"
-  script:
-    # 1. Build the SDK NuGet packages
-    - echo "Building SDK packages..."
-    - ./build.sh
-
-    # 2. Build Android APK of Shopist MAUI
-    - echo "Building Shopist MAUI Android APK..."
-    - chmod +x e2e/scripts/build-android-shopist.sh
-    - ./e2e/scripts/build-android-shopist.sh
-
-    # 3. Upload APK to Synthetics
-    - echo "Uploading APK to Synthetics..."
-    - chmod +x e2e/scripts/upload.sh
-    - ./e2e/scripts/upload.sh e2e/output/com.datadog.shopist.maui-Signed.apk ANDROID
-
-    # 4. Run Synthetics tests
-    - echo "Running Synthetics tests..."
-    - chmod +x e2e/scripts/run-synthetics.sh
-    - ./e2e/scripts/run-synthetics.sh android
-
-  artifacts:
-    paths:
-      - e2e/output/
-      - e2e/logs/
-    when: always
