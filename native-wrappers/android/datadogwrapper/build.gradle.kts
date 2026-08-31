@@ -41,7 +41,7 @@ dependencies {
     implementation("com.datadoghq:dd-sdk-android-rum:3.10.0")
     implementation("com.datadoghq:dd-sdk-android-ndk:3.10.0")
     implementation("com.datadoghq:dd-sdk-android-session-replay:3.10.0")
-    implementation("com.squareup.okhttp3:okhttp:4.12.0")
+    implementation("com.squareup.okhttp3:okhttp:5.5.0")
 
     // Test dependencies
     testImplementation("junit:junit:4.13.2")
