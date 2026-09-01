@@ -4,7 +4,9 @@
  * Copyright 2026-Present Datadog, Inc.
  */
 
+using System.Reflection;
 using System.Runtime.CompilerServices;
+using Datadog.Maui.Configuration;
 using Datadog.Maui.Tests.Fixtures.CrossAssembly;
 using Xunit;
 
@@ -70,10 +72,21 @@ public class DdRumErrorTrackingTests : IDisposable
     {
         DdRumErrorTracking.StartTracking();
 
-        // Simulate AppDomain.UnhandledException by raising it on the current domain
-        // We can't easily trigger this without crashing, so we test via the public API
-        // that DdRumErrorTracking hooks are in place by checking IsTracking
-        Assert.True(DdRumErrorTracking.IsTracking);
+        // AppDomain.CurrentDomain.UnhandledException can't be raised directly without
+        // crashing the test process, so invoke the private handler itself via reflection
+        // with a real UnhandledExceptionEventArgs, mirroring what the CLR would do.
+        var exception = new InvalidOperationException("boom");
+        var args = new UnhandledExceptionEventArgs(exception, isTerminating: false);
+        var handler = typeof(DdRumErrorTracking).GetMethod("OnUnhandledException", BindingFlags.NonPublic | BindingFlags.Static);
+        Assert.NotNull(handler);
+
+        handler!.Invoke(null, [null, args]);
+
+        Assert.Equal(1, rumBridge.AddErrorCallCount);
+        Assert.Equal(RumErrorSource.Source, rumBridge.LastSource);
+        Assert.Equal("boom", rumBridge.LastMessage);
+        Assert.Equal("AppDomain.UnhandledException", rumBridge.LastContext?["_dd.error.handler"]);
+        Assert.Equal(false, rumBridge.LastContext?["_dd.error.is_crash"]);
     }
 
     // ── UnwrapJavaException ────────────────────────────────────────
