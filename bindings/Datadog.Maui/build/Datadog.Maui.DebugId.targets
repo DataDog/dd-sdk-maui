@@ -137,25 +137,49 @@
     <Exec Command="dotnet exec &quot;$(_DdDebugIdManifestGeneratorDll)&quot; &quot;$(_DdDebugIdManifestPath)&quot; @(_DdDebugIdManifestAssemblies->'&quot;%(FullPath)&quot;', ' ')" />
   </Target>
 
-  <!-- iOS: regenerate the manifest from the app's own POST-link assembly, AND push it
-       directly into the already-built .app bundle. Unlike Android, iOS's real
-       bundle-resource copy (_CopyResourcesToBundle, which is what actually copies our
-       MauiAsset's on-disk bytes into the .app) was confirmed empirically to run BEFORE
-       the linker's output is even loaded (_LoadLinkerOutput) — so by the time linking
-       finishes, our file has already been copied into the bundle once, with stale
-       content, and nothing will copy it again automatically. Rewriting
-       $(IntermediateOutputPath)'s copy after the fact (as the Android target above
-       does) would be silently correct-but-unshipped: the file sitting in bin/.../
-       example.app would still hold the old value. So this target also explicitly
-       re-copies the freshly regenerated file over the one already inside
-       $(AppBundleDir) — a plain MSBuild property, confirmed set well before this point
-       in the build and stable for its remainder. AfterTargets="_LoadLinkerOutput" is
-       an approximate anchor, not an exact dependency edge, chosen because it's the
-       first point in the observed build order where the linked assembly is guaranteed
-       to already exist on disk; the Exists() condition is the real gate. -->
+  <!-- iOS: regenerate the manifest from whatever the SDK's own publish pipeline actually
+       ships, AND push it directly into the already-built .app bundle.
+
+       First cut of this target read $(IntermediateOutputPath)linked\$(TargetFileName) —
+       WRONG, found via independent review: on the standard Release+AOT+single-RID config
+       (EnableAssemblyILStripping defaults to true there — see _ComputeStripAssemblyIL in
+       the iOS SDK's Xamarin.Shared.Sdk.targets), a further target _StripAssemblyIL runs
+       AFTER _LoadLinkerOutput and re-emits EVERY published assembly (not just the app's
+       own — anything in @(ResolvedFileToPublish) with a .dll extension) into
+       $(DeviceSpecificIntermediateOutputPath)stripped, each with a fresh CodeView
+       GUID+Stamp, and that stripped copy — not linked/ — is what _StripAssemblyIL itself
+       swaps into @(ResolvedFileToPublish) and what later gets copied into the .app. So
+       reading linked/ shipped a stale id for every reference assembly too, not only the
+       app's own. Reading @(ResolvedFileToPublish) instead of guessing a path directly
+       tracks whatever _StripAssemblyIL (if it ran) already substituted, so this is
+       correct whether or not stripping happened, without needing our own condition on
+       $(EnableAssemblyILStripping) — a target's Condition failing doesn't remove its
+       AfterTargets scheduling point, only its body, so hooking AfterTargets="_StripAssemblyIL"
+       still runs at the right point on Debug builds where stripping is skipped.
+
+       IMPORTANT, confirmed via -v:diag: AfterTargets does NOT mean "after every target in
+       this semicolon-list has run" — MSBuild inserts the hooked target at the FIRST point
+       in the build graph where any listed name is reached, even if that's an earlier,
+       unrelated dependency-chain reference to the same name rather than its real, later
+       execution. A first attempt listing "_StripAssemblyIL;_LoadLinkerOutput" together
+       got inserted right after _LoadLinkerOutput's DependsOnTargets chain — which runs much
+       earlier, well before the real _StripAssemblyIL target body executes — reproducing
+       the exact same class of ordering bug found on Android. Anchoring on _StripAssemblyIL
+       alone avoids this because nothing else references that name earlier in the graph.
+
+       We still need to push directly into $(AppBundleDir): iOS's real bundle-resource
+       copy (_CopyResourcesToBundle, which is what actually copies our MauiAsset's
+       on-disk bytes into the .app) was confirmed empirically to run BEFORE stripping or
+       linking even start — so by the time either finishes, our file has already been
+       copied into the bundle once, with stale content, and nothing will copy it again
+       automatically. Rewriting $(IntermediateOutputPath)'s copy alone (as the Android
+       target above does) would be silently correct-but-unshipped: the file sitting in
+       bin/.../example.app would still hold the old value. $(AppBundleDir) is a plain
+       MSBuild property, confirmed set well before this point in the build and stable
+       for its remainder. -->
   <Target Name="_DdRewriteDebugIdManifestPostLink_iOS"
-          AfterTargets="_LoadLinkerOutput"
-          Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios' And Exists('$(IntermediateOutputPath)linked\$(TargetFileName)')">
+          AfterTargets="_StripAssemblyIL"
+          Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios' And '@(ResolvedFileToPublish)' != ''">
 
     <PropertyGroup>
       <_DdDebugIdManifestPath>$(IntermediateOutputPath)dd_debug_ids.json</_DdDebugIdManifestPath>
@@ -163,11 +187,10 @@
     </PropertyGroup>
 
     <ItemGroup>
-      <_DdDebugIdManifestAssemblies Include="@(ReferencePath)" />
-      <_DdDebugIdManifestAssemblies Include="$(IntermediateOutputPath)linked\$(TargetFileName)" />
+      <_DdDebugIdManifestAssemblies Include="@(ResolvedFileToPublish)" Condition="'%(Extension)' == '.dll' And '%(ResolvedFileToPublish.Culture)' == ''" />
     </ItemGroup>
 
-    <Message Importance="low" Text="Datadog: rewriting debug-id manifest from post-link assembly at $(_DdDebugIdManifestPath), re-copying into $(_DdAppBundleManifestPath)" />
+    <Message Importance="low" Text="Datadog: rewriting debug-id manifest from @(ResolvedFileToPublish) (post-strip if stripping ran) at $(_DdDebugIdManifestPath), re-copying into $(_DdAppBundleManifestPath)" />
 
     <Exec Command="dotnet exec &quot;$(_DdDebugIdManifestGeneratorDll)&quot; &quot;$(_DdDebugIdManifestPath)&quot; @(_DdDebugIdManifestAssemblies->'&quot;%(FullPath)&quot;', ' ')" />
 
