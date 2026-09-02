@@ -89,6 +89,32 @@ public class DdRumErrorTrackingTests : IDisposable
         Assert.Equal(false, rumBridge.LastContext?["_dd.error.is_crash"]);
     }
 
+    [Fact]
+    public void OnUnobservedTaskException_ReportsErrorWithCorrectSource()
+    {
+        DdRumErrorTracking.StartTracking();
+
+        // TaskScheduler.UnobservedTaskException can't be raised directly without a real
+        // unobserved faulted Task and a GC pass, so invoke the private handler itself via
+        // reflection with a real UnobservedTaskExceptionEventArgs, mirroring the
+        // OnUnhandledException test above — both handlers must go through the same
+        // unwrap-then-report path (see DdRumErrorTracking.HandleException), so this test
+        // exists specifically to catch that symmetry regressing.
+        var exception = new InvalidOperationException("boom");
+        var faultedTask = Task.FromException(exception);
+        var args = new UnobservedTaskExceptionEventArgs(faultedTask.Exception!);
+        var handler = typeof(DdRumErrorTracking).GetMethod("OnUnobservedTaskException", BindingFlags.NonPublic | BindingFlags.Static);
+        Assert.NotNull(handler);
+
+        handler!.Invoke(null, [null, args]);
+
+        Assert.Equal(1, rumBridge.AddErrorCallCount);
+        Assert.Equal(RumErrorSource.Source, rumBridge.LastSource);
+        Assert.Equal("boom", rumBridge.LastMessage);
+        Assert.Equal("TaskScheduler.UnobservedTaskException", rumBridge.LastContext?["_dd.error.handler"]);
+        Assert.Equal(false, rumBridge.LastContext?["_dd.error.is_crash"]);
+    }
+
     // ── UnwrapJavaException ────────────────────────────────────────
     // The #if ANDROID branch (Java.Lang.Throwable → InnerException) only compiles for the
     // -android target framework, so it can't be exercised by this desktop (net9.0/net10.0)
