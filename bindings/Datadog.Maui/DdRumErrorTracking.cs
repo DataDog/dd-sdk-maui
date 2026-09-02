@@ -60,21 +60,25 @@ namespace Datadog.Maui
 
         private static void OnUnhandledException(object sender, UnhandledExceptionEventArgs e)
         {
-            var exception = UnwrapJavaException(e.ExceptionObject as Exception);
-            var message = exception?.Message ?? "Unhandled exception";
-            var stacktrace = exception?.ToString() ?? "No stacktrace available";
-            var isCrash = e.IsTerminating;
-
-            ReportError(message, stacktrace, isCrash, "AppDomain.UnhandledException", exception);
+            HandleException(e.ExceptionObject as Exception, "Unhandled exception", e.IsTerminating, "AppDomain.UnhandledException");
         }
 
         private static void OnUnobservedTaskException(object? sender, UnobservedTaskExceptionEventArgs e)
         {
-            var exception = UnwrapJavaException(e.Exception.GetBaseException());
-            var message = exception?.Message ?? "Unobserved task exception";
+            HandleException(e.Exception.GetBaseException(), "Unobserved task exception", false, "TaskScheduler.UnobservedTaskException");
+        }
+
+        /// <summary>
+        /// Shared by both handlers so UnwrapJavaException is structurally guaranteed to apply
+        /// identically to both — see its own doc comment for why that matters.
+        /// </summary>
+        private static void HandleException(Exception? rawException, string defaultMessage, bool isCrash, string handler)
+        {
+            var exception = UnwrapJavaException(rawException);
+            var message = exception?.Message ?? defaultMessage;
             var stacktrace = exception?.ToString() ?? "No stacktrace available";
 
-            ReportError(message, stacktrace, false, "TaskScheduler.UnobservedTaskException", exception);
+            ReportError(message, stacktrace, isCrash, handler, exception);
         }
 
         /// <summary>
