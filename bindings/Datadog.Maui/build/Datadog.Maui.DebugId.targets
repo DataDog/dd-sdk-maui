@@ -18,10 +18,10 @@
   from inline task code, and any fix required hardcoding a specific .NET runtime version, which
   isn't safe across consumers' machines.
 
-  The manifest is written by two distinct targets (NOT the same target hooked twice —
-  MSBuild only executes a given target once per project build, however many things
-  depend on or come after it, so hooking one target from two trigger points silently
-  collapses to a single run):
+  The manifest is written by up to three distinct targets (NOT the same target hooked
+  twice — MSBuild only executes a given target once per project build, however many
+  things depend on or come after it, so hooking one target from two trigger points
+  silently collapses to a single run):
     1. _DdStubDebugIdManifest, forced early by _DdRegisterDebugIdManifestAsset's
        DependsOnTargets, before Compile/CoreCompile has run (MAUI's ProcessMauiAssets —
        which needs the MauiAsset item declared — itself runs before Compile on both
@@ -31,14 +31,21 @@
        bundle-resource check), well before Compile — with no file at all there, the build
        fails outright ("Bundle Resource ... not found on disk"). Android has no
        equivalent eager check, but running this early there too is harmless.
-    2. _DdGenerateDebugIdManifest, via AfterTargets="CoreCompile", once the app's own
-       assembly has actually been compiled — this overwrites the placeholder with the
-       complete, correct manifest. Both platforms' actual packaging step (the one that
-       copies bytes into the .apk/.app — Android's UpdateAndroidAssets, a dependency of
-       _CreateBaseApk that runs after _CompileDex; iOS's bundle-resource copy) reads the
-       file's on-disk content well after CoreCompile, so it picks up this complete
-       version — the placeholder only needs to exist, its content is superseded before
-       anything reads it for real.
+    2. _DdGenerateDebugIdManifest writes the first complete manifest, using the app's own
+       assembly as it exists right after CoreCompile. This is CORRECT for Debug builds
+       (no IL trimming happens, so this is the only copy of the assembly that will ever
+       exist) but was found to be WRONG for Release builds of both platforms: `dotnet
+       build -c Release` runs IL trimming (Android's R8/ILLink, iOS's mono linker) as
+       part of build, not just publish, and trimming regenerates the app's own DLL/PDB
+       with a brand-new CodeView GUID+Stamp — so by the time the real packaging step
+       reads this manifest, the app's own assembly has already been silently replaced by
+       a differently-identified file, and the shipped manifest would report the WRONG,
+       stale id for the app's own assembly in every Release build.
+    3. _DdRewriteDebugIdManifestPostLink (Android) / _DdRewriteDebugIdManifestPostLink_iOS
+       (iOS) regenerate the manifest a second time from the POST-trim assembly, once
+       trimming has actually finished, and are no-ops (Condition fails, target doesn't
+       run) when trimming didn't happen (Debug) — see each target's own comment for why
+       the two platforms need different final hooks.
 -->
 <Project>
 
@@ -86,6 +93,85 @@
     <Message Importance="low" Text="Datadog: generating debug-id manifest at $(_DdDebugIdManifestPath)" />
 
     <Exec Command="dotnet exec &quot;$(_DdDebugIdManifestGeneratorDll)&quot; &quot;$(_DdDebugIdManifestPath)&quot; @(_DdDebugIdManifestAssemblies->'&quot;%(FullPath)&quot;', ' ')" />
+  </Target>
+
+  <!-- Android: regenerate the manifest from the app's own POST-trim/shrink assembly.
+       Confirmed empirically (obj/.../<rid>/linked/shrunk/$(TargetFileName)) is the file
+       that carries the debug id Android Release builds actually ship — R8/ILLink
+       replaces the plain post-CoreCompile DLL with this one, with a new CodeView
+       GUID+Stamp. The <rid> segment (e.g. android-arm64) is matched with a wildcard
+       rather than hardcoded, since it depends on which ABIs are targeted; builds for
+       multiple ABIs were confirmed to produce byte-identical linked/shrunk output for
+       this assembly (same input IL, deterministic build), so picking any one match is
+       safe. BeforeTargets="_GenerateAndroidAssetsDir", NOT
+       BeforeTargets="UpdateAndroidAssets" — confirmed empirically via -v:diag that the
+       actual file-copy from $(IntermediateOutputPath)dd_debug_ids.json into the
+       obj/.../assets/ staging dir (which the final .apk is later built from) happens
+       inside _GenerateAndroidAssetsDir, which is a DependsOnTargets dependency of
+       UpdateAndroidAssets — dependencies run before a target's own BeforeTargets
+       insertions do, so hooking UpdateAndroidAssets itself is one step too late; the
+       copy has already run by then. On Debug builds (no linking) the wildcard match is
+       empty and this falls back to the same plain path _DdGenerateDebugIdManifest
+       already used, so this target is a harmless no-op re-run there, not a special
+       case to guard against. -->
+  <Target Name="_DdRewriteDebugIdManifestPostLink"
+          BeforeTargets="_GenerateAndroidAssetsDir"
+          Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">
+
+    <PropertyGroup>
+      <_DdDebugIdManifestPath>$(IntermediateOutputPath)dd_debug_ids.json</_DdDebugIdManifestPath>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <_DdLinkedOwnAssembly Include="$(IntermediateOutputPath)*\linked\shrunk\$(TargetFileName)" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <_DdDebugIdManifestAssemblies Include="@(ReferencePath)" />
+      <_DdDebugIdManifestAssemblies Include="@(_DdLinkedOwnAssembly)" Condition="'@(_DdLinkedOwnAssembly)' != ''" />
+      <_DdDebugIdManifestAssemblies Include="$(IntermediateOutputPath)$(TargetFileName)" Condition="'@(_DdLinkedOwnAssembly)' == ''" />
+    </ItemGroup>
+
+    <Message Importance="low" Text="Datadog: rewriting debug-id manifest from post-link assembly at $(_DdDebugIdManifestPath)" />
+
+    <Exec Command="dotnet exec &quot;$(_DdDebugIdManifestGeneratorDll)&quot; &quot;$(_DdDebugIdManifestPath)&quot; @(_DdDebugIdManifestAssemblies->'&quot;%(FullPath)&quot;', ' ')" />
+  </Target>
+
+  <!-- iOS: regenerate the manifest from the app's own POST-link assembly, AND push it
+       directly into the already-built .app bundle. Unlike Android, iOS's real
+       bundle-resource copy (_CopyResourcesToBundle, which is what actually copies our
+       MauiAsset's on-disk bytes into the .app) was confirmed empirically to run BEFORE
+       the linker's output is even loaded (_LoadLinkerOutput) — so by the time linking
+       finishes, our file has already been copied into the bundle once, with stale
+       content, and nothing will copy it again automatically. Rewriting
+       $(IntermediateOutputPath)'s copy after the fact (as the Android target above
+       does) would be silently correct-but-unshipped: the file sitting in bin/.../
+       example.app would still hold the old value. So this target also explicitly
+       re-copies the freshly regenerated file over the one already inside
+       $(AppBundleDir) — a plain MSBuild property, confirmed set well before this point
+       in the build and stable for its remainder. AfterTargets="_LoadLinkerOutput" is
+       an approximate anchor, not an exact dependency edge, chosen because it's the
+       first point in the observed build order where the linked assembly is guaranteed
+       to already exist on disk; the Exists() condition is the real gate. -->
+  <Target Name="_DdRewriteDebugIdManifestPostLink_iOS"
+          AfterTargets="_LoadLinkerOutput"
+          Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios' And Exists('$(IntermediateOutputPath)linked\$(TargetFileName)')">
+
+    <PropertyGroup>
+      <_DdDebugIdManifestPath>$(IntermediateOutputPath)dd_debug_ids.json</_DdDebugIdManifestPath>
+      <_DdAppBundleManifestPath>$(AppBundleDir)\dd_debug_ids.json</_DdAppBundleManifestPath>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <_DdDebugIdManifestAssemblies Include="@(ReferencePath)" />
+      <_DdDebugIdManifestAssemblies Include="$(IntermediateOutputPath)linked\$(TargetFileName)" />
+    </ItemGroup>
+
+    <Message Importance="low" Text="Datadog: rewriting debug-id manifest from post-link assembly at $(_DdDebugIdManifestPath), re-copying into $(_DdAppBundleManifestPath)" />
+
+    <Exec Command="dotnet exec &quot;$(_DdDebugIdManifestGeneratorDll)&quot; &quot;$(_DdDebugIdManifestPath)&quot; @(_DdDebugIdManifestAssemblies->'&quot;%(FullPath)&quot;', ' ')" />
+
+    <Copy SourceFiles="$(_DdDebugIdManifestPath)" DestinationFiles="$(_DdAppBundleManifestPath)" Condition="Exists('$(AppBundleDir)')" />
   </Target>
 
   <!-- ═══════════════════════════════════════════════════════════════════════
