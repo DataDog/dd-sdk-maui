@@ -241,7 +241,7 @@ class DdRum {
                 if (timestampMs > 0) {
                     attributes[RumAttributes.INTERNAL_TIMESTAMP] = timestampMs
                 }
-                attributes["_dd.error.source_type"] = "maui"
+                attributes["_dd.error.source_type"] = "ppdb"
 
                 GlobalRumMonitor.get().addErrorWithStacktrace(
                     message = message,
