@@ -23,9 +23,11 @@
   What gets uploaded:
     iOS:     .dSYM bundle (covers native + AOT-compiled C# crashes)
     Android: ProGuard/R8 mapping.txt (covers obfuscated Java/Kotlin names)
+    Both:    Portable PDB (covers managed C# stack traces, first-party assembly only)
 
-  Note: Portable PDBs (C# line numbers) are NOT uploaded — they are resolved
-  on-device by the .NET runtime at crash time. No server-side processing needed.
+  Note: the Portable PDB upload correlates by the build-time debug-id manifest
+  (RUM-18332, see Datadog.Maui.DebugId.targets) rather than re-deriving the id
+  at upload time, so it stays correct across IL trimming/AOT stripping.
 -->
 <Project>
 
@@ -45,7 +47,7 @@
        Pre-check: Verify prerequisites, set _DdCanUpload flag
        ═══════════════════════════════════════════════════════════════════════ -->
   <Target Name="DatadogCheckCli"
-          BeforeTargets="DatadogUploadDsym;DatadogUploadMapping;DatadogSymbolReport"
+          BeforeTargets="DatadogUploadDsym;DatadogUploadMapping;DatadogUploadPortablePdb;DatadogSymbolReport"
           Condition="'$(DatadogUploadSymbols)' == 'true'">
 
     <!-- Check if datadog-ci is available (must be installed globally) -->
@@ -137,10 +139,44 @@
   </Target>
 
   <!-- ═══════════════════════════════════════════════════════════════════════
+       Portable PDB: Upload first-party Portable PDB after Publish
+       ═══════════════════════════════════════════════════════════════════════ -->
+  <Target Name="DatadogUploadPortablePdb"
+          AfterTargets="Publish"
+          Condition="'$(DatadogUploadSymbols)' == 'true' AND ($(TargetFramework.Contains('-ios')) Or $(TargetFramework.Contains('-android')))">
+
+    <!-- $(OutputPath) (bin/…) is where the app's own Portable PDB lands after a normal
+         build/publish — see SYMBOLS.md's "Symbol file locations" section. This is the
+         same directory datadog-ci's own `ppdb-symbols upload` usage example points at.
+         $(_DdDebugIdManifestPath) comes from Datadog.Maui.DebugId.targets (imported
+         above) and is already correct here (post IL-trimming/AOT-stripping) — see
+         RUM-18297 dev notes for why no fresh id computation is needed at upload time. -->
+    <Message Importance="high"
+             Text="Datadog: Skipping Portable PDB upload — no debug-id manifest found at $(_DdDebugIdManifestPath)."
+             Condition="'$(_DdCanUpload)' == 'true' AND !Exists('$(_DdDebugIdManifestPath)')" />
+
+    <Message Importance="high"
+             Text="Datadog: Uploading Portable PDB(s) from $(OutputPath)"
+             Condition="'$(_DdCanUpload)' == 'true' AND Exists('$(_DdDebugIdManifestPath)')" />
+
+    <!-- ppdb-symbols upload has no service-name/version options (unlike flutter-symbols
+         upload) — the debug-id manifest is the sole correlation key for these uploads. -->
+    <Exec Command="datadog-ci ppdb-symbols upload &quot;$(OutputPath)&quot; --debug-id-manifest &quot;$(_DdDebugIdManifestPath)&quot;"
+          Condition="'$(_DdCanUpload)' == 'true' AND Exists('$(_DdDebugIdManifestPath)') AND '$(DatadogApiKey)' != ''"
+          EnvironmentVariables="DATADOG_API_KEY=$(DatadogApiKey);DATADOG_SITE=$(DatadogSite)"
+          IgnoreExitCode="true"
+          ContinueOnError="true" />
+    <Exec Command="DATADOG_SITE=$(DatadogSite) datadog-ci ppdb-symbols upload &quot;$(OutputPath)&quot; --debug-id-manifest &quot;$(_DdDebugIdManifestPath)&quot;"
+          Condition="'$(_DdCanUpload)' == 'true' AND Exists('$(_DdDebugIdManifestPath)') AND '$(DatadogApiKey)' == ''"
+          IgnoreExitCode="true"
+          ContinueOnError="true" />
+  </Target>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════
        Summary: Report what was uploaded (always runs when enabled)
        ═══════════════════════════════════════════════════════════════════════ -->
   <Target Name="DatadogSymbolReport"
-          AfterTargets="DatadogUploadDsym;DatadogUploadMapping"
+          AfterTargets="DatadogUploadDsym;DatadogUploadMapping;DatadogUploadPortablePdb"
           Condition="'$(DatadogUploadSymbols)' == 'true'">
 
     <Message Importance="high" Text="" />
@@ -157,6 +193,9 @@
     <Message Importance="high"
              Text="  Android mapping: $(OutputPath)mapping.txt"
              Condition="$(TargetFramework.Contains('-android'))" />
+    <Message Importance="high"
+             Text="  Portable PDB: $(OutputPath) (manifest: $(_DdDebugIdManifestPath))"
+             Condition="$(TargetFramework.Contains('-ios')) Or $(TargetFramework.Contains('-android'))" />
     <Message Importance="high" Text="" />
   </Target>
 
