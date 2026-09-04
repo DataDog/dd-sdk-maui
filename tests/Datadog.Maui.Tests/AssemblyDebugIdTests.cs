@@ -4,9 +4,11 @@
  * Copyright 2026-Present Datadog, Inc.
  */
 
+using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
-using System.Reflection.Emit;
+using System.Text;
+using System.Text.Json;
 using Xunit;
 
 namespace Datadog.Maui.Tests;
@@ -14,126 +16,124 @@ namespace Datadog.Maui.Tests;
 public class AssemblyDebugIdTests
 {
     [Fact]
-    public void TryGetDebugId_RealAssembly_MatchesIndependentlyComputedDebugDirectoryId()
+    public void TryGetDebugId_ManifestHasEntryForAssemblySimpleName_ReturnsIt()
     {
         var assembly = typeof(AssemblyDebugIdTests).Assembly;
+        var simpleName = assembly.GetName().Name!;
+        var manifest = new Dictionary<string, string> { [simpleName] = "abc123" };
 
-        var actual = AssemblyDebugId.TryGetDebugId(assembly);
-        var expected = ComputeExpectedDebugId(assembly);
+        var result = AssemblyDebugId.TryGetDebugId(assembly, manifest);
 
-        Assert.Equal(expected, actual);
+        Assert.Equal("abc123", result);
     }
 
     [Fact]
-    public void TryGetDebugId_IsNotTheModuleVersionId()
+    public void TryGetDebugId_ManifestHasNoEntryForAssembly_ReturnsNull()
     {
         var assembly = typeof(AssemblyDebugIdTests).Assembly;
+        var manifest = new Dictionary<string, string> { ["SomeOtherAssembly"] = "abc123" };
 
-        var debugId = AssemblyDebugId.TryGetDebugId(assembly);
-        var mvid = assembly.ManifestModule.ModuleVersionId.ToString("N");
-
-        Assert.NotNull(debugId);
-        Assert.NotEqual(mvid, debugId);
-        Assert.Matches("^[0-9a-f]{40}$", debugId);
-    }
-
-    [Fact]
-    public void TryGetDebugId_AssemblyWithNoLocation_ReturnsNull()
-    {
-        // A dynamic in-memory assembly always has an empty Location, the same as an
-        // AOT/single-file-bundled assembly at runtime — still needs real-device
-        // verification, see project memory for RUM-18289.
-        var dynamicAssembly = AssemblyBuilder.DefineDynamicAssembly(
-            new AssemblyName("Datadog.Maui.Tests.DynamicFixture"),
-            AssemblyBuilderAccess.Run);
-
-        var result = AssemblyDebugId.TryGetDebugId(dynamicAssembly);
+        var result = AssemblyDebugId.TryGetDebugId(assembly, manifest);
 
         Assert.Null(result);
     }
 
-    /// <summary>
-    /// Independently re-derives the expected debug-directory id by hand-parsing the assembly's
-    /// raw PE bytes, deliberately WITHOUT using System.Reflection.PortableExecutable — using
-    /// PEReader/ReadCodeViewDebugDirectoryData here would just re-run the exact same library
-    /// calls AssemblyDebugId.TryGetDebugId itself makes, so any bug shared by both call sites
-    /// (e.g. picking the wrong stamp-like field) would pass silently on both sides.
-    /// </summary>
-    internal static string ComputeExpectedDebugId(Assembly assembly)
+    [Fact]
+    public void TryGetDebugId_EmptyManifest_ReturnsNull()
     {
-        var data = File.ReadAllBytes(assembly.Location);
+        var assembly = typeof(AssemblyDebugIdTests).Assembly;
 
-        var peOffset = ReadUInt32(data, 0x3C);
-        if (data[peOffset] != 'P' || data[peOffset + 1] != 'E' || data[peOffset + 2] != 0 || data[peOffset + 3] != 0)
-        {
-            throw new InvalidOperationException("Not a valid PE file (missing PE\\0\\0 signature).");
-        }
+        var result = AssemblyDebugId.TryGetDebugId(assembly, new Dictionary<string, string>());
 
-        var coffOffset = peOffset + 4;
-        var numberOfSections = ReadUInt16(data, coffOffset + 2);
-        var sizeOfOptionalHeader = ReadUInt16(data, coffOffset + 16);
-        var optionalHeaderOffset = coffOffset + 20;
-        var magic = ReadUInt16(data, optionalHeaderOffset);
-        var isPe32Plus = magic == 0x20B;
-
-        var numberOfRvaAndSizesOffset = optionalHeaderOffset + (isPe32Plus ? 108u : 92u);
-        var dataDirectoriesOffset = numberOfRvaAndSizesOffset + 4;
-        var debugDirectoryRva = ReadUInt32(data, dataDirectoriesOffset + 6 * 8);
-        var debugDirectorySize = ReadUInt32(data, dataDirectoriesOffset + 6 * 8 + 4);
-
-        var sectionHeadersOffset = optionalHeaderOffset + sizeOfOptionalHeader;
-        var debugDirectoryOffset = RvaToOffset(data, sectionHeadersOffset, numberOfSections, debugDirectoryRva);
-
-        var entryCount = debugDirectorySize / 28;
-        for (var i = 0; i < entryCount; i++)
-        {
-            var entryOffset = debugDirectoryOffset + (uint)i * 28;
-            var timeDateStamp = ReadUInt32(data, entryOffset + 4);
-            var type = ReadUInt32(data, entryOffset + 12);
-            var pointerToRawData = ReadUInt32(data, entryOffset + 24);
-
-            const uint ImageDebugTypeCodeView = 2;
-            if (type != ImageDebugTypeCodeView)
-            {
-                continue;
-            }
-
-            if (data[pointerToRawData] != 'R' || data[pointerToRawData + 1] != 'S' ||
-                data[pointerToRawData + 2] != 'D' || data[pointerToRawData + 3] != 'S')
-            {
-                continue;
-            }
-
-            var guidBytes = new byte[16];
-            Array.Copy(data, pointerToRawData + 4, guidBytes, 0, 16);
-            var guid = new Guid(guidBytes);
-            return $"{guid:N}{timeDateStamp:x8}";
-        }
-
-        throw new InvalidOperationException($"No CodeView/RSDS debug directory entry found for {assembly.FullName}");
+        Assert.Null(result);
     }
 
-    private static uint ReadUInt32(byte[] data, uint offset) =>
-        (uint)(data[offset] | (data[offset + 1] << 8) | (data[offset + 2] << 16) | (data[offset + 3] << 24));
-
-    private static ushort ReadUInt16(byte[] data, uint offset) =>
-        (ushort)(data[offset] | (data[offset + 1] << 8));
-
-    private static uint RvaToOffset(byte[] data, uint sectionHeadersOffset, ushort numberOfSections, uint rva)
+    [Fact]
+    public void TryGetDebugId_LookupIsCaseSensitiveBySimpleName_NotByLocationOrPath()
     {
-        for (var i = 0; i < numberOfSections; i++)
+        // The manifest is keyed by simple name (Path.GetFileNameWithoutExtension), not by any
+        // runtime notion of assembly identity — a manifest entry for the wrong case is not the
+        // same key and must not match.
+        var assembly = typeof(AssemblyDebugIdTests).Assembly;
+        var wrongCaseName = assembly.GetName().Name!.ToUpperInvariant();
+        var manifest = new Dictionary<string, string> { [wrongCaseName] = "abc123" };
+
+        var result = AssemblyDebugId.TryGetDebugId(assembly, manifest);
+
+        Assert.Null(result);
+    }
+
+    [Fact]
+    public void TryGetDebugId_NoAppPackageManifestAvailable_ReturnsNullRatherThanThrowing()
+    {
+        // The single-argument overload loads the manifest via
+        // FileSystem.OpenAppPackageFileAsync, which has no real MAUI app package to read from
+        // in this test host — this exercises that failure is swallowed (logged, not thrown)
+        // and degrades to null, the same as a genuinely missing/never-generated manifest.
+        var assembly = typeof(AssemblyDebugIdTests).Assembly;
+
+        var result = AssemblyDebugId.TryGetDebugId(assembly);
+
+        Assert.Null(result);
+    }
+
+    [Fact]
+    public void TryGetDebugId_SingleArgumentOverload_UsesManifestOverrideForTestsWhenSet()
+    {
+        var assembly = typeof(AssemblyDebugIdTests).Assembly;
+        var simpleName = assembly.GetName().Name!;
+
+        try
         {
-            var sectionOffset = sectionHeadersOffset + (uint)i * 40;
-            var virtualSize = ReadUInt32(data, sectionOffset + 8);
-            var virtualAddress = ReadUInt32(data, sectionOffset + 12);
-            var pointerToRawData = ReadUInt32(data, sectionOffset + 20);
+            AssemblyDebugId.SetManifestOverrideForTests(new Dictionary<string, string> { [simpleName] = "override123" });
 
-            if (rva >= virtualAddress && rva < virtualAddress + virtualSize)
-            {
-                return pointerToRawData + (rva - virtualAddress);
-            }
+            var result = AssemblyDebugId.TryGetDebugId(assembly);
+
+            Assert.Equal("override123", result);
         }
+        finally
+        {
+            AssemblyDebugId.SetManifestOverrideForTests(null);
+        }
+    }
 
-        throw new InvalidOperationException($"RVA 0x{rva:x} not found in any section.");
+    // ── ParseManifest ───────────────────────────────────────────────
+    // Exercises the actual JSON-parsing path used by the app-package manifest load
+    // (FileSystem.OpenAppPackageFileAsync -> ParseManifest), which none of the tests above
+    // reach: they either bypass it via the override seam or hit the always-empty
+    // "no app package" fallback.
+
+    [Fact]
+    public void ParseManifest_RealJsonWithMultipleEntries_ParsesAllOfThem()
+    {
+        var json = """{"Foo": "aaaa1111", "Bar": "bbbb2222"}""";
+        using var stream = new MemoryStream(Encoding.UTF8.GetBytes(json));
+
+        var manifest = AssemblyDebugId.ParseManifest(stream);
+
+        Assert.Equal(2, manifest.Count);
+        Assert.Equal("aaaa1111", manifest["Foo"]);
+        Assert.Equal("bbbb2222", manifest["Bar"]);
+    }
+
+    [Fact]
+    public void ParseManifest_EmptyJsonObject_ReturnsEmptyManifest()
+    {
+        using var stream = new MemoryStream(Encoding.UTF8.GetBytes("{}"));
+
+        var manifest = AssemblyDebugId.ParseManifest(stream);
+
+        Assert.Empty(manifest);
+    }
+
+    [Fact]
+    public void ParseManifest_MalformedJson_ThrowsRatherThanSilentlyReturningEmpty()
+    {
+        // ParseManifest itself is the seam LoadManifest wraps in try/catch — it's expected to
+        // throw on bad input; LoadManifest (not exercised here) is what converts that into a
+        // graceful empty-manifest fallback.
+        using var stream = new MemoryStream(Encoding.UTF8.GetBytes("not valid json"));
+
+        Assert.ThrowsAny<JsonException>(() => AssemblyDebugId.ParseManifest(stream));
     }
 }
