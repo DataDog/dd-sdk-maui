@@ -448,7 +448,7 @@ final class DdRumTests: XCTestCase {
         let attrs = mockRumModule.capturedErrorAttributes!
         XCTAssertEqual(attrs["_dd.error.is_crash"] as? Bool, true)
         XCTAssertEqual(attrs["_dd.timestamp"] as? Int64, 1234567890)
-        XCTAssertEqual(attrs["_dd.error.source_type"] as? String, "ppdb")
+        XCTAssertEqual(attrs["_dd.error.source_type"] as? String, "maui")
     }
 
     func testAddError_withZeroTimestamp_doesNotAddTimestampAttribute() {

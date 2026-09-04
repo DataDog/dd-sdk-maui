@@ -336,7 +336,7 @@ public class DdRum: NSObject {
             attributes["_dd.timestamp"] = timestampMs
         }
 
-        attributes["_dd.error.source_type"] = "ppdb"
+        attributes["_dd.error.source_type"] = "maui"
 
         rumModule.addError(
             message: message,

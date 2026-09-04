@@ -1243,7 +1243,7 @@ The SDK automatically tracks MAUI page navigations and user interactions when en
 - ✅ Native crash reporting (iOS: CrashReporting, Android: NdkCrashReports) via `DdSdkConfiguration.NativeCrashReportEnabled`
 - ✅ C# error tracking: `AppDomain.UnhandledException` and `TaskScheduler.UnobservedTaskException` handlers
 - ✅ Manual error reporting via `DdRum.AddError(message, source, stacktrace, context, timestampMs)`
-- ✅ Error context includes `_dd.error.source_type: "ppdb"`, `_dd.error.is_crash`, and `_dd.error.handler`
+- ✅ Error context includes `_dd.error.source_type: "maui"`, `_dd.error.is_crash`, and `_dd.error.handler`
 - ✅ `ErrorEventMapper` for modifying or dropping error events before they are sent
 - ✅ On Android, `JavaProxyThrowable` unwrapping to extract original C# exception details
 
