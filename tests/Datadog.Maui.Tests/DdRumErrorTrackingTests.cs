@@ -26,6 +26,7 @@ public class DdRumErrorTrackingTests : IDisposable
     {
         DdRumErrorTracking.StopTracking();
         DdRum.testBridge = null;
+        AssemblyDebugId.SetManifestOverrideForTests(null);
         GC.SuppressFinalize(this);
     }
 
@@ -162,12 +163,14 @@ public class DdRumErrorTrackingTests : IDisposable
     }
 
     [Fact]
-    public void BuildSdkFrames_AssemblyId_MatchesIndependentlyComputedDebugIdAndIsNotTheMvid()
+    public void BuildSdkFrames_AssemblyId_MatchesItsManifestEntryAndIsNotTheMvid()
     {
         var exception = CatchException(() => throw new InvalidOperationException("boom"));
         var thisAssembly = typeof(DdRumErrorTrackingTests).Assembly;
-        var expectedId = AssemblyDebugIdTests.ComputeExpectedDebugId(thisAssembly);
+        var expectedId = TestPeDebugId.Compute(thisAssembly);
         var mvid = thisAssembly.ManifestModule.ModuleVersionId.ToString("N");
+        AssemblyDebugId.SetManifestOverrideForTests(
+            new Dictionary<string, string> { [thisAssembly.GetName().Name!] = expectedId });
 
         var frames = DdRumErrorTracking.BuildSdkFrames(exception);
 
@@ -176,18 +179,22 @@ public class DdRumErrorTrackingTests : IDisposable
     }
 
     [Fact]
-    public void BuildSdkFrames_MultiAssemblyStack_EachFrameReportsItsOwnDeclaringAssembly()
+    public void BuildSdkFrames_MultiAssemblyStack_EachFrameReportsItsOwnDeclaringAssemblyFromTheManifest()
     {
-        var exception = CatchException(InvokeCrossAssemblyThrower);
-
-        var frames = DdRumErrorTracking.BuildSdkFrames(exception);
-
         var thisAssembly = typeof(DdRumErrorTrackingTests).Assembly;
         var otherAssembly = typeof(CrossAssemblyThrower).Assembly;
-        var expectedThisId = AssemblyDebugIdTests.ComputeExpectedDebugId(thisAssembly);
-        var expectedOtherId = AssemblyDebugIdTests.ComputeExpectedDebugId(otherAssembly);
-
+        var expectedThisId = TestPeDebugId.Compute(thisAssembly);
+        var expectedOtherId = TestPeDebugId.Compute(otherAssembly);
         Assert.NotEqual(expectedThisId, expectedOtherId);
+        AssemblyDebugId.SetManifestOverrideForTests(new Dictionary<string, string>
+        {
+            [thisAssembly.GetName().Name!] = expectedThisId,
+            [otherAssembly.GetName().Name!] = expectedOtherId,
+        });
+
+        var exception = CatchException(InvokeCrossAssemblyThrower);
+        var frames = DdRumErrorTracking.BuildSdkFrames(exception);
+
         Assert.Contains(frames, f => Equals(f.GetValueOrDefault("assembly_id"), expectedThisId));
         Assert.Contains(frames, f => Equals(f.GetValueOrDefault("assembly_id"), expectedOtherId));
     }
