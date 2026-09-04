@@ -331,7 +331,7 @@ class DdRumTest {
                 attributes = match { attrs ->
                     attrs["key"] == "value" &&
                     attrs["_dd.timestamp"] == 1234567890L &&
-                    attrs["_dd.error.source_type"] == "ppdb"
+                    attrs["_dd.error.source_type"] == "maui"
                 }
             )
         }
@@ -357,7 +357,7 @@ class DdRumTest {
                 stacktrace = "stack",
                 attributes = match { attrs ->
                     !attrs.containsKey("_dd.timestamp") &&
-                    attrs["_dd.error.source_type"] == "ppdb"
+                    attrs["_dd.error.source_type"] == "maui"
                 }
             )
         }
