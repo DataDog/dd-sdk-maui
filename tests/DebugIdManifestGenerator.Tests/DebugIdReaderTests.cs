@@ -4,8 +4,8 @@
  * Copyright 2026-Present Datadog, Inc.
  */
 
+using System.Buffers.Binary;
 using System.Reflection.Metadata;
-using System.Text.RegularExpressions;
 using Datadog.Maui.Tools.DebugIdManifestGenerator;
 using Xunit;
 
@@ -55,7 +55,7 @@ public class DebugIdReaderTests
 
         var idBytes = header!.Id.ToArray();
         var expectedGuid = new Guid(idBytes.Take(16).ToArray());
-        var expectedStamp = BitConverter.ToUInt32(idBytes.Skip(16).Take(4).ToArray());
+        var expectedStamp = BinaryPrimitives.ReadUInt32LittleEndian(idBytes.AsSpan(16, 4));
         var expectedId = $"{expectedGuid:N}{expectedStamp:x8}";
 
         Assert.Equal(expectedId, dllId);

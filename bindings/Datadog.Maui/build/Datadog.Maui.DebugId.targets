@@ -92,7 +92,17 @@
 
     <Message Importance="low" Text="Datadog: generating debug-id manifest at $(_DdDebugIdManifestPath)" />
 
-    <Exec Command="dotnet exec &quot;$(_DdDebugIdManifestGeneratorDll)&quot; &quot;$(_DdDebugIdManifestPath)&quot; @(_DdDebugIdManifestAssemblies->'&quot;%(FullPath)&quot;', ' ')" />
+    <!-- A MAUI app's framework + package references can push the expanded path list past
+         cmd.exe's ~8,191-character command-line limit on Windows. Write the paths to a
+         response file instead of putting them directly on the command line — the generator
+         reads a single "@<file>" argument the same way MSBuild/csc response files work. -->
+    <PropertyGroup>
+      <_DdDebugIdManifestAssembliesFile>$(IntermediateOutputPath)dd_debug_ids.assemblies.rsp</_DdDebugIdManifestAssembliesFile>
+    </PropertyGroup>
+
+    <WriteLinesToFile File="$(_DdDebugIdManifestAssembliesFile)" Lines="@(_DdDebugIdManifestAssemblies->'%(FullPath)')" Overwrite="true" />
+
+    <Exec Command="dotnet exec &quot;$(_DdDebugIdManifestGeneratorDll)&quot; &quot;$(_DdDebugIdManifestPath)&quot; &quot;@$(_DdDebugIdManifestAssembliesFile)&quot;" />
   </Target>
 
   <!-- Android: regenerate the manifest from the app's own POST-trim/shrink assembly.
@@ -122,19 +132,47 @@
       <_DdDebugIdManifestPath>$(IntermediateOutputPath)dd_debug_ids.json</_DdDebugIdManifestPath>
     </PropertyGroup>
 
+    <!-- linked/shrunk holds every assembly that survived trimming/shrinking — referenced
+         library assemblies as well as the app's own — each re-emitted with a fresh CodeView
+         GUID+Stamp. Confirmed from the SDKs' own build logic, not just the app-own-assembly
+         case observed empirically above: the shared trimmer
+         (microsoft.net.illink.tasks\build\Microsoft.NET.ILLink.targets) computes
+         ManagedAssemblyToLink from @(ResolvedFileToPublish) — i.e. the app's assembly AND
+         every reference — and its ILLink task writes all of them into
+         $(IntermediateLinkDir) = $(IntermediateOutputPath)linked\. Android's own shrink pass
+         (Xamarin.Android.Common.targets / Microsoft.Android.Sdk.AssemblyResolution.targets)
+         likewise builds _ShrunkAssemblies from @(_ResolvedAssemblies) — again all resolved
+         assemblies, not the app's own alone. Glob the whole directory rather than just
+         $(TargetFileName), so referenced assemblies get their post-link id too instead of the
+         stale pre-link one from @(ReferencePath). The generator's "last one wins on a
+         duplicate simple name" behavior (DebugIdReader.BuildManifest) means listing these
+         AFTER @(ReferencePath) is sufficient to override the stale entries; any assembly with
+         no post-link copy here (nothing was trimmed, e.g. Debug builds) simply keeps its
+         pre-link @(ReferencePath) id. -->
     <ItemGroup>
-      <_DdLinkedOwnAssembly Include="$(IntermediateOutputPath)*\linked\shrunk\$(TargetFileName)" />
+      <_DdLinkedAssemblies Include="$(IntermediateOutputPath)*\linked\shrunk\*.dll" />
     </ItemGroup>
 
     <ItemGroup>
       <_DdDebugIdManifestAssemblies Include="@(ReferencePath)" />
-      <_DdDebugIdManifestAssemblies Include="@(_DdLinkedOwnAssembly)" Condition="'@(_DdLinkedOwnAssembly)' != ''" />
-      <_DdDebugIdManifestAssemblies Include="$(IntermediateOutputPath)$(TargetFileName)" Condition="'@(_DdLinkedOwnAssembly)' == ''" />
+      <_DdDebugIdManifestAssemblies Include="$(IntermediateOutputPath)$(TargetFileName)" Condition="'@(_DdLinkedAssemblies)' == ''" />
+      <_DdDebugIdManifestAssemblies Include="@(_DdLinkedAssemblies)" Condition="'@(_DdLinkedAssemblies)' != ''" />
     </ItemGroup>
 
-    <Message Importance="low" Text="Datadog: rewriting debug-id manifest from post-link assembly at $(_DdDebugIdManifestPath)" />
+    <Message Importance="low" Text="Datadog: rewriting debug-id manifest from post-link assemblies at $(_DdDebugIdManifestPath)" />
 
-    <Exec Command="dotnet exec &quot;$(_DdDebugIdManifestGeneratorDll)&quot; &quot;$(_DdDebugIdManifestPath)&quot; @(_DdDebugIdManifestAssemblies->'&quot;%(FullPath)&quot;', ' ')" />
+    <!-- Own .rsp filename per target (not shared with _DdGenerateDebugIdManifest /
+         _DdRewriteDebugIdManifestPostLink_iOS) — harmless today since only one platform's
+         targets ever run in a given build and each target writes-then-reads its file within
+         the same synchronous target body, but a shared literal name is a needless trap for
+         whoever next touches target scheduling here. -->
+    <PropertyGroup>
+      <_DdDebugIdManifestAssembliesFile>$(IntermediateOutputPath)dd_debug_ids.assemblies.postlink.rsp</_DdDebugIdManifestAssembliesFile>
+    </PropertyGroup>
+
+    <WriteLinesToFile File="$(_DdDebugIdManifestAssembliesFile)" Lines="@(_DdDebugIdManifestAssemblies->'%(FullPath)')" Overwrite="true" />
+
+    <Exec Command="dotnet exec &quot;$(_DdDebugIdManifestGeneratorDll)&quot; &quot;$(_DdDebugIdManifestPath)&quot; &quot;@$(_DdDebugIdManifestAssembliesFile)&quot;" />
   </Target>
 
   <!-- iOS: regenerate the manifest from whatever the SDK's own publish pipeline actually
@@ -192,7 +230,13 @@
 
     <Message Importance="low" Text="Datadog: rewriting debug-id manifest from @(ResolvedFileToPublish) (post-strip if stripping ran) at $(_DdDebugIdManifestPath), re-copying into $(_DdAppBundleManifestPath)" />
 
-    <Exec Command="dotnet exec &quot;$(_DdDebugIdManifestGeneratorDll)&quot; &quot;$(_DdDebugIdManifestPath)&quot; @(_DdDebugIdManifestAssemblies->'&quot;%(FullPath)&quot;', ' ')" />
+    <PropertyGroup>
+      <_DdDebugIdManifestAssembliesFile>$(IntermediateOutputPath)dd_debug_ids.assemblies.ios.rsp</_DdDebugIdManifestAssembliesFile>
+    </PropertyGroup>
+
+    <WriteLinesToFile File="$(_DdDebugIdManifestAssembliesFile)" Lines="@(_DdDebugIdManifestAssemblies->'%(FullPath)')" Overwrite="true" />
+
+    <Exec Command="dotnet exec &quot;$(_DdDebugIdManifestGeneratorDll)&quot; &quot;$(_DdDebugIdManifestPath)&quot; &quot;@$(_DdDebugIdManifestAssembliesFile)&quot;" />
 
     <Copy SourceFiles="$(_DdDebugIdManifestPath)" DestinationFiles="$(_DdAppBundleManifestPath)" Condition="Exists('$(AppBundleDir)')" />
   </Target>

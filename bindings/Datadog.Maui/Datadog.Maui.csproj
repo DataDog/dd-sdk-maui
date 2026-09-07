@@ -60,6 +60,11 @@
     <None Include="build\tools\DebugIdManifestGenerator\DebugIdManifestGenerator.runtimeconfig.json"
           Pack="true"
           PackagePath="buildTransitive\tools\DebugIdManifestGenerator\DebugIdManifestGenerator.runtimeconfig.json" />
+    <!-- `dotnet exec` resolves dependencies via the .deps.json next to the .dll — pack it too
+         so the tool doesn't silently break the moment it gains a non-framework dependency. -->
+    <None Include="build\tools\DebugIdManifestGenerator\DebugIdManifestGenerator.deps.json"
+          Pack="true"
+          PackagePath="buildTransitive\tools\DebugIdManifestGenerator\DebugIdManifestGenerator.deps.json" />
   </ItemGroup>
 
   <!-- MAUI Controls (provides Page, VisualElement, etc. for auto-tracking predicates) -->

@@ -9,12 +9,20 @@ using Datadog.Maui.Tools.DebugIdManifestGenerator;
 
 if (args.Length < 1)
 {
-    Console.Error.WriteLine("Usage: DebugIdManifestGenerator <output-manifest-path> [assembly-path ...]");
+    Console.Error.WriteLine("Usage: DebugIdManifestGenerator <output-manifest-path> [assembly-path ...] | <output-manifest-path> @<response-file>");
     return 1;
 }
 
 var outputPath = args[0];
-var manifest = DebugIdReader.BuildManifest(args.Skip(1));
+
+// A single "@<file>" argument reads assembly paths (one per line) from a response file
+// instead of the command line — needed because a MAUI app's framework + package references
+// can push the expanded path list past cmd.exe's ~8,191-character command-line limit.
+var assemblyPaths = args.Length == 2 && args[1].StartsWith('@')
+    ? File.ReadAllLines(args[1][1..]).Where(line => !string.IsNullOrWhiteSpace(line))
+    : args.Skip(1);
+
+var manifest = DebugIdReader.BuildManifest(assemblyPaths);
 
 var fullOutputPath = Path.GetFullPath(outputPath);
 Directory.CreateDirectory(Path.GetDirectoryName(fullOutputPath)!);
