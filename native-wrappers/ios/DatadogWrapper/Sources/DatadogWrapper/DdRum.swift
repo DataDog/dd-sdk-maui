@@ -311,12 +311,35 @@ public class DdRum: NSObject {
         context: NSDictionary,
         timestampMs: Int64
     ) {
-        // buildAttributes wraps every value in AnyEncodable, which preserves nested
-        // dictionaries/arrays (e.g. _dd.error.sdk_frames) as structured data. A previous,
-        // hand-rolled version of this switch fell back to String(describing:) for anything
-        // that wasn't a bool/int/double/string/Int64, which flattened sdk_frames into an
-        // unusable debug string before it ever reached the native SDK.
-        var attributes = buildAttributes(from: context, timestampMs: timestampMs)
+        var attributes: [AttributeKey: AttributeValue] = [:]
+
+        if let contextDict = context as? [String: Any] {
+            for (key, value) in contextDict {
+                switch value {
+                case let boolVal as Bool:
+                    attributes[key] = boolVal
+                case let intVal as Int:
+                    attributes[key] = intVal
+                case let doubleVal as Double:
+                    attributes[key] = doubleVal
+                case let stringVal as String:
+                    attributes[key] = stringVal
+                case let int64Val as Int64:
+                    attributes[key] = int64Val
+                default:
+                    // AnyEncodable (also used by buildAttributes and elsewhere in this file)
+                    // preserves nested dictionaries/arrays — e.g. _dd.error.sdk_frames — as
+                    // structured data. The previous fallback, String(describing: value),
+                    // flattened sdk_frames into an unusable debug string before it ever
+                    // reached the native SDK.
+                    attributes[key] = AnyEncodable(value)
+                }
+            }
+        }
+
+        if timestampMs > 0 {
+            attributes["_dd.timestamp"] = timestampMs
+        }
 
         attributes["_dd.error.source_type"] = "maui"
 
