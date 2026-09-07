@@ -22,7 +22,8 @@ internal static class TestPeDebugId
         var data = File.ReadAllBytes(assembly.Location);
 
         var peOffset = ReadUInt32(data, 0x3C);
-        if (data[peOffset] != 'P' || data[peOffset + 1] != 'E' || data[peOffset + 2] != 0 || data[peOffset + 3] != 0)
+        var peOffsetInt = checked((int)peOffset);
+        if (data[peOffsetInt] != 'P' || data[peOffsetInt + 1] != 'E' || data[peOffsetInt + 2] != 0 || data[peOffsetInt + 3] != 0)
         {
             throw new InvalidOperationException("Not a valid PE file (missing PE\\0\\0 signature).");
         }
@@ -56,14 +57,15 @@ internal static class TestPeDebugId
                 continue;
             }
 
-            if (data[pointerToRawData] != 'R' || data[pointerToRawData + 1] != 'S' ||
-                data[pointerToRawData + 2] != 'D' || data[pointerToRawData + 3] != 'S')
+            var pointerToRawDataInt = checked((int)pointerToRawData);
+            if (data[pointerToRawDataInt] != 'R' || data[pointerToRawDataInt + 1] != 'S' ||
+                data[pointerToRawDataInt + 2] != 'D' || data[pointerToRawDataInt + 3] != 'S')
             {
                 continue;
             }
 
             var guidBytes = new byte[16];
-            Array.Copy(data, pointerToRawData + 4, guidBytes, 0, 16);
+            Array.Copy(data, pointerToRawDataInt + 4, guidBytes, 0, 16);
             var guid = new Guid(guidBytes);
             return $"{guid:N}{timeDateStamp:x8}";
         }
@@ -71,11 +73,17 @@ internal static class TestPeDebugId
         throw new InvalidOperationException($"No CodeView/RSDS debug directory entry found for {assembly.FullName}");
     }
 
-    private static uint ReadUInt32(byte[] data, uint offset) =>
-        (uint)(data[offset] | (data[offset + 1] << 8) | (data[offset + 2] << 16) | (data[offset + 3] << 24));
+    private static uint ReadUInt32(byte[] data, uint offset)
+    {
+        var i = checked((int)offset);
+        return (uint)(data[i] | (data[i + 1] << 8) | (data[i + 2] << 16) | (data[i + 3] << 24));
+    }
 
-    private static ushort ReadUInt16(byte[] data, uint offset) =>
-        (ushort)(data[offset] | (data[offset + 1] << 8));
+    private static ushort ReadUInt16(byte[] data, uint offset)
+    {
+        var i = checked((int)offset);
+        return (ushort)(data[i] | (data[i + 1] << 8));
+    }
 
     private static uint RvaToOffset(byte[] data, uint sectionHeadersOffset, ushort numberOfSections, uint rva)
     {

@@ -121,25 +121,36 @@ namespace Datadog.Maui
                 var stackTrace = new StackTrace(exception, false);
                 foreach (var frame in stackTrace.GetFrames() ?? Array.Empty<StackFrame>())
                 {
-                    var method = frame.GetMethod();
-                    if (method == null)
+                    // MetadataToken (and, in principle, GetILOffset) can throw for some
+                    // runtime-provided frames (e.g. DynamicMethod) — caught per-frame so one
+                    // bad frame is just omitted instead of discarding every frame gathered so
+                    // far in this exception's stack trace.
+                    try
                     {
-                        continue;
+                        var method = frame.GetMethod();
+                        if (method == null)
+                        {
+                            continue;
+                        }
+
+                        var frameData = new Dictionary<string, object>
+                        {
+                            { "method_token", method.MetadataToken },
+                            { "il_offset", frame.GetILOffset() }
+                        };
+
+                        var assemblyId = AssemblyDebugId.TryGetDebugId(method.Module.Assembly);
+                        if (assemblyId != null)
+                        {
+                            frameData["assembly_id"] = assemblyId;
+                        }
+
+                        frames.Add(frameData);
                     }
-
-                    var frameData = new Dictionary<string, object>
+                    catch (Exception frameEx)
                     {
-                        { "method_token", method.MetadataToken },
-                        { "il_offset", frame.GetILOffset() }
-                    };
-
-                    var assemblyId = AssemblyDebugId.TryGetDebugId(method.Module.Assembly);
-                    if (assemblyId != null)
-                    {
-                        frameData["assembly_id"] = assemblyId;
+                        InternalLog.Log($"DdRumErrorTracking: Failed to build sdk_frames entry for a frame: {frameEx.Message}", SdkVerbosity.DEBUG);
                     }
-
-                    frames.Add(frameData);
                 }
             }
             catch (Exception ex)

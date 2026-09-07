@@ -77,16 +77,19 @@ namespace Datadog.Maui
         {
             try
             {
-                using var stream = FileSystem.OpenAppPackageFileAsync(ManifestFileName).Result;
+                // .GetAwaiter().GetResult() instead of .Result: besides not wrapping the real
+                // failure in an AggregateException (so the log line already names the actual
+                // cause, e.g. file-not-found, with no unwrapping needed), .Result can deadlock
+                // when called on a thread with a captured synchronization context (e.g. the UI
+                // thread) — this call runs on whatever thread first triggers the Lazy<T>, which
+                // isn't guaranteed to be context-free.
+                using var stream = FileSystem.OpenAppPackageFileAsync(ManifestFileName).ConfigureAwait(false).GetAwaiter().GetResult();
                 return ParseManifest(stream);
             }
             catch (Exception ex)
             {
-                // .Result wraps the real failure in an AggregateException — unwrap it so the
-                // log line names the actual cause (e.g. file-not-found) instead of just
-                // "One or more errors occurred."
                 InternalLog.Log(
-                    $"AssemblyDebugId: Failed to load {ManifestFileName}: {ex.GetBaseException().Message}",
+                    $"AssemblyDebugId: Failed to load {ManifestFileName}: {ex.Message}",
                     SdkVerbosity.DEBUG);
                 return new Dictionary<string, string>();
             }
