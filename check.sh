@@ -126,7 +126,7 @@ if [ "$RUN_MAUI" = true ]; then
         log_error "C# tests failed"
     fi
 
-    # DebugIdManifestGenerator targets net8.0 only (it runs via `dotnet exec` at consuming-app
+    # DebugIdManifestGenerator targets net9.0 only (it runs via `dotnet exec` at consuming-app
     # build time, independent of the app's own TFM), so it isn't part of the net9/net10 matrix
     # above and needs its own dotnet test invocation.
     log_info "Running dotnet test (DebugIdManifestGenerator.Tests)..."
