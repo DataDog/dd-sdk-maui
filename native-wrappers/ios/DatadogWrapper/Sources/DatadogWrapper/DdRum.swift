@@ -327,7 +327,10 @@ public class DdRum: NSObject {
                 case let int64Val as Int64:
                     attributes[key] = int64Val
                 default:
-                    attributes[key] = String(describing: value)
+                    // AnyEncodable (also used by buildAttributes and elsewhere in this file)
+                    // preserves nested dictionaries/arrays — e.g. _dd.error.sdk_frames — as
+                    // structured data.
+                    attributes[key] = AnyEncodable(value)
                 }
             }
         }

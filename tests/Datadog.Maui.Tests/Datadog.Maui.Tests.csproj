@@ -15,6 +15,10 @@
     <PackageReference Include="Microsoft.Maui.Controls" Version="10.0.0" Condition="$(TargetFramework.StartsWith('net10.0'))" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="../Datadog.Maui.Tests.Fixtures.CrossAssembly/Datadog.Maui.Tests.Fixtures.CrossAssembly.csproj" />
+  </ItemGroup>
+
   <!-- Link source files from Datadog.Maui for testing -->
   <ItemGroup>
     <Compile Include="../../bindings/Datadog.Maui/DdSdk.cs" Link="Linked/DdSdk.cs" />
@@ -45,6 +49,7 @@
     <Compile Include="../../bindings/Datadog.Maui/Configuration/RumErrorSource.cs" Link="Linked/Configuration/RumErrorSource.cs" />
     <Compile Include="../../bindings/Datadog.Maui/Configuration/OperationFailure.cs" Link="Linked/Configuration/OperationFailure.cs" />
     <Compile Include="../../bindings/Datadog.Maui/DdRumErrorTracking.cs" Link="Linked/DdRumErrorTracking.cs" />
+    <Compile Include="../../bindings/Datadog.Maui/AssemblyDebugId.cs" Link="Linked/AssemblyDebugId.cs" />
     <Compile Include="../../bindings/Datadog.Maui/Configuration/DdRumActionEvent.cs" Link="Linked/Configuration/DdRumActionEvent.cs" />
     <Compile Include="../../bindings/Datadog.Maui/AutoTracking/ActionTargetResolver.cs" Link="Linked/AutoTracking/ActionTargetResolver.cs" />
     <Compile Include="../../bindings/Datadog.Maui/DdViewAttribute.cs" Link="Linked/DdViewAttribute.cs" />

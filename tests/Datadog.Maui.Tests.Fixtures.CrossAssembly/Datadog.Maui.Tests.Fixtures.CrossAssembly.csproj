@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!--
+    Standalone class library used only by DdRumErrorTrackingTests' multi-assembly sdk_frames
+    test. It must be a real, separately-compiled assembly (not just another type in the test
+    project) so a thrown exception genuinely produces stack frames whose declaring assembly
+    differs from the test project's own assembly.
+  -->
+  <PropertyGroup>
+    <TargetFrameworks>net9.0;net10.0</TargetFrameworks>
+    <RootNamespace>Datadog.Maui.Tests.Fixtures.CrossAssembly</RootNamespace>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+</Project>

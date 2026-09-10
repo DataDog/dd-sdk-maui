@@ -5,6 +5,7 @@
  */
 
 using System.Runtime.InteropServices;
+using Android.Runtime;
 
 namespace example;
 
@@ -15,9 +16,21 @@ public static partial class NativeCrashHelper
 
     public static partial void TriggerNativeCrash()
     {
-        // Throw a Java RuntimeException directly, which is a true native crash
-        // that bypasses .NET exception handling
-        throw new Java.Lang.RuntimeException("Native Java Exception");
+        // Calls into real Java bytecode (JavaThrower.level1 -> level2 -> level3),
+        // so the resulting exception carries a genuine JVM-populated stack trace
+        // (file/line info), unlike a C#-constructed Java.Lang.Throwable.
+        // JavaThrower is compiled in via <AndroidJavaSource> only (no bindings project),
+        // so there's no generated C# proxy type for it — invoke it via raw JNI instead.
+        var javaThrowerClass = JNIEnv.FindClass("com/datadog/mauiexample/crash/JavaThrower");
+        try
+        {
+            var level1MethodId = JNIEnv.GetStaticMethodID(javaThrowerClass, "level1", "()V");
+            JNIEnv.CallStaticVoidMethod(javaThrowerClass, level1MethodId);
+        }
+        finally
+        {
+            JNIEnv.DeleteLocalRef(javaThrowerClass);
+        }
     }
 
     public static partial void TriggerNdkCrash()

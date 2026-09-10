@@ -27,8 +27,8 @@
 		<ApplicationId>com.datadog.maui.test</ApplicationId>
 
 		<!-- Versions -->
-		<ApplicationDisplayVersion>1.0.2</ApplicationDisplayVersion>
-		<ApplicationVersion>2</ApplicationVersion>
+		<ApplicationDisplayVersion>1.0.3</ApplicationDisplayVersion>
+		<ApplicationVersion>3</ApplicationVersion>
 
 		<!-- Datadog symbol upload settings -->
 		<DatadogServiceName>datadog-maui-test</DatadogServiceName>
@@ -76,6 +76,11 @@
 	<ItemGroup>
 		<PackageReference Include="Microsoft.Maui.Controls" Version="$(MauiVersion)" />
 		<PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="10.0.0" />
+	</ItemGroup>
+
+	<!-- Genuinely-Java-thrown test source for mixed C#+Java stack trace testing (see NativeCrashHelper.cs) -->
+	<ItemGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">
+		<AndroidJavaSource Include="Platforms\Android\JavaThrower.java" />
 	</ItemGroup>
 
 	<!-- Datadog SDK for .NET MAUI (unified package for iOS and Android) -->
