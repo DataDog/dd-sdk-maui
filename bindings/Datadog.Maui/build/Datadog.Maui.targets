@@ -152,7 +152,7 @@
 
          $(_DdDebugIdManifestPath) is usually already set by Datadog.Maui.DebugId.targets
          (imported above). It's recomputed here as a fallback for split build/publish
-         invocations (e.g. `dotnet build` then `dotnet publish --no-build`), where the
+         invocations (e.g. a `dotnet build` followed by a no-build `dotnet publish`), where the
          publish step runs in a fresh MSBuild process and the DebugId targets never re-run —
          this keeps the target self-sufficient in that case. -->
     <PropertyGroup>
