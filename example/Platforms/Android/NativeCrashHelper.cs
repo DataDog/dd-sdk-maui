@@ -22,8 +22,15 @@ public static partial class NativeCrashHelper
         // JavaThrower is compiled in via <AndroidJavaSource> only (no bindings project),
         // so there's no generated C# proxy type for it — invoke it via raw JNI instead.
         var javaThrowerClass = JNIEnv.FindClass("com/datadog/mauiexample/crash/JavaThrower");
-        var level1MethodId = JNIEnv.GetStaticMethodID(javaThrowerClass, "level1", "()V");
-        JNIEnv.CallStaticVoidMethod(javaThrowerClass, level1MethodId);
+        try
+        {
+            var level1MethodId = JNIEnv.GetStaticMethodID(javaThrowerClass, "level1", "()V");
+            JNIEnv.CallStaticVoidMethod(javaThrowerClass, level1MethodId);
+        }
+        finally
+        {
+            JNIEnv.DeleteLocalRef(javaThrowerClass);
+        }
     }
 
     public static partial void TriggerNdkCrash()
