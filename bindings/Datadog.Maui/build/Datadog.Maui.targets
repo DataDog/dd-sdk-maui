@@ -145,19 +145,16 @@
           AfterTargets="Publish"
           Condition="'$(DatadogUploadSymbols)' == 'true' AND ($(TargetFramework.Contains('-ios')) Or $(TargetFramework.Contains('-android')))">
 
-    <!-- $(OutputPath) (bin/…) is where the app's own Portable PDB lands after a normal
-         build/publish — see SYMBOLS.md's "Symbol file locations" section. This is the
-         same directory datadog-ci's own `ppdb-symbols upload` usage example points at.
-         $(_DdDebugIdManifestPath) is normally already set (and correct, post
-         IL-trimming/AOT-stripping) by Datadog.Maui.DebugId.targets (imported above) —
-         see RUM-18297 dev notes. But that only holds when this MSBuild invocation is the
-         one that ran Compile/Publish end to end: a consumer running a split
-         `dotnet build` then a `dotnet publish` with the no-build flag starts a fresh
-         MSBuild process for the publish step, in which none of the DebugId targets re-run, leaving the
-         property empty even though obj/.../dd_debug_ids.json already exists on disk from
-         the build step. Recompute it here from $(IntermediateOutputPath) — the same
-         derivation every DebugId target uses — so this target is self-sufficient
-         regardless of whether this process built the app itself. -->
+    <!-- Uploads the app's Portable PDB file(s) from $(OutputPath) (bin/…) after Publish,
+         so Datadog can symbolicate managed (C#) exceptions. See SYMBOLS.md's "Symbol file
+         locations" section for where these files land; datadog-ci's `ppdb-symbols upload`
+         usage example points at the same directory.
+
+         $(_DdDebugIdManifestPath) is usually already set by Datadog.Maui.DebugId.targets
+         (imported above). It's recomputed here as a fallback for split build/publish
+         invocations (e.g. `dotnet build` then `dotnet publish --no-build`), where the
+         publish step runs in a fresh MSBuild process and the DebugId targets never re-run —
+         this keeps the target self-sufficient in that case. -->
     <PropertyGroup>
       <_DdDebugIdManifestPath Condition="'$(_DdDebugIdManifestPath)' == ''">$(IntermediateOutputPath)dd_debug_ids.json</_DdDebugIdManifestPath>
     </PropertyGroup>
