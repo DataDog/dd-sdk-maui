@@ -5,6 +5,7 @@
  */
 
 using System.Runtime.InteropServices;
+using Android.Runtime;
 
 namespace example;
 
@@ -18,7 +19,11 @@ public static partial class NativeCrashHelper
         // Calls into real Java bytecode (JavaThrower.level1 -> level2 -> level3),
         // so the resulting exception carries a genuine JVM-populated stack trace
         // (file/line info), unlike a C#-constructed Java.Lang.Throwable.
-        Com.Datadog.Mauiexample.Crash.JavaThrower.Level1();
+        // JavaThrower is compiled in via <AndroidJavaSource> only (no bindings project),
+        // so there's no generated C# proxy type for it — invoke it via raw JNI instead.
+        var javaThrowerClass = JNIEnv.FindClass("com/datadog/mauiexample/crash/JavaThrower");
+        var level1MethodId = JNIEnv.GetStaticMethodID(javaThrowerClass, "level1", "()V");
+        JNIEnv.CallStaticVoidMethod(javaThrowerClass, level1MethodId);
     }
 
     public static partial void TriggerNdkCrash()
