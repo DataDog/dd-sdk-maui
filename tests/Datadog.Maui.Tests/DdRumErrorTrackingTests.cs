@@ -117,9 +117,8 @@ public class DdRumErrorTrackingTests : IDisposable
     }
 
     // ── UnwrapJavaException ────────────────────────────────────────
-    // The #if ANDROID branch (Java.Lang.Throwable → InnerException) only compiles for the
-    // -android target framework, so it can't be exercised by this desktop (net9.0/net10.0)
-    // test project — that unwrap path still needs verification on a real Android run/device.
+    // TODO: The #if ANDROID branch (Java.Lang.Throwable → InnerException) only compiles for
+    // the -android target framework. Still needs verification on a real Android run/device.
 
     [Fact]
     public void UnwrapJavaException_PlainException_ReturnsSameInstance()
