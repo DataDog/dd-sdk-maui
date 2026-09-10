@@ -2,6 +2,17 @@
 
   <Import Project="..\StripTransitiveJni.targets" />
 
+  <!-- tools/DebugIdManifestGenerator is its own standalone console app project — exclude its
+       sources from this library's implicit **/*.cs glob so they don't get compiled straight
+       into Datadog.Maui itself (its Program.cs uses top-level statements, which only compile in
+       an Exe output type, so left in this would break every build of this library). -->
+  <ItemGroup>
+    <Compile Remove="tools\**\*.cs" />
+    <None Remove="tools\**" />
+    <Compile Remove="build\tools\**\*.cs" />
+    <None Remove="build\tools\**" />
+  </ItemGroup>
+
   <PropertyGroup>
     <TargetFrameworks>net9.0-ios;net9.0-android;net10.0-ios;net10.0-android</TargetFrameworks>
     <SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios'">15.0</SupportedOSPlatformVersion>
@@ -23,11 +34,37 @@
     <PackageTags>datadog;maui;logging;monitoring;rum;apm;ios;android</PackageTags>
   </PropertyGroup>
 
-  <!-- Pack the .targets file into the NuGet package so consuming apps get it automatically -->
+  <!-- Pack the .targets files into the NuGet package so consuming apps get them automatically -->
   <ItemGroup>
     <None Include="build\Datadog.Maui.targets"
           Pack="true"
           PackagePath="buildTransitive\Datadog.Maui.targets" />
+    <None Include="build\Datadog.Maui.DebugId.targets"
+          Pack="true"
+          PackagePath="buildTransitive\Datadog.Maui.DebugId.targets" />
+  </ItemGroup>
+
+  <!-- Build the debug-id manifest generator tool (see tools/DebugIdManifestGenerator) once per
+       outer build/pack invocation — not once per TargetFramework — and pack its published
+       output alongside the .targets file that invokes it via `dotnet exec`. -->
+  <Target Name="_DdBuildDebugIdManifestGenerator"
+          BeforeTargets="Build;Pack"
+          Condition="'$(TargetFramework)' == ''">
+    <Exec Command="dotnet publish &quot;$(MSBuildThisFileDirectory)tools\DebugIdManifestGenerator\DebugIdManifestGenerator.csproj&quot; -c Release -o &quot;$(MSBuildThisFileDirectory)build\tools\DebugIdManifestGenerator&quot;" />
+  </Target>
+
+  <ItemGroup>
+    <None Include="build\tools\DebugIdManifestGenerator\DebugIdManifestGenerator.dll"
+          Pack="true"
+          PackagePath="buildTransitive\tools\DebugIdManifestGenerator\DebugIdManifestGenerator.dll" />
+    <None Include="build\tools\DebugIdManifestGenerator\DebugIdManifestGenerator.runtimeconfig.json"
+          Pack="true"
+          PackagePath="buildTransitive\tools\DebugIdManifestGenerator\DebugIdManifestGenerator.runtimeconfig.json" />
+    <!-- `dotnet exec` resolves dependencies via the .deps.json next to the .dll — pack it too
+         so the tool doesn't silently break the moment it gains a non-framework dependency. -->
+    <None Include="build\tools\DebugIdManifestGenerator\DebugIdManifestGenerator.deps.json"
+          Pack="true"
+          PackagePath="buildTransitive\tools\DebugIdManifestGenerator\DebugIdManifestGenerator.deps.json" />
   </ItemGroup>
 
   <!-- MAUI Controls (provides Page, VisualElement, etc. for auto-tracking predicates) -->

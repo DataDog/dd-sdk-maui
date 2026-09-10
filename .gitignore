@@ -18,6 +18,9 @@ bindings/Datadog.iOS.Binding/NativeReference/dSYMs/
 bindings/Datadog.Android.Binding/Jars/datadogwrapper-release.aar
 example/Jars/
 
+# DebugIdManifestGenerator tool, republished into build/tools on every Datadog.Maui build/pack
+bindings/Datadog.Maui/build/tools/
+
 # Gradle
 .gradle/
 native-wrappers/android/**/build/
