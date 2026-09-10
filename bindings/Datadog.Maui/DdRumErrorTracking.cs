@@ -156,6 +156,7 @@ namespace Datadog.Maui
             catch (Exception ex)
             {
                 InternalLog.Log($"DdRumErrorTracking: Failed to build sdk_frames: {ex.Message}", SdkVerbosity.DEBUG);
+                InternalTelemetry.Error("DdRumErrorTracking: Failed to build sdk_frames", ex);
             }
 
             return frames;
