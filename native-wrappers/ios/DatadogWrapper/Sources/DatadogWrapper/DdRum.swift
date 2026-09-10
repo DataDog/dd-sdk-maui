@@ -329,9 +329,7 @@ public class DdRum: NSObject {
                 default:
                     // AnyEncodable (also used by buildAttributes and elsewhere in this file)
                     // preserves nested dictionaries/arrays — e.g. _dd.error.sdk_frames — as
-                    // structured data. The previous fallback, String(describing: value),
-                    // flattened sdk_frames into an unusable debug string before it ever
-                    // reached the native SDK.
+                    // structured data.
                     attributes[key] = AnyEncodable(value)
                 }
             }
