@@ -76,7 +76,8 @@ public class DdRumErrorTrackingTests : IDisposable
         // AppDomain.CurrentDomain.UnhandledException can't be raised directly without
         // crashing the test process, so invoke the private handler itself via reflection
         // with a real UnhandledExceptionEventArgs, mirroring what the CLR would do.
-        var exception = new InvalidOperationException("boom");
+        // Actually thrown (not just `new`'d) so it carries real stack frames for BuildSdkFrames.
+        var exception = CatchException(() => throw new InvalidOperationException("boom"));
         var args = new UnhandledExceptionEventArgs(exception, isTerminating: false);
         var handler = typeof(DdRumErrorTracking).GetMethod("OnUnhandledException", BindingFlags.NonPublic | BindingFlags.Static);
         Assert.NotNull(handler);
@@ -88,6 +89,17 @@ public class DdRumErrorTrackingTests : IDisposable
         Assert.Equal("boom", rumBridge.LastMessage);
         Assert.Equal("AppDomain.UnhandledException", rumBridge.LastContext?["_dd.error.handler"]);
         Assert.Equal(false, rumBridge.LastContext?["_dd.error.is_crash"]);
+
+        // Guards the ReportError -> AddError wiring itself: BuildSdkFrames is unit-tested
+        // directly elsewhere, but nothing else exercises the real handler path to confirm
+        // its output actually reaches the reported context under the expected key.
+        var sdkFrames = Assert.IsType<List<Dictionary<string, object>>>(rumBridge.LastContext?["_dd.error.sdk_frames"]);
+        Assert.NotEmpty(sdkFrames);
+        Assert.All(sdkFrames, frame =>
+        {
+            Assert.IsType<int>(frame["method_token"]);
+            Assert.IsType<int>(frame["il_offset"]);
+        });
     }
 
     [Fact]
