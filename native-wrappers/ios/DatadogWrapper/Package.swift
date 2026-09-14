@@ -9,7 +9,7 @@ import PackageDescription
 let package = Package(
     name: "DatadogWrapper",
     platforms: [
-        .iOS(.v12),
+        .iOS(.v15),
         // macOS is required to run unit tests locally via `swift test`.
         .macOS("12.6")
     ],
@@ -20,7 +20,7 @@ let package = Package(
             targets: ["DatadogWrapper"])
     ],
     dependencies: [
-        .package(url: "https://github.com/DataDog/dd-sdk-ios.git", from: "3.11.0")
+        .package(url: "https://github.com/DataDog/dd-sdk-ios.git", exact: "3.17.0")
     ],
     targets: [
         .target(
