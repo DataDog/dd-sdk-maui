@@ -221,7 +221,7 @@
 
     <PropertyGroup>
       <_DdDebugIdManifestPath>$(IntermediateOutputPath)dd_debug_ids.json</_DdDebugIdManifestPath>
-      <_DdAppBundleManifestPath>$(AppBundleDir)\dd_debug_ids.json</_DdAppBundleManifestPath>
+      <_DdAppBundleManifestPath>$(AppBundleDir)/dd_debug_ids.json</_DdAppBundleManifestPath>
     </PropertyGroup>
 
     <ItemGroup>
