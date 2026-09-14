@@ -50,7 +50,7 @@
   <Target Name="_DdBuildDebugIdManifestGenerator"
           BeforeTargets="Build;Pack"
           Condition="'$(TargetFramework)' == ''">
-    <Exec Command="dotnet publish &quot;$(MSBuildThisFileDirectory)tools\DebugIdManifestGenerator\DebugIdManifestGenerator.csproj&quot; -c Release -o &quot;$(MSBuildThisFileDirectory)build\tools\DebugIdManifestGenerator&quot;" />
+    <Exec Command="dotnet publish &quot;$(MSBuildThisFileDirectory)tools/DebugIdManifestGenerator/DebugIdManifestGenerator.csproj&quot; -c Release -o &quot;$(MSBuildThisFileDirectory)build/tools/DebugIdManifestGenerator&quot;" />
   </Target>
 
   <ItemGroup>

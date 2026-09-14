@@ -50,7 +50,7 @@
 <Project>
 
   <PropertyGroup>
-    <_DdDebugIdManifestGeneratorDll>$(MSBuildThisFileDirectory)tools\DebugIdManifestGenerator\DebugIdManifestGenerator.dll</_DdDebugIdManifestGeneratorDll>
+    <_DdDebugIdManifestGeneratorDll>$(MSBuildThisFileDirectory)tools/DebugIdManifestGenerator/DebugIdManifestGenerator.dll</_DdDebugIdManifestGeneratorDll>
   </PropertyGroup>
 
   <!-- Placeholder so a file exists before iOS's eager bundle-resource check — see the
