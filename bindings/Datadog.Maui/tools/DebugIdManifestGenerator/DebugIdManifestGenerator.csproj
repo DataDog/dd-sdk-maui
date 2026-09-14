@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net9.0</TargetFramework>
+    <!-- Runs via `dotnet exec` at consuming-app build time, on whatever .NET runtime that
+         machine has installed — RollForward avoids hardcoding a specific SDK/runtime version.
+         net9.0 matches the SDK's current minimum supported TFM; this tool is a standalone
+         precompiled binary invoked via `dotnet exec`, so it isn't actually required to track
+         the SDK's TFM, but keeping it aligned avoids it looking like an arbitrary choice. -->
+    <RollForward>LatestMajor</RollForward>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>Datadog.Maui.Tools.DebugIdManifestGenerator</RootNamespace>
+    <IsPackable>false</IsPackable>
+    <InvariantGlobalization>true</InvariantGlobalization>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="DebugIdManifestGenerator.Tests" />
+  </ItemGroup>
+
+</Project>

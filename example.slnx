@@ -7,4 +7,5 @@
   <Project Path="bindings/Datadog.Android.Internal/Datadog.Android.Internal.csproj" />
   <Project Path="bindings/Datadog.Android.Logs/Datadog.Android.Logs.csproj" />
   <Project Path="tests/Datadog.Maui.Tests/Datadog.Maui.Tests.csproj" />
+  <Project Path="tests/DebugIdManifestGenerator.Tests/DebugIdManifestGenerator.Tests.csproj" />
 </Solution>
