@@ -23,9 +23,11 @@
   What gets uploaded:
     iOS:     .dSYM bundle (covers native + AOT-compiled C# crashes)
     Android: ProGuard/R8 mapping.txt (covers obfuscated Java/Kotlin names)
+    Both:    Portable PDB (covers managed C# stack traces, first-party assembly only)
 
-  Note: Portable PDBs (C# line numbers) are NOT uploaded — they are resolved
-  on-device by the .NET runtime at crash time. No server-side processing needed.
+  Note: the Portable PDB upload correlates by the build-time debug-id manifest
+  (RUM-18332, see Datadog.Maui.DebugId.targets) rather than re-deriving the id
+  at upload time, so it stays correct across IL trimming/AOT stripping.
 -->
 <Project>
 
@@ -45,7 +47,7 @@
        Pre-check: Verify prerequisites, set _DdCanUpload flag
        ═══════════════════════════════════════════════════════════════════════ -->
   <Target Name="DatadogCheckCli"
-          BeforeTargets="DatadogUploadDsym;DatadogUploadMapping;DatadogSymbolReport"
+          BeforeTargets="DatadogUploadDsym;DatadogUploadMapping;DatadogUploadPortablePdb;DatadogSymbolReport"
           Condition="'$(DatadogUploadSymbols)' == 'true'">
 
     <!-- Check if datadog-ci is available (must be installed globally) -->
@@ -137,10 +139,63 @@
   </Target>
 
   <!-- ═══════════════════════════════════════════════════════════════════════
+       Portable PDB: Upload first-party Portable PDB after Publish
+       ═══════════════════════════════════════════════════════════════════════ -->
+  <Target Name="DatadogUploadPortablePdb"
+          AfterTargets="Publish"
+          Condition="'$(DatadogUploadSymbols)' == 'true' AND ($(TargetFramework.Contains('-ios')) Or $(TargetFramework.Contains('-android')))">
+
+    <!-- Uploads the app's Portable PDB file(s) from $(OutputPath) (bin/…) after Publish,
+         so Datadog can symbolicate managed (C#) exceptions. See SYMBOLS.md's "Symbol file
+         locations" section for where these files land; datadog-ci's `ppdb-symbols upload`
+         usage example points at the same directory.
+
+         $(_DdDebugIdManifestPath) is usually already set by Datadog.Maui.DebugId.targets
+         (imported above). It's recomputed here as a fallback for split build/publish
+         invocations (e.g. a `dotnet build` followed by a no-build `dotnet publish`), where the
+         publish step runs in a fresh MSBuild process and the DebugId targets never re-run —
+         this keeps the target self-sufficient in that case. -->
+    <PropertyGroup>
+      <_DdDebugIdManifestPath Condition="'$(_DdDebugIdManifestPath)' == ''">$(IntermediateOutputPath)dd_debug_ids.json</_DdDebugIdManifestPath>
+    </PropertyGroup>
+
+    <Message Importance="high"
+             Text="Datadog: Skipping Portable PDB upload — no debug-id manifest found at $(_DdDebugIdManifestPath)."
+             Condition="'$(_DdCanUpload)' == 'true' AND !Exists('$(_DdDebugIdManifestPath)')" />
+
+    <Message Importance="high"
+             Text="Datadog: Uploading Portable PDB(s) from $(OutputPath)"
+             Condition="'$(_DdCanUpload)' == 'true' AND Exists('$(_DdDebugIdManifestPath)')" />
+
+    <!-- ppdb-symbols upload has no service-name/version options (unlike flutter-symbols
+         upload) — the debug-id manifest is the sole correlation key for these uploads. -->
+    <Exec Command="datadog-ci ppdb-symbols upload &quot;$(OutputPath)&quot; --debug-id-manifest &quot;$(_DdDebugIdManifestPath)&quot;"
+          Condition="'$(_DdCanUpload)' == 'true' AND Exists('$(_DdDebugIdManifestPath)') AND '$(DatadogApiKey)' != ''"
+          EnvironmentVariables="DATADOG_API_KEY=$(DatadogApiKey);DATADOG_SITE=$(DatadogSite)"
+          IgnoreExitCode="true"
+          ContinueOnError="true" />
+    <Exec Command="DATADOG_SITE=$(DatadogSite) datadog-ci ppdb-symbols upload &quot;$(OutputPath)&quot; --debug-id-manifest &quot;$(_DdDebugIdManifestPath)&quot;"
+          Condition="'$(_DdCanUpload)' == 'true' AND Exists('$(_DdDebugIdManifestPath)') AND '$(DatadogApiKey)' == ''"
+          IgnoreExitCode="true"
+          ContinueOnError="true" />
+  </Target>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════
        Summary: Report what was uploaded (always runs when enabled)
        ═══════════════════════════════════════════════════════════════════════ -->
+  <!-- Anchored on "Publish" itself, NOT on DatadogUploadDsym/Mapping/PortablePdb — those
+       three are themselves only reached via their own AfterTargets="Publish" hooks, so
+       they never sit at a stable, later point in the build graph for another target to
+       hook onto (the same "AfterTargets targets a NAME, not a real completion point"
+       gotcha documented in Datadog.Maui.DebugId.targets). Anchoring on "Publish" — a
+       real, always-present target — and relying on MSBuild's stable declaration-order
+       scheduling among sibling AfterTargets="Publish" hooks (this target is declared
+       last in the file, after the three upload targets) reliably runs this last.
+       Note: this declaration-order behavior is empirically stable across current
+       MSBuild versions but is not an explicitly documented public contract — if a
+       future MSBuild version changes it, add an explicit DependsOnTargets fallback. -->
   <Target Name="DatadogSymbolReport"
-          AfterTargets="DatadogUploadDsym;DatadogUploadMapping"
+          AfterTargets="Publish"
           Condition="'$(DatadogUploadSymbols)' == 'true'">
 
     <Message Importance="high" Text="" />
@@ -157,6 +212,9 @@
     <Message Importance="high"
              Text="  Android mapping: $(OutputPath)mapping.txt"
              Condition="$(TargetFramework.Contains('-android'))" />
+    <Message Importance="high"
+             Text="  Portable PDB: $(OutputPath) (manifest: $(_DdDebugIdManifestPath))"
+             Condition="$(TargetFramework.Contains('-ios')) Or $(TargetFramework.Contains('-android'))" />
     <Message Importance="high" Text="" />
   </Target>
 
