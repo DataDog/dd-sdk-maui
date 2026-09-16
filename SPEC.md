@@ -139,12 +139,12 @@ DatadogWrapper/
 ```swift
 let package = Package(
     name: "DatadogWrapper",
-    platforms: [.iOS(.v12)],
+    platforms: [.iOS(.v15)],
     products: [
         .library(name: "DatadogWrapper", type: .dynamic, targets: ["DatadogWrapper"])
     ],
     dependencies: [
-        .package(url: "https://github.com/DataDog/dd-sdk-ios.git", from: "<IOS_NATIVE_VERSION>")
+        .package(url: "https://github.com/DataDog/dd-sdk-ios.git", exact: "<IOS_NATIVE_VERSION>")
     ],
     targets: [
         .target(
@@ -1214,7 +1214,7 @@ The SDK automatically tracks MAUI page navigations and user interactions when en
    - R8/ProGuard minification reduces impact
 
 3. **Minimum OS versions**
-   - iOS: 12.0+ (dd-sdk-ios requirement)
+   - iOS: 15.0+ (dd-sdk-ios requirement, raised in dd-sdk-ios 3.17.0)
    - Android: API 23+ (dd-sdk-android requirement)
 
 ## Roadmap

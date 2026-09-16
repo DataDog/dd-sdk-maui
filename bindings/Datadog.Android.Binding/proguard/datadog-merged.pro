@@ -12,19 +12,24 @@
     @kotlin.jvm.JvmStatic *;
 }
 
-# --- Rules from dd-sdk-android-logs-3.10.0.aar ---
+# --- Rules from dd-sdk-android-core-3.14.0.aar ---
+# see https://github.com/DataDog/dd-sdk-android/issues/3491 for motivation
+# we are using Work Manager version which is not compatible with R8 full mode
+-keep class androidx.work.impl.WorkDatabase_Impl { <init>(); }
+
+# --- Rules from dd-sdk-android-logs-3.14.0.aar ---
 # This is needed for the Datadog Error Tracking feature to work reliably,
  # this file is used by Logs and RUM modules
 -keepattributes SourceFile,LineNumberTable
 
-# --- Rules from dd-sdk-android-trace-3.10.0.aar ---
+# --- Rules from dd-sdk-android-trace-3.14.0.aar ---
 -keep class com.datadog.android.trace.GlobalDatadogTracer {
     public com.datadog.android.trace.api.tracer.DatadogTracer getOrNull();
     public static com.datadog.android.trace.GlobalDatadogTracer INSTANCE;
 }
 -keepclassmembernames class org.jctools.** { *; }
 
-# --- Rules from dd-sdk-android-rum-3.10.0.aar ---
+# --- Rules from dd-sdk-android-rum-3.14.0.aar ---
 # This is needed for the Datadog Error Tracking feature to work reliably,
  # this file is used by Logs and RUM modules
 -keepattributes SourceFile,LineNumberTable
@@ -34,7 +39,7 @@
 -keepnames class com.datadog.android.rum.internal.domain.scope.RumRawEvent
 -keepnames class * extends com.datadog.android.rum.internal.domain.scope.RumRawEvent
 
-# --- Rules from dd-sdk-android-session-replay-3.10.0.aar ---
+# --- Rules from dd-sdk-android-session-replay-3.14.0.aar ---
 # Keep the optional selector class name. We need this in the SR recorder.
 -keepnames class * extends android.view.View
 -keepnames class * extends android.graphics.drawable.Drawable

@@ -17,8 +17,9 @@
 # Files modified by --ios:
 #   versions.properties
 #   native-wrappers/ios/DatadogWrapper/Package.swift
+#     (pinned to the exact requested version, not an open `from:` range)
 #   native-wrappers/ios/DatadogWrapper/Package.resolved
-#     (regenerated via `swift package update dd-sdk-ios`)
+#     (regenerated via `swift package resolve`, then asserted to match)
 #
 # Files modified by --android:
 #   versions.properties
@@ -170,12 +171,16 @@ if [ -n "$NEW_IOS" ]; then
             "s|^IOS_NATIVE_VERSION=${ESC_IOS}$|IOS_NATIVE_VERSION=${NEW_IOS}|" \
             "versions.properties (IOS_NATIVE_VERSION)"
 
-        # Package.swift: .package(url: "...", from: "X.Y.Z")
-        # Match any semver-shaped value so this still works when Package.swift
-        # has drifted from versions.properties (e.g. a previous bump touched
-        # Package.swift but not IOS_NATIVE_VERSION).
+        # Package.swift: .package(url: "...", exact: "X.Y.Z")
+        #
+        # Pin the exact version. An open `from:` range lets the resolver choose
+        # any newer release, so `--ios X` would not actually guarantee X — it
+        # would yield whatever the newest compatible version happens to be.
+        #
+        # Anchored on the dd-sdk-ios URL and accepting any requirement keyword,
+        # so this rewrites a pre-existing `from:` pin and is idempotent after.
         replace_in_file "$SCRIPT_DIR/native-wrappers/ios/DatadogWrapper/Package.swift" \
-            "s|(from: \")[0-9][0-9A-Za-z.\\-]*(\")|\${1}${NEW_IOS}\${2}|g" \
+            "s#(dd-sdk-ios\\.git\", )[a-z]+: \"[0-9][0-9A-Za-z.\\-]*\"#\${1}exact: \"${NEW_IOS}\"#g" \
             "native-wrappers/ios/DatadogWrapper/Package.swift"
 
         # Drive SwiftPM to re-pin dd-sdk-ios in Package.resolved. Without this
@@ -184,11 +189,34 @@ if [ -n "$NEW_IOS" ]; then
         IOS_PKG_DIR="$SCRIPT_DIR/native-wrappers/ios/DatadogWrapper"
         if command -v swift >/dev/null 2>&1; then
             log_info "Re-resolving SwiftPM dependencies..."
-            if ! (cd "$IOS_PKG_DIR" && swift package update dd-sdk-ios); then
-                log_warning "swift package update failed — run it manually in $IOS_PKG_DIR before building"
+            if ! (cd "$IOS_PKG_DIR" && swift package resolve); then
+                log_error "swift package resolve failed — does dd-sdk-ios $NEW_IOS exist upstream?"
+                exit 1
             fi
+
+            # Package.resolved is what the build actually consumes, and it is
+            # gitignored, so assert it really landed on the requested version
+            # instead of trusting the resolver to have honoured the manifest.
+            RESOLVED_IOS=$(python3 -c '
+import json, sys
+try:
+    with open(sys.argv[1]) as f:
+        pins = json.load(f).get("pins", [])
+except (OSError, ValueError):
+    sys.exit(1)
+for pin in pins:
+    if pin.get("identity") == "dd-sdk-ios":
+        print(pin.get("state", {}).get("version", ""))
+        break
+' "$IOS_PKG_DIR/Package.resolved" 2>/dev/null) || RESOLVED_IOS=""
+
+            if [ "$RESOLVED_IOS" != "$NEW_IOS" ]; then
+                log_error "Package.resolved pins dd-sdk-ios ${RESOLVED_IOS:-<unreadable>}, expected $NEW_IOS"
+                exit 1
+            fi
+            log_info "Package.resolved pins dd-sdk-ios $RESOLVED_IOS"
         else
-            log_warning "swift not on PATH — run 'swift package update dd-sdk-ios' in $IOS_PKG_DIR before building"
+            log_warning "swift not on PATH — run 'swift package resolve' in $IOS_PKG_DIR before building"
         fi
     fi
 fi
