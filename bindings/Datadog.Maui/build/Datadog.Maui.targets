@@ -13,12 +13,20 @@
     Set these properties in your .csproj or via command line:
 
     <DatadogUploadSymbols>true</DatadogUploadSymbols>
-    <DatadogSite>datadoghq.com</DatadogSite>          (optional, defaults to datadoghq.com)
+    <DatadogSite>datadoghq.com</DatadogSite>          (optional; unset means datadog-ci's own
+                                                       DATADOG_SITE/DD_SITE handling applies)
     <DatadogServiceName>your-service</DatadogServiceName>  (optional, defaults to assembly name)
+    <DatadogFailOnSymbolUploadError>false</DatadogFailOnSymbolUploadError>  (optional, defaults to false)
 
     Or pass them on the command line:
       export DATADOG_API_KEY=xxx
       dotnet publish -c Release -p:DatadogUploadSymbols=true
+
+    For a non-default org/site, `export DATADOG_SITE=datad0g.com` is enough.
+    -p:DatadogSite=… pins a site explicitly and overrides the environment.
+
+    Upload failures are reported in the summary and as an MSBuild warning, but do not
+    fail the build. -p:DatadogFailOnSymbolUploadError=true makes them errors.
 
   What gets uploaded:
     iOS:     .dSYM bundle (covers native + AOT-compiled C# crashes)
@@ -38,8 +46,14 @@
   <!-- Defaults -->
   <PropertyGroup>
     <DatadogUploadSymbols Condition="'$(DatadogUploadSymbols)' == ''">false</DatadogUploadSymbols>
-    <DatadogSite Condition="'$(DatadogSite)' == ''">datadoghq.com</DatadogSite>
+
+    <!-- DatadogSite has no default on purpose: it is injected into datadog-ci's
+         environment below, so any default here would override an exported
+         DATADOG_SITE. Left unset, datadog-ci resolves the site itself. -->
     <DatadogServiceName Condition="'$(DatadogServiceName)' == ''">$(AssemblyName)</DatadogServiceName>
+
+    <DatadogFailOnSymbolUploadError Condition="'$(DatadogFailOnSymbolUploadError)' == ''">false</DatadogFailOnSymbolUploadError>
+
     <_DdCanUpload>false</_DdCanUpload>
   </PropertyGroup>
 
@@ -72,6 +86,25 @@
       <_DdHasApiKey Condition="'$(_DdHasApiKey)' == ''">false</_DdHasApiKey>
       <_DdCanUpload Condition="'$(_DdCliExitCode)' == '0' AND '$(_DdHasApiKey)' == 'true'">true</_DdCanUpload>
     </PropertyGroup>
+
+    <!-- Environment overrides for the datadog-ci invocations, shared by the three upload
+         targets. Each entry is added only when its property is set; Exec augments the
+         inherited environment, so anything exported in the shell otherwise passes
+         through. -->
+    <PropertyGroup>
+      <_DdUploadEnv></_DdUploadEnv>
+      <_DdUploadEnv Condition="'$(DatadogApiKey)' != ''">DATADOG_API_KEY=$(DatadogApiKey)</_DdUploadEnv>
+      <_DdUploadEnv Condition="'$(DatadogSite)' != '' AND '$(_DdUploadEnv)' != ''">$(_DdUploadEnv);DATADOG_SITE=$(DatadogSite)</_DdUploadEnv>
+      <_DdUploadEnv Condition="'$(DatadogSite)' != '' AND '$(_DdUploadEnv)' == ''">DATADOG_SITE=$(DatadogSite)</_DdUploadEnv>
+    </PropertyGroup>
+
+    <!-- Site shown in the summary, resolved in datadog-ci's own precedence order. -->
+    <PropertyGroup>
+      <_DdSiteDisplay Condition="'$(DatadogSite)' != ''">$(DatadogSite) (-p:DatadogSite)</_DdSiteDisplay>
+      <_DdSiteDisplay Condition="'$(_DdSiteDisplay)' == '' AND '$(DATADOG_SITE)' != ''">$(DATADOG_SITE) (DATADOG_SITE)</_DdSiteDisplay>
+      <_DdSiteDisplay Condition="'$(_DdSiteDisplay)' == '' AND '$(DD_SITE)' != ''">$(DD_SITE) (DD_SITE)</_DdSiteDisplay>
+      <_DdSiteDisplay Condition="'$(_DdSiteDisplay)' == ''">datadoghq.com (datadog-ci default)</_DdSiteDisplay>
+    </PropertyGroup>
   </Target>
 
   <!-- ═══════════════════════════════════════════════════════════════════════
@@ -95,16 +128,18 @@
              Text="Datadog: Uploading iOS dSYM from $(_DdDsymPath)"
              Condition="'$(_DdCanUpload)' == 'true' AND Exists('$(_DdDsymPath)')" />
 
-    <!-- When DatadogApiKey property is set, pass it as env var. Otherwise let the shell's DATADOG_API_KEY pass through. -->
     <Exec Command="datadog-ci dsyms upload &quot;$(_DdDsymDir)&quot;"
-          Condition="'$(_DdCanUpload)' == 'true' AND Exists('$(_DdDsymPath)') AND '$(DatadogApiKey)' != ''"
-          EnvironmentVariables="DATADOG_API_KEY=$(DatadogApiKey);DATADOG_SITE=$(DatadogSite)"
+          Condition="'$(_DdCanUpload)' == 'true' AND Exists('$(_DdDsymPath)')"
+          EnvironmentVariables="$(_DdUploadEnv)"
           IgnoreExitCode="true"
-          ContinueOnError="true" />
-    <Exec Command="DATADOG_SITE=$(DatadogSite) datadog-ci dsyms upload &quot;$(_DdDsymDir)&quot;"
-          Condition="'$(_DdCanUpload)' == 'true' AND Exists('$(_DdDsymPath)') AND '$(DatadogApiKey)' == ''"
-          IgnoreExitCode="true"
-          ContinueOnError="true" />
+          ContinueOnError="true">
+      <Output TaskParameter="ExitCode" PropertyName="_DdDsymUploadExitCode" />
+    </Exec>
+
+    <!-- _DdUploadFailed accumulates across the three upload targets; read by DatadogSymbolReport. -->
+    <PropertyGroup>
+      <_DdUploadFailed Condition="'$(_DdDsymUploadExitCode)' != '' AND '$(_DdDsymUploadExitCode)' != '0'">true</_DdUploadFailed>
+    </PropertyGroup>
   </Target>
 
   <!-- ═══════════════════════════════════════════════════════════════════════
@@ -128,14 +163,16 @@
              Condition="'$(_DdCanUpload)' == 'true' AND Exists('$(_DdMappingPath)')" />
 
     <Exec Command="datadog-ci flutter-symbols upload --android-mapping --android-mapping-location &quot;$(_DdMappingPath)&quot; --service-name &quot;$(DatadogServiceName)&quot; --version &quot;$(ApplicationDisplayVersion)&quot;"
-          Condition="'$(_DdCanUpload)' == 'true' AND Exists('$(_DdMappingPath)') AND '$(DatadogApiKey)' != ''"
-          EnvironmentVariables="DATADOG_API_KEY=$(DatadogApiKey);DATADOG_SITE=$(DatadogSite)"
+          Condition="'$(_DdCanUpload)' == 'true' AND Exists('$(_DdMappingPath)')"
+          EnvironmentVariables="$(_DdUploadEnv)"
           IgnoreExitCode="true"
-          ContinueOnError="true" />
-    <Exec Command="DATADOG_SITE=$(DatadogSite) datadog-ci flutter-symbols upload --android-mapping --android-mapping-location &quot;$(_DdMappingPath)&quot; --service-name &quot;$(DatadogServiceName)&quot; --version &quot;$(ApplicationDisplayVersion)&quot;"
-          Condition="'$(_DdCanUpload)' == 'true' AND Exists('$(_DdMappingPath)') AND '$(DatadogApiKey)' == ''"
-          IgnoreExitCode="true"
-          ContinueOnError="true" />
+          ContinueOnError="true">
+      <Output TaskParameter="ExitCode" PropertyName="_DdMappingUploadExitCode" />
+    </Exec>
+
+    <PropertyGroup>
+      <_DdUploadFailed Condition="'$(_DdMappingUploadExitCode)' != '' AND '$(_DdMappingUploadExitCode)' != '0'">true</_DdUploadFailed>
+    </PropertyGroup>
   </Target>
 
   <!-- ═══════════════════════════════════════════════════════════════════════
@@ -170,14 +207,16 @@
     <!-- ppdb-symbols upload has no service-name/version options (unlike flutter-symbols
          upload) — the debug-id manifest is the sole correlation key for these uploads. -->
     <Exec Command="datadog-ci ppdb-symbols upload &quot;$(OutputPath)&quot; --debug-id-manifest &quot;$(_DdDebugIdManifestPath)&quot;"
-          Condition="'$(_DdCanUpload)' == 'true' AND Exists('$(_DdDebugIdManifestPath)') AND '$(DatadogApiKey)' != ''"
-          EnvironmentVariables="DATADOG_API_KEY=$(DatadogApiKey);DATADOG_SITE=$(DatadogSite)"
+          Condition="'$(_DdCanUpload)' == 'true' AND Exists('$(_DdDebugIdManifestPath)')"
+          EnvironmentVariables="$(_DdUploadEnv)"
           IgnoreExitCode="true"
-          ContinueOnError="true" />
-    <Exec Command="DATADOG_SITE=$(DatadogSite) datadog-ci ppdb-symbols upload &quot;$(OutputPath)&quot; --debug-id-manifest &quot;$(_DdDebugIdManifestPath)&quot;"
-          Condition="'$(_DdCanUpload)' == 'true' AND Exists('$(_DdDebugIdManifestPath)') AND '$(DatadogApiKey)' == ''"
-          IgnoreExitCode="true"
-          ContinueOnError="true" />
+          ContinueOnError="true">
+      <Output TaskParameter="ExitCode" PropertyName="_DdPpdbUploadExitCode" />
+    </Exec>
+
+    <PropertyGroup>
+      <_DdUploadFailed Condition="'$(_DdPpdbUploadExitCode)' != '' AND '$(_DdPpdbUploadExitCode)' != '0'">true</_DdUploadFailed>
+    </PropertyGroup>
   </Target>
 
   <!-- ═══════════════════════════════════════════════════════════════════════
@@ -198,24 +237,46 @@
           AfterTargets="Publish"
           Condition="'$(DatadogUploadSymbols)' == 'true'">
 
+    <!-- Per-upload outcome, from each Exec's captured exit code. Empty means the upload
+         was skipped (wrong platform, missing artifact, or upload disabled). -->
+    <PropertyGroup>
+      <_DdDsymStatus Condition="'$(_DdDsymUploadExitCode)' == ''">not run</_DdDsymStatus>
+      <_DdDsymStatus Condition="'$(_DdDsymUploadExitCode)' == '0'">uploaded</_DdDsymStatus>
+      <_DdDsymStatus Condition="'$(_DdDsymUploadExitCode)' != '' AND '$(_DdDsymUploadExitCode)' != '0'">FAILED (exit $(_DdDsymUploadExitCode))</_DdDsymStatus>
+
+      <_DdMappingStatus Condition="'$(_DdMappingUploadExitCode)' == ''">not run</_DdMappingStatus>
+      <_DdMappingStatus Condition="'$(_DdMappingUploadExitCode)' == '0'">uploaded</_DdMappingStatus>
+      <_DdMappingStatus Condition="'$(_DdMappingUploadExitCode)' != '' AND '$(_DdMappingUploadExitCode)' != '0'">FAILED (exit $(_DdMappingUploadExitCode))</_DdMappingStatus>
+
+      <_DdPpdbStatus Condition="'$(_DdPpdbUploadExitCode)' == ''">not run</_DdPpdbStatus>
+      <_DdPpdbStatus Condition="'$(_DdPpdbUploadExitCode)' == '0'">uploaded</_DdPpdbStatus>
+      <_DdPpdbStatus Condition="'$(_DdPpdbUploadExitCode)' != '' AND '$(_DdPpdbUploadExitCode)' != '0'">FAILED (exit $(_DdPpdbUploadExitCode))</_DdPpdbStatus>
+    </PropertyGroup>
+
     <Message Importance="high" Text="" />
     <Message Importance="high" Text="╔══════════════════════════════════════════════════╗" />
     <Message Importance="high" Text="║  Datadog Symbol Upload Summary                   ║" />
     <Message Importance="high" Text="╚══════════════════════════════════════════════════╝" />
     <Message Importance="high" Text="  Service:  $(DatadogServiceName)" />
     <Message Importance="high" Text="  Version:  $(ApplicationDisplayVersion)" />
-    <Message Importance="high" Text="  Site:     $(DatadogSite)" />
-    <Message Importance="high" Text="  Upload:   $(_DdCanUpload)" />
+    <Message Importance="high" Text="  Site:     $(_DdSiteDisplay)" />
+    <Message Importance="high" Text="  Enabled:  $(_DdCanUpload)" />
     <Message Importance="high"
-             Text="  iOS dSYM: $(_DdDsymPath)"
+             Text="  iOS dSYM: $(_DdDsymStatus) — $(_DdDsymPath)"
              Condition="$(TargetFramework.Contains('-ios'))" />
     <Message Importance="high"
-             Text="  Android mapping: $(OutputPath)mapping.txt"
+             Text="  Android mapping: $(_DdMappingStatus) — $(OutputPath)mapping.txt"
              Condition="$(TargetFramework.Contains('-android'))" />
     <Message Importance="high"
-             Text="  Portable PDB: $(OutputPath) (manifest: $(_DdDebugIdManifestPath))"
+             Text="  Portable PDB: $(_DdPpdbStatus) — $(OutputPath) (manifest: $(_DdDebugIdManifestPath))"
              Condition="$(TargetFramework.Contains('-ios')) Or $(TargetFramework.Contains('-android'))" />
     <Message Importance="high" Text="" />
+
+    <Warning Condition="'$(_DdUploadFailed)' == 'true' AND '$(DatadogFailOnSymbolUploadError)' != 'true'"
+             Text="Datadog: one or more symbol uploads FAILED (see the summary above). Crashes from this build will not symbolicate. Check DATADOG_API_KEY is valid for site $(_DdSiteDisplay). Pass -p:DatadogFailOnSymbolUploadError=true to turn this into a build error." />
+
+    <Error Condition="'$(_DdUploadFailed)' == 'true' AND '$(DatadogFailOnSymbolUploadError)' == 'true'"
+           Text="Datadog: one or more symbol uploads FAILED (see the summary above). Crashes from this build will not symbolicate. Check DATADOG_API_KEY is valid for site $(_DdSiteDisplay)." />
   </Target>
 
 </Project>
