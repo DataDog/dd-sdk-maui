@@ -50,8 +50,9 @@ All configuration is done via MSBuild properties. These can be set in your `.csp
 |----------|----------|---------|-------------|
 | `DatadogUploadSymbols` | Yes | `false` | Set to `true` to enable symbol upload after publish |
 | `DatadogServiceName` | No | `$(AssemblyName)` | Service name used to identify your app in Datadog |
-| `DatadogSite` | No | `datadoghq.com` | Datadog site (e.g., `datadoghq.eu`, `us5.datadoghq.com`) |
+| `DatadogSite` | No | — | Datadog site (e.g., `datadoghq.eu`, `us5.datadoghq.com`). If not set, `datadog-ci` resolves the site itself from `DATADOG_SITE` / `DD_SITE`, defaulting to `datadoghq.com` |
 | `DatadogApiKey` | No | — | API key passed directly. If not set, the `DATADOG_API_KEY` environment variable is used instead |
+| `DatadogFailOnSymbolUploadError` | No | `false` | Set to `true` to fail the build when a symbol upload fails. By default failures are reported as an MSBuild warning |
 
 ### Setting properties in `.csproj`
 
@@ -70,6 +71,26 @@ dotnet publish -c Release -f net10.0-ios -r ios-arm64 \
   -p:DatadogServiceName=my-app \
   -p:DatadogSite=datadoghq.eu
 ```
+
+## Datadog site
+
+If your org is not on US1, export `DATADOG_SITE` and the upload targets will pick it up:
+
+```bash
+export DATADOG_SITE=datadoghq.eu
+```
+
+`datadog-ci` reads `DATADOG_SITE` first, then `DD_SITE`, falling back to `datadoghq.com`.
+Setting `DatadogSite` pins the site explicitly and overrides both environment variables.
+
+## Upload failures
+
+By default a failed upload produces an MSBuild warning and the build still succeeds, so a
+symbol upload problem never blocks shipping the app. The upload summary printed after
+publish shows the per-artifact outcome (`uploaded`, `FAILED (exit N)`, or `not run`).
+
+Pass `-p:DatadogFailOnSymbolUploadError=true` to turn those failures into build errors,
+which is usually what you want in CI.
 
 ## API key
 

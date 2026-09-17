@@ -4,7 +4,9 @@
  * Copyright 2026-Present Datadog, Inc.
  */
 
+import Foundation
 import XCTest
+import DatadogInternal
 import DatadogRUM
 @testable import DatadogWrapper
 
@@ -449,6 +451,52 @@ final class DdRumTests: XCTestCase {
         XCTAssertEqual(attrs["_dd.error.is_crash"] as? Bool, true)
         XCTAssertEqual(attrs["_dd.timestamp"] as? Int64, 1234567890)
         XCTAssertEqual(attrs["_dd.error.source_type"] as? String, "maui")
+    }
+
+    func testAddError_preservesNestedArrayAttributeAsStructuredData() {
+        let config: NSDictionary = [
+            "applicationId": "test-app-id"
+        ]
+        DdRum.enableRum(configuration: config)
+
+        // Shaped like _dd.error.sdk_frames coming from the C# side: an array of
+        // dictionaries, not a primitive. Guards the `default` branch in addError's
+        // attribute switch, which must wrap it in AnyEncodable rather than stringify it.
+        let sdkFrames: [[String: Any]] = [
+            ["method_token": 42, "il_offset": 10],
+            ["method_token": 99, "il_offset": 20, "assembly_id": "abc123"]
+        ]
+        let context: NSDictionary = [
+            "_dd.error.sdk_frames": sdkFrames
+        ]
+
+        DdRum.addError(
+            message: "Error",
+            source: "source",
+            stacktrace: "stack",
+            context: context,
+            timestampMs: 0
+        )
+
+        let attrs = mockRumModule.capturedErrorAttributes!
+        let capturedValue = attrs["_dd.error.sdk_frames"]
+
+        // The original bug this test guards against: falling back to String(describing:)
+        // instead of preserving structure.
+        XCTAssertNil(capturedValue as? String)
+
+        guard let encodableFrames = capturedValue as? AnyEncodable else {
+            XCTFail("Expected _dd.error.sdk_frames to be wrapped in AnyEncodable, got \(String(describing: capturedValue))")
+            return
+        }
+
+        let json = try! JSONEncoder().encode(encodableFrames)
+        let decoded = try! JSONSerialization.jsonObject(with: json) as? [[String: Any]]
+
+        XCTAssertEqual(decoded?.count, 2)
+        XCTAssertEqual(decoded?[0]["method_token"] as? Int, 42)
+        XCTAssertEqual(decoded?[0]["il_offset"] as? Int, 10)
+        XCTAssertEqual(decoded?[1]["assembly_id"] as? String, "abc123")
     }
 
     func testAddError_withZeroTimestamp_doesNotAddTimestampAttribute() {
