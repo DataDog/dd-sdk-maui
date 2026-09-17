@@ -17,8 +17,6 @@ namespace Datadog.Maui
     /// </summary>
     internal static class DdRumErrorTracking
     {
-        internal const string JavaStackTraceSeparator = "--- Java stack trace ---";
-
         private static bool _isTracking;
 
         /// <summary>
@@ -125,7 +123,6 @@ namespace Datadog.Maui
 
             if (javaStackTrace is { Count: > 0 })
             {
-                lines.Add(JavaStackTraceSeparator);
                 foreach (var javaLine in javaStackTrace)
                 {
                     AppendLines(lines, javaLine);

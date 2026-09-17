@@ -192,14 +192,14 @@ public class DdRumErrorTrackingTests : IDisposable
 
         var result = DdRumErrorTracking.BuildStackTrace(exception, javaStackTrace);
         var lines = result.Text.Split('\n');
-        var separatorIndex = Array.IndexOf(lines, DdRumErrorTracking.JavaStackTraceSeparator);
+        var javaStartIndex = lines.Length - javaStackTrace.Length;
 
-        Assert.True(separatorIndex > 0);
-        Assert.Equal(javaStackTrace, lines.Skip(separatorIndex + 1));
+        Assert.True(javaStartIndex > 0);
+        Assert.Equal(javaStackTrace, lines.Skip(javaStartIndex));
         Assert.All(result.SdkFrames, frame =>
         {
             var lineIndex = Assert.IsType<int>(frame["line_index"]);
-            Assert.True(lineIndex < separatorIndex);
+            Assert.True(lineIndex < javaStartIndex);
         });
     }
 
