@@ -214,6 +214,43 @@ namespace Datadog.Maui
             {
                 InternalLog.Log($"DdRumErrorTracking: Failed to build sdk_frames entry for a frame: {frameEx.Message}", SdkVerbosity.DEBUG);
             }
+
+            AppendRuntimeFrameMarkers(frame, lines);
+        }
+
+        private static void AppendRuntimeFrameMarkers(StackFrame frame, List<string> lines)
+        {
+            try
+            {
+                // StackFrame does not publicly expose the flag set by
+                // ExceptionDispatchInfo.Throw. Formatting that individual frame lets the
+                // runtime append any associated boundary marker without making the raw
+                // runtime-rendered method line authoritative for sdk_frames correlation.
+                var runtimeStackTrace = new StackTrace(frame).ToString();
+                var runtimeLines = runtimeStackTrace.Replace("\r\n", "\n")
+                                                    .Replace('\r', '\n')
+                                                    .Split('\n');
+                var skippedFrameLine = false;
+                foreach (var runtimeLine in runtimeLines)
+                {
+                    if (string.IsNullOrWhiteSpace(runtimeLine))
+                    {
+                        continue;
+                    }
+
+                    if (!skippedFrameLine)
+                    {
+                        skippedFrameLine = true;
+                        continue;
+                    }
+
+                    lines.Add(runtimeLine);
+                }
+            }
+            catch (Exception frameEx)
+            {
+                InternalLog.Log($"DdRumErrorTracking: Failed to render stack frame markers: {frameEx.Message}", SdkVerbosity.DEBUG);
+            }
         }
 
         private static string FormatManagedFrame(StackFrame frame, MethodBase method)

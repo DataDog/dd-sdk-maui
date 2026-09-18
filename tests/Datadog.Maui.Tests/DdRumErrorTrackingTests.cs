@@ -6,6 +6,7 @@
 
 using System.Reflection;
 using System.Runtime.CompilerServices;
+using System.Runtime.ExceptionServices;
 using Datadog.Maui.Configuration;
 using Datadog.Maui.Tests.Fixtures.CrossAssembly;
 using Xunit;
@@ -221,6 +222,27 @@ public class DdRumErrorTrackingTests : IDisposable
     }
 
     [Fact]
+    public void BuildStackTrace_ExceptionDispatchInfoRethrowPreservesBoundary()
+    {
+        var exception = CatchException(RethrowWithExceptionDispatchInfo);
+
+        var result = DdRumErrorTracking.BuildStackTrace(exception);
+        var lines = result.Text.Split('\n');
+        var boundaryIndex = Array.FindIndex(
+            lines,
+            line => line.Contains("End of stack trace from previous location", StringComparison.Ordinal));
+
+        Assert.True(boundaryIndex > 0);
+        Assert.Contains(lines.Take(boundaryIndex), line => line.Contains(nameof(ThrowBeforeDispatch), StringComparison.Ordinal));
+        Assert.Contains(lines.Skip(boundaryIndex + 1), line => line.Contains(nameof(RethrowWithExceptionDispatchInfo), StringComparison.Ordinal));
+        Assert.All(result.SdkFrames, frame =>
+        {
+            var lineIndex = Assert.IsType<int>(frame["line_index"]);
+            Assert.StartsWith("   at ", lines[lineIndex]);
+        });
+    }
+
+    [Fact]
     public void BuildSdkFrames_AssemblyId_MatchesItsManifestEntryAndIsNotTheMvid()
     {
         var exception = CatchException(() => throw new InvalidOperationException("boom"));
@@ -272,6 +294,22 @@ public class DdRumErrorTrackingTests : IDisposable
             throw new ApplicationException("outer failure", inner);
         }
     }
+
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    private static void RethrowWithExceptionDispatchInfo()
+    {
+        try
+        {
+            ThrowBeforeDispatch();
+        }
+        catch (Exception exception)
+        {
+            ExceptionDispatchInfo.Capture(exception).Throw();
+        }
+    }
+
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    private static void ThrowBeforeDispatch() => throw new InvalidOperationException("dispatched failure");
 
     private static Exception CatchException(Action action)
     {
