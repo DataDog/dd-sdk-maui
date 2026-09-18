@@ -6,6 +6,7 @@
 
 using System;
 using System.Diagnostics;
+using System.Reflection;
 using Datadog.Maui.Configuration;
 
 namespace Datadog.Maui
@@ -76,9 +77,9 @@ namespace Datadog.Maui
         {
             var exception = UnwrapJavaException(rawException);
             var message = exception?.Message ?? defaultMessage;
-            var stacktrace = exception?.ToString() ?? "No stacktrace available";
+            var renderedStackTrace = BuildStackTrace(exception, BuildJavaStackTrace(rawException));
 
-            ReportError(message, stacktrace, isCrash, handler, exception);
+            ReportError(message, renderedStackTrace, isCrash, handler);
         }
 
         /// <summary>
@@ -101,68 +102,208 @@ namespace Datadog.Maui
         }
 
         /// <summary>
-        /// Builds the structured, per-frame counterpart to the raw-text stacktrace.
-        /// Each frame carries the assembly's native PE debug-directory id (GUID+Stamp —
-        /// the same id build-time tooling reads off the compiled DLL/PDB, not
-        /// Module.ModuleVersionId/MVID), the method's metadata token, and its IL offset.
-        /// Frames whose assembly id can't be resolved (e.g. AOT/single-file bundling,
-        /// where Assembly.Location is empty) are still included, just without that field.
+        /// Renders the managed stack trace and builds sdk_frames in one pass. line_index is
+        /// zero-based and addresses the final newline-delimited stack string. Because the
+        /// text line and metadata entry are emitted together, a frame whose metadata can't
+        /// be read cannot shift the mapping for any later frame.
         /// </summary>
-        internal static List<Dictionary<string, object>> BuildSdkFrames(Exception? exception)
+        internal static RenderedStackTrace BuildStackTrace(Exception? exception, IReadOnlyList<string>? javaStackTrace = null)
         {
+            var lines = new List<string>();
             var frames = new List<Dictionary<string, object>>();
-            if (exception == null)
+
+            if (exception != null)
             {
-                return frames;
+                RenderException(exception, lines, frames, isInnerException: false);
+            }
+            else
+            {
+                lines.Add("No stacktrace available");
+            }
+
+            if (javaStackTrace is { Count: > 0 })
+            {
+                foreach (var javaLine in javaStackTrace)
+                {
+                    AppendLines(lines, javaLine);
+                }
+            }
+
+            return new RenderedStackTrace(string.Join('\n', lines), frames);
+        }
+
+        private static void RenderException(
+            Exception exception,
+            List<string> lines,
+            List<Dictionary<string, object>> sdkFrames,
+            bool isInnerException)
+        {
+            AppendLines(lines, $"{(isInnerException ? " ---> " : string.Empty)}{exception.GetType().FullName}: {exception.Message}");
+
+            IEnumerable<Exception> innerExceptions = exception is AggregateException aggregate
+                ? aggregate.InnerExceptions
+                : exception.InnerException is { } inner
+                    ? new[] { inner }
+                    : Array.Empty<Exception>();
+
+            foreach (var innerException in innerExceptions)
+            {
+                RenderException(innerException, lines, sdkFrames, isInnerException: true);
             }
 
             try
             {
-                var stackTrace = new StackTrace(exception, false);
+                var stackTrace = new StackTrace(exception, true);
                 foreach (var frame in stackTrace.GetFrames() ?? Array.Empty<StackFrame>())
                 {
-                    // MetadataToken (and, in principle, GetILOffset) can throw for some
-                    // runtime-provided frames (e.g. DynamicMethod) — caught per-frame so one
-                    // bad frame is just omitted instead of discarding every frame gathered so
-                    // far in this exception's stack trace.
-                    try
-                    {
-                        var method = frame.GetMethod();
-                        if (method == null)
-                        {
-                            continue;
-                        }
-
-                        var frameData = new Dictionary<string, object>
-                        {
-                            { "method_token", method.MetadataToken },
-                            { "il_offset", frame.GetILOffset() }
-                        };
-
-                        var assemblyId = AssemblyDebugId.TryGetDebugId(method.Module.Assembly);
-                        if (assemblyId != null)
-                        {
-                            frameData["assembly_id"] = assemblyId;
-                        }
-
-                        frames.Add(frameData);
-                    }
-                    catch (Exception frameEx)
-                    {
-                        InternalLog.Log($"DdRumErrorTracking: Failed to build sdk_frames entry for a frame: {frameEx.Message}", SdkVerbosity.DEBUG);
-                    }
+                    RenderFrame(frame, lines, sdkFrames);
                 }
             }
             catch (Exception ex)
             {
-                InternalLog.Log($"DdRumErrorTracking: Failed to build sdk_frames: {ex.Message}", SdkVerbosity.DEBUG);
-                InternalTelemetry.Error("DdRumErrorTracking: Failed to build sdk_frames", ex);
+                InternalLog.Log($"DdRumErrorTracking: Failed to render managed stack frames: {ex.Message}", SdkVerbosity.DEBUG);
+                InternalTelemetry.Error("DdRumErrorTracking: Failed to render managed stack frames", ex);
             }
 
-            return frames;
+            if (isInnerException)
+            {
+                lines.Add("   --- End of inner exception stack trace ---");
+            }
         }
 
-        private static void ReportError(string message, string stacktrace, bool isCrash, string handler, Exception? exception)
+        private static void RenderFrame(
+            StackFrame frame,
+            List<string> lines,
+            List<Dictionary<string, object>> sdkFrames)
+        {
+            MethodBase? method = null;
+            try
+            {
+                method = frame.GetMethod();
+                lines.Add(method == null ? "   at <unknown>" : FormatManagedFrame(frame, method));
+            }
+            catch (Exception frameEx)
+            {
+                lines.Add("   at <unknown>");
+                InternalLog.Log($"DdRumErrorTracking: Failed to render a managed frame: {frameEx.Message}", SdkVerbosity.DEBUG);
+            }
+
+            if (method == null)
+            {
+                return;
+            }
+
+            try
+            {
+                var frameData = new Dictionary<string, object>
+                {
+                    { "line_index", lines.Count - 1 },
+                    { "method_token", method.MetadataToken },
+                    { "il_offset", frame.GetILOffset() }
+                };
+
+                var assemblyId = AssemblyDebugId.TryGetDebugId(method.Module.Assembly);
+                if (assemblyId != null)
+                {
+                    frameData["assembly_id"] = assemblyId;
+                }
+
+                sdkFrames.Add(frameData);
+            }
+            catch (Exception frameEx)
+            {
+                InternalLog.Log($"DdRumErrorTracking: Failed to build sdk_frames entry for a frame: {frameEx.Message}", SdkVerbosity.DEBUG);
+            }
+
+            AppendRuntimeFrameMarkers(frame, lines);
+        }
+
+        private static void AppendRuntimeFrameMarkers(StackFrame frame, List<string> lines)
+        {
+            try
+            {
+                // StackFrame does not publicly expose the flag set by
+                // ExceptionDispatchInfo.Throw. Formatting that individual frame lets the
+                // runtime append any associated boundary marker without making the raw
+                // runtime-rendered method line authoritative for sdk_frames correlation.
+                var runtimeStackTrace = new StackTrace(frame).ToString();
+                var runtimeLines = runtimeStackTrace.Replace("\r\n", "\n")
+                                                    .Replace('\r', '\n')
+                                                    .Split('\n');
+                var skippedFrameLine = false;
+                foreach (var runtimeLine in runtimeLines)
+                {
+                    if (string.IsNullOrWhiteSpace(runtimeLine))
+                    {
+                        continue;
+                    }
+
+                    if (!skippedFrameLine)
+                    {
+                        skippedFrameLine = true;
+                        continue;
+                    }
+
+                    lines.Add(runtimeLine);
+                }
+            }
+            catch (Exception frameEx)
+            {
+                InternalLog.Log($"DdRumErrorTracking: Failed to render stack frame markers: {frameEx.Message}", SdkVerbosity.DEBUG);
+            }
+        }
+
+        private static string FormatManagedFrame(StackFrame frame, MethodBase method)
+        {
+            var declaringType = method.DeclaringType?.FullName;
+            var qualifiedMethod = string.IsNullOrEmpty(declaringType)
+                ? method.Name
+                : $"{declaringType}.{method.Name}";
+            var parameters = string.Join(", ", method.GetParameters().Select(FormatParameter));
+            var rendered = $"   at {qualifiedMethod}({parameters})";
+
+            var fileName = frame.GetFileName();
+            var lineNumber = frame.GetFileLineNumber();
+            if (!string.IsNullOrEmpty(fileName) && lineNumber > 0)
+            {
+                rendered += $" in {fileName}:line {lineNumber}";
+            }
+
+            return rendered;
+        }
+
+        private static string FormatParameter(ParameterInfo parameter)
+        {
+            var typeName = parameter.ParameterType.FullName ?? parameter.ParameterType.Name;
+            return string.IsNullOrEmpty(parameter.Name) ? typeName : $"{typeName} {parameter.Name}";
+        }
+
+        private static void AppendLines(List<string> lines, string text)
+        {
+            lines.AddRange(text.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n'));
+        }
+
+        private static IReadOnlyList<string>? BuildJavaStackTrace(Exception? rawException)
+        {
+#if ANDROID
+            if (rawException is not Java.Lang.Throwable javaThrowable)
+            {
+                return null;
+            }
+
+            var lines = new List<string> { javaThrowable.ToString() };
+            foreach (var frame in javaThrowable.GetStackTrace())
+            {
+                lines.Add($"   at {frame}");
+            }
+
+            return lines;
+#else
+            return null;
+#endif
+        }
+
+        private static void ReportError(string message, RenderedStackTrace renderedStackTrace, bool isCrash, string handler)
         {
             InternalLog.Log($"DdRumErrorTracking: Caught error via {handler}: {message}", SdkVerbosity.DEBUG);
 
@@ -172,15 +313,14 @@ namespace Datadog.Maui
                 { "_dd.error.handler", handler }
             };
 
-            var sdkFrames = BuildSdkFrames(exception);
-            if (sdkFrames.Count > 0)
+            if (renderedStackTrace.SdkFrames.Count > 0)
             {
-                context["_dd.error.sdk_frames"] = sdkFrames;
+                context["_dd.error.sdk_frames"] = renderedStackTrace.SdkFrames;
             }
 
             var timestampMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
 
-            DdRum.AddError(message, RumErrorSource.Source, stacktrace, context, timestampMs);
+            DdRum.AddError(message, RumErrorSource.Source, renderedStackTrace.Text, context, timestampMs);
 
             if (isCrash)
             {
@@ -189,5 +329,7 @@ namespace Datadog.Maui
                 Thread.Sleep(100);
             }
         }
+
+        internal sealed record RenderedStackTrace(string Text, List<Dictionary<string, object>> SdkFrames);
     }
 }
