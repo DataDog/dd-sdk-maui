@@ -370,8 +370,10 @@ class DatadogWrapper {
 Android runtime dependencies (OkHttp, Gson, Kotlin, AndroidX) are declared one of two ways, never both:
 1. `PackageReference` entries in multiple `.csproj` files — use NuGet versions (which may differ from Maven
    versions). This is the default for anything that has a NuGet binding.
-2. `AndroidMavenLibrary` entries in `Datadog.Android.Core.csproj` — use Maven versions directly. Reserved for
-   dependencies with no NuGet binding (currently only kronos).
+2. `AndroidMavenLibrary` entries in the binding `.csproj` files — use Maven versions directly. Reserved for
+   dependencies with no NuGet binding. Of the artifacts tracked in `android-transitive-deps.json` that is
+   currently only kronos; the Maven-only `jctools-core`, `re2j` and `metrics-performance` entries in the
+   Trace and RUM bindings sit outside that file and have no NuGet binding to conflict with.
 
 **Never declare the same dependency both ways.** The Maven jar's classes get packaged into our AAR, outside
 NuGet's version resolution, so a consuming app pulling a different version of that library hits a dex-merge
