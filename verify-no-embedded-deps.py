@@ -58,14 +58,19 @@ def owned_packages(deps):
     return owned, unguarded
 
 
+class UnreadableArchive(Exception):
+    """An archive we ship could not be opened, so its contents could not be verified."""
+
+
 def classes_by_owner(jar_path, owned):
     """{(artifact, nuget_name): count} of classes in this jar owned by a NuGet package."""
     hits = {}
     try:
         with zipfile.ZipFile(jar_path) as jar:
             names = jar.namelist()
-    except zipfile.BadZipFile:
-        return hits
+    except (zipfile.BadZipFile, OSError) as exc:
+        # Reporting "no hits" here would pass off an unverified jar as clean.
+        raise UnreadableArchive(str(exc)) from exc
     for name in names:
         if not name.endswith(".class"):
             continue
@@ -77,27 +82,34 @@ def classes_by_owner(jar_path, owned):
     return hits
 
 
-def scan_aar(aar_path, owned, workdir):
-    """[(jar_name, artifact, nuget_name, count)] for one AAR's bundled jars."""
+def scan_aar(aar_path, owned, workdir, label):
+    """([(jar_name, artifact, nuget_name, count)], [error]) for one AAR's bundled jars."""
     findings = []
+    errors = []
     extract_to = tempfile.mkdtemp(dir=workdir)
     try:
         with zipfile.ZipFile(aar_path) as aar:
             jars = [n for n in aar.namelist() if n.endswith(".jar")]
             for jar_name in jars:
-                jar_path = aar.extract(jar_name, extract_to)
-                for (artifact, nuget_name), count in classes_by_owner(jar_path, owned).items():
+                try:
+                    jar_path = aar.extract(jar_name, extract_to)
+                    hits = classes_by_owner(jar_path, owned)
+                except (UnreadableArchive, zipfile.BadZipFile, OSError) as exc:
+                    errors.append(f"{label} → {jar_name}: cannot read jar ({exc})")
+                    continue
+                for (artifact, nuget_name), count in hits.items():
                     findings.append((jar_name, artifact, nuget_name, count))
-    except zipfile.BadZipFile:
-        print(f"  {YELLOW}⚠{NC} Not a readable AAR, skipping: {aar_path}")
-    return findings
+    except (zipfile.BadZipFile, OSError) as exc:
+        errors.append(f"{label}: cannot read AAR ({exc})")
+    return findings, errors
 
 
 def main():
     nupkgs = sys.argv[1:]
     if not nupkgs:
-        print(f"  {YELLOW}⚠{NC} No .nupkg paths given — nothing to check")
-        return 0
+        # Checking nothing is not the same as checking clean.
+        print(f"  {RED}✗{NC} No .nupkg paths given — nothing was verified")
+        return 1
 
     with open(DEPS_JSON) as f:
         deps = json.load(f)["dependencies"]
@@ -114,25 +126,47 @@ def main():
         return 1
 
     violations = 0
+    unverified = 0
     checked_aars = 0
 
     with tempfile.TemporaryDirectory() as workdir:
         for nupkg in nupkgs:
+            # Anything we cannot open is unverified, not clean — never skip quietly.
             if not os.path.isfile(nupkg):
-                print(f"  {YELLOW}⚠{NC} Not found, skipping: {nupkg}")
+                print(f"  {RED}✗{NC} Not found, cannot verify: {nupkg}")
+                unverified += 1
                 continue
 
             pkg_dir = tempfile.mkdtemp(dir=workdir)
-            with zipfile.ZipFile(nupkg) as pkg:
+            pkg_name = os.path.basename(nupkg)
+            try:
+                pkg = zipfile.ZipFile(nupkg)
+            except (zipfile.BadZipFile, OSError) as exc:
+                print(f"  {RED}✗{NC} {pkg_name}: cannot read package ({exc})")
+                unverified += 1
+                continue
+
+            with pkg:
                 aars = [n for n in pkg.namelist() if n.endswith(".aar")]
                 for aar_name in aars:
-                    aar_path = pkg.extract(aar_name, pkg_dir)
+                    label = f"{pkg_name} → {aar_name}"
+                    try:
+                        aar_path = pkg.extract(aar_name, pkg_dir)
+                    except (zipfile.BadZipFile, OSError) as exc:
+                        print(f"  {RED}✗{NC} {label}: cannot extract AAR ({exc})")
+                        unverified += 1
+                        continue
+
                     checked_aars += 1
-                    for jar, artifact, nuget_name, count in scan_aar(aar_path, owned, workdir):
+                    findings, errors = scan_aar(aar_path, owned, workdir, label)
+
+                    for error in errors:
+                        print(f"  {RED}✗{NC} {error}")
+                        unverified += 1
+
+                    for jar, artifact, nuget_name, count in findings:
                         violations += 1
-                        print(
-                            f"  {RED}✗{NC} {os.path.basename(nupkg)} → {aar_name} → {jar}"
-                        )
+                        print(f"  {RED}✗{NC} {label} → {jar}")
                         print(
                             f"      embeds {count} class(es) from {artifact}, "
                             f"which consumers already get via {nuget_name}"
@@ -143,6 +177,13 @@ def main():
         print(f"  {RED}✗{NC} {violations} embedded-dependency violation(s) across {checked_aars} AAR(s)")
         print(f"  {YELLOW}→{NC} Remove the AndroidMavenLibrary entry for these artifacts and rely on the")
         print(f"    NuGet PackageReference instead, then update android-transitive-deps.json.")
+
+    if unverified:
+        print("")
+        print(f"  {RED}✗{NC} {unverified} archive(s) could not be read, so they were never verified")
+        print(f"  {YELLOW}→{NC} Rebuild with ./build.sh and re-run. A corrupt artifact must not pass.")
+
+    if violations or unverified:
         return 1
 
     print(f"  {GREEN}✓{NC} No NuGet-provided classes embedded in {checked_aars} shipped AAR(s)")
