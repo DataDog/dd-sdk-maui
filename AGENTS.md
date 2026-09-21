@@ -367,9 +367,15 @@ class DatadogWrapper {
 
 **Android Transitive Dependencies:**
 
-Android runtime dependencies (OkHttp, Gson, Kotlin, AndroidX) are declared in two places:
-1. `AndroidMavenLibrary` entries in `Datadog.Android.Core.csproj` — use Maven versions directly
-2. `PackageReference` entries in multiple `.csproj` files — use NuGet versions (which may differ from Maven versions)
+Android runtime dependencies (OkHttp, Gson, Kotlin, AndroidX) are declared one of two ways, never both:
+1. `PackageReference` entries in multiple `.csproj` files — use NuGet versions (which may differ from Maven
+   versions). This is the default for anything that has a NuGet binding.
+2. `AndroidMavenLibrary` entries in `Datadog.Android.Core.csproj` — use Maven versions directly. Reserved for
+   dependencies with no NuGet binding (currently only kronos).
+
+**Never declare the same dependency both ways.** The Maven jar's classes get packaged into our AAR, outside
+NuGet's version resolution, so a consuming app pulling a different version of that library hits a dex-merge
+duplicate-class failure. This was issue #72 (okio via AndroidX DataStore/Firebase).
 
 The mapping between Maven artifacts and NuGet packages is tracked in `android-transitive-deps.json`. Key fields:
 - `maven_version`: what Gradle resolves for this artifact
@@ -378,7 +384,8 @@ The mapping between Maven artifacts and NuGet packages is tracked in `android-tr
 
 When bumping the native Android SDK, `resolve-android-deps.sh` automatically:
 - Resolves the Gradle dependency tree
-- Auto-updates `AndroidMavenLibrary` versions in csproj files
+- Auto-updates `AndroidMavenLibrary` versions in csproj files (kronos only — everything else is NuGet-provided
+  and must be bumped by hand)
 - Warns when a NuGet `PackageReference` needs manual review (Maven version exceeds `nuget_covers_maven`)
 
 **iOS has no transitive dependency problem** — SPM statically links everything into the XCFramework.
