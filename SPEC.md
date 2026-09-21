@@ -887,12 +887,16 @@ Type marshaling: on Android, `context` passes as `Map<String, String>` directly;
 
 Android runtime dependencies (OkHttp, Gson, Kotlin stdlib, AndroidX) must be explicitly declared in `.csproj` files because the AAR format doesn't statically link them. The mapping between Maven artifacts and NuGet packages is tracked in `android-transitive-deps.json`.
 
+**One provider per dependency.** A dependency that has a NuGet binding is declared as a `PackageReference` and nothing else. Declaring it *also* as an `AndroidMavenLibrary` packages the Maven jar's classes into our AAR, where they sit outside NuGet's version resolution — a consuming app that pulls a different version of the same library then fails dex-merge with a duplicate-class error it has no clean way to fix. Only dependencies with no NuGet binding (currently kronos) are packaged as `AndroidMavenLibrary`. In `android-transitive-deps.json` this is the invariant that `maven_library_csproj` and `package_ref_csproj` are never both non-empty for the same artifact.
+
 **`resolve-android-deps.sh`** resolves the Gradle dependency tree and:
 - Auto-updates `AndroidMavenLibrary` Version attributes (these use Maven versions directly)
 - Warns when NuGet `PackageReference` versions may need manual review
 - Uses `nuget_covers_maven` to determine if the current NuGet package already satisfies the new Maven version (avoids false warnings)
 
 **`verify-artifacts.sh --deps`** runs `resolve-android-deps.sh --check` to detect drift without modifying files.
+
+**`verify-artifacts.sh --nuget`** enforces the one-provider invariant by inspecting the built AARs for classes belonging to NuGet-provided artifacts.
 
 **iOS does not have this problem** — SPM statically links all transitive dependencies into the XCFramework at build time.
 

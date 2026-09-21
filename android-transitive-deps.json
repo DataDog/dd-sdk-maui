@@ -1,14 +1,15 @@
 {
-  "_comment": "Maps resolved Maven transitive dependencies to NuGet packages and csproj locations. Updated by resolve-android-deps.sh after Gradle dependency resolution. nuget_covers_maven records the max Maven version the current NuGet package is known to satisfy.",
+  "_comment": "Maps resolved Maven transitive dependencies to NuGet packages and csproj locations. Updated by resolve-android-deps.sh after Gradle dependency resolution. nuget_covers_maven records the max Maven version the current NuGet package is known to satisfy. An artifact is provided EITHER as an AndroidMavenLibrary (maven_library_csproj) OR as a NuGet PackageReference (package_ref_csproj), never both - see verify-no-embedded-deps.py. java_packages lists the Java package prefixes a NuGet-provided artifact owns, used to detect them leaking into our AARs.",
   "dependencies": {
     "com.squareup.okhttp3:okhttp": {
       "maven_version": "4.12.0",
       "nuget_name": "Square.OkHttp3",
       "nuget_version": "4.12.0",
       "nuget_covers_maven": "4.12.0",
-      "maven_library_csproj": [
-        "Datadog.Android.Core"
+      "java_packages": [
+        "okhttp3"
       ],
+      "maven_library_csproj": [],
       "package_ref_csproj": [
         "Datadog.Android.Core",
         "Datadog.Maui"
@@ -19,20 +20,21 @@
       "nuget_name": "Square.OkIO",
       "nuget_version": "3.6.0",
       "nuget_covers_maven": "3.6.0",
-      "maven_library_csproj": [
-        "Datadog.Android.Core"
+      "java_packages": [
+        "okio"
       ],
+      "maven_library_csproj": [],
       "package_ref_csproj": [
+        "Datadog.Android.Core",
         "Datadog.Maui"
       ]
     },
     "com.squareup.okio:okio-jvm": {
       "maven_version": "3.6.0",
+      "_covered_by": "Square.OkIO",
       "nuget_name": null,
       "nuget_version": null,
-      "maven_library_csproj": [
-        "Datadog.Android.Core"
-      ],
+      "maven_library_csproj": [],
       "package_ref_csproj": []
     },
     "com.lyft.kronos:kronos-android": {
@@ -58,6 +60,9 @@
       "nuget_name": "GoogleGson",
       "nuget_version": "2.13.1.1",
       "nuget_covers_maven": "2.13.1",
+      "java_packages": [
+        "com/google/gson"
+      ],
       "maven_library_csproj": [],
       "package_ref_csproj": [
         "Datadog.Android.Core",
@@ -69,6 +74,9 @@
       "nuget_name": "Xamarin.Kotlin.StdLib",
       "nuget_version": "2.2.0.1",
       "nuget_covers_maven": "2.2.0",
+      "java_packages": [
+        "kotlin"
+      ],
       "maven_library_csproj": [],
       "package_ref_csproj": [
         "Datadog.Android.Internal",
@@ -82,6 +90,9 @@
       "nuget_name": "Xamarin.Kotlin.Reflect",
       "nuget_version": "2.2.0.1",
       "nuget_covers_maven": "2.2.0",
+      "java_packages": [
+        "kotlin/reflect"
+      ],
       "maven_library_csproj": [],
       "package_ref_csproj": [
         "Datadog.Maui"
@@ -92,6 +103,9 @@
       "nuget_name": "Xamarin.AndroidX.Annotation",
       "nuget_version": "1.9.1.5",
       "nuget_covers_maven": "1.9.1",
+      "java_packages": [
+        "androidx/annotation"
+      ],
       "maven_library_csproj": [],
       "package_ref_csproj": [
         "Datadog.Maui"
@@ -102,6 +116,9 @@
       "nuget_name": "Xamarin.AndroidX.Collection",
       "nuget_version": "1.5.0.3",
       "nuget_covers_maven": "1.5.0",
+      "java_packages": [
+        "androidx/collection"
+      ],
       "maven_library_csproj": [],
       "package_ref_csproj": [
         "Datadog.Maui"
@@ -112,6 +129,9 @@
       "nuget_name": "Xamarin.AndroidX.Collection.Ktx",
       "nuget_version": "1.5.0.3",
       "nuget_covers_maven": "1.5.0",
+      "java_packages": [
+        "androidx/collection"
+      ],
       "maven_library_csproj": [],
       "package_ref_csproj": [
         "Datadog.Maui"
@@ -122,6 +142,9 @@
       "nuget_name": "Xamarin.AndroidX.Work.Runtime",
       "nuget_version": "2.8.1",
       "nuget_covers_maven": "2.8.1",
+      "java_packages": [
+        "androidx/work"
+      ],
       "maven_library_csproj": [],
       "package_ref_csproj": [
         "Datadog.Maui"
