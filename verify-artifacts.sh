@@ -9,6 +9,7 @@
 #   - NuGet packages exist in local-packages/
 #   - ProGuard rules contain the required keep directives
 #   - NuGet package structure includes the .targets + merged rules for propagation
+#   - Shipped AARs don't embed classes that consumers already get via NuGet
 #
 # Run after build.sh. Does NOT run unit tests (use check.sh for that).
 #
@@ -197,6 +198,27 @@ if [ "$RUN_NUGET" = true ]; then
         NUGET_RESULT=1
     fi
 
+    # ── 3. No NuGet-provided classes embedded in our AARs ────────────────────
+    #
+    # Consumers get okhttp/okio/gson/Kotlin/AndroidX as NuGet PackageReferences. If we
+    # ALSO package one as an AndroidMavenLibrary, its classes land inside our AAR where
+    # NuGet cannot version-resolve them, and any app pulling a different version of that
+    # library fails dex-merge with a duplicate-class error it cannot fix. See issue #72.
+    log_section "No embedded NuGet-provided dependencies"
+
+    if [ ! -f "$SCRIPT_DIR/verify-no-embedded-deps.py" ]; then
+        log_fail "verify-no-embedded-deps.py not found — the guard cannot run"
+        NUGET_RESULT=1
+    elif ! command -v python3 &> /dev/null; then
+        log_fail "python3 is required but not found — the guard cannot run"
+        NUGET_RESULT=1
+    elif ls local-packages/*.nupkg >/dev/null 2>&1; then
+        python3 "$SCRIPT_DIR/verify-no-embedded-deps.py" local-packages/*.nupkg || NUGET_RESULT=1
+    else
+        log_warn "No packages in local-packages/ — run ./build.sh first"
+        NUGET_RESULT=1
+    fi
+
 fi
 
 # ════════════════════════════════════════════════════════════════════════════
@@ -207,7 +229,7 @@ PROGUARD_RESULT=0
 
 if [ "$RUN_PROGUARD" = true ]; then
 
-    # ── 3. Current proguard.txt baseline ─────────────────────────────────────
+    # ── 4. Current proguard.txt baseline ─────────────────────────────────────
     # These rules are already committed. They must never regress.
     log_section "ProGuard baseline rules (Transforms/proguard.txt)"
 
@@ -225,7 +247,7 @@ if [ "$RUN_PROGUARD" = true ]; then
         PROGUARD_RESULT=1
     fi
 
-    # ── 4. Merged ProGuard rules file ─────────────────────────────────────────
+    # ── 5. Merged ProGuard rules file ─────────────────────────────────────────
     log_section "Merged ProGuard rules (proguard/datadog-merged.pro)"
 
     MERGED_RULES="bindings/Datadog.Android.Binding/proguard/datadog-merged.pro"

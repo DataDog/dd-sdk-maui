@@ -577,10 +577,15 @@ This script updates `versions.properties`, `Package.swift`, `build.gradle.kts`, 
 
 **Android transitive dependencies**: When bumping the Android SDK, the script automatically runs `resolve-android-deps.sh` which:
 1. Resolves the full Gradle dependency tree
-2. Auto-updates `AndroidMavenLibrary` versions in `Datadog.Android.Core.csproj`
-3. Warns if any NuGet `PackageReference` versions need manual updating (e.g., `Xamarin.Kotlin.StdLib`, `GoogleGson`)
+2. Auto-updates `AndroidMavenLibrary` versions in `Datadog.Android.Core.csproj` (only kronos is still packaged this way)
+3. Warns if any NuGet `PackageReference` versions need manual updating (e.g., `Xamarin.Kotlin.StdLib`, `GoogleGson`, `Square.OkHttp3`, `Square.OkIO`)
 
 If you see NuGet warnings, check [nuget.org](https://www.nuget.org) for a compatible release and update the version in the relevant `.csproj` files and `android-transitive-deps.json`.
+
+Any dependency with a NuGet binding must be declared **only** as a `PackageReference`, never also as an
+`AndroidMavenLibrary`. A Maven jar bakes its classes into our AAR, outside NuGet's version resolution, so a
+consumer pulling a different version of the same library hits a dex-merge duplicate-class failure that they
+cannot resolve from their own project. `./verify-artifacts.sh --nuget` enforces this.
 
 **iOS transitive dependencies**: Not a concern — SPM statically links all dependencies into the XCFramework at build time. No runtime dependency declarations are needed.
 
