@@ -207,10 +207,10 @@ if [ "$RUN_NUGET" = true ]; then
     log_section "No embedded NuGet-provided dependencies"
 
     if [ ! -f "$SCRIPT_DIR/verify-no-embedded-deps.py" ]; then
-        log_error "verify-no-embedded-deps.py not found — the guard cannot run"
+        log_fail "verify-no-embedded-deps.py not found — the guard cannot run"
         NUGET_RESULT=1
     elif ! command -v python3 &> /dev/null; then
-        log_error "python3 is required but not found — the guard cannot run"
+        log_fail "python3 is required but not found — the guard cannot run"
         NUGET_RESULT=1
     elif ls local-packages/*.nupkg >/dev/null 2>&1; then
         python3 "$SCRIPT_DIR/verify-no-embedded-deps.py" local-packages/*.nupkg || NUGET_RESULT=1
