@@ -15,6 +15,7 @@
     <DatadogUploadSymbols>true</DatadogUploadSymbols>
     <DatadogSite>datadoghq.com</DatadogSite>          (optional, defaults to datadoghq.com)
     <DatadogServiceName>your-service</DatadogServiceName>  (optional, defaults to assembly name)
+    <DatadogKeepPortablePdbs>true</DatadogKeepPortablePdbs>  (optional, defaults to false — see below)
 
     Or pass them on the command line:
       export DATADOG_API_KEY=xxx
@@ -28,6 +29,16 @@
   Note: the Portable PDB upload correlates by the build-time debug-id manifest
   (RUM-18332, see Datadog.Maui.DebugId.targets) rather than re-deriving the id
   at upload time, so it stays correct across IL trimming/AOT stripping.
+
+  iOS Portable PDB bundle stripping:
+    Symbolication of managed (C#) exceptions is always done offline, backend-side,
+    from the Portable PDB uploaded above — the app never needs to read its own PDB
+    on-device. On iOS, some opt-in debug configurations (e.g. `soft-debug`) cause
+    the build to also bundle the Portable PDB inside the shipped .app, which serves
+    no purpose for this SDK and only adds size. When DatadogUploadSymbols=true,
+    this target strips any Portable PDB from the published iOS app bundle by
+    default. Set DatadogKeepPortablePdbs=true to keep it in the bundle instead
+    (e.g. if you rely on it for your own on-device debugging).
 -->
 <Project>
 
@@ -40,6 +51,7 @@
     <DatadogUploadSymbols Condition="'$(DatadogUploadSymbols)' == ''">false</DatadogUploadSymbols>
     <DatadogSite Condition="'$(DatadogSite)' == ''">datadoghq.com</DatadogSite>
     <DatadogServiceName Condition="'$(DatadogServiceName)' == ''">$(AssemblyName)</DatadogServiceName>
+    <DatadogKeepPortablePdbs Condition="'$(DatadogKeepPortablePdbs)' == ''">false</DatadogKeepPortablePdbs>
     <_DdCanUpload>false</_DdCanUpload>
   </PropertyGroup>
 
@@ -105,6 +117,27 @@
           Condition="'$(_DdCanUpload)' == 'true' AND Exists('$(_DdDsymPath)') AND '$(DatadogApiKey)' == ''"
           IgnoreExitCode="true"
           ContinueOnError="true" />
+  </Target>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════
+       iOS: Strip Portable PDB from the published app bundle
+       ═══════════════════════════════════════════════════════════════════════ -->
+  <Target Name="DatadogStripPdbFromBundle"
+          AfterTargets="_ComputePublishLocation"
+          Condition="'$(DatadogUploadSymbols)' == 'true' AND '$(DatadogKeepPortablePdbs)' != 'true' AND $(TargetFramework.Contains('-ios'))">
+
+    <!-- Some iOS debug configurations (e.g. soft-debug, needed to get real IL offsets
+         out of Mono's AOT runtime) cause the Portable PDB to be added to
+         @(ResolvedFileToPublish) and bundled inside the .app. This SDK always
+         symbolicates managed exceptions offline from the PDB uploaded by
+         DatadogUploadPortablePdb above, so the on-device copy is never read and
+         only adds size — remove it from the bundle unless the customer opted to
+         keep it (DatadogKeepPortablePdbs=true). This only removes the file from
+         the publish item group, not from disk — the copy DatadogUploadPortablePdb
+         reads from $(OutputPath) is untouched. -->
+    <ItemGroup>
+      <ResolvedFileToPublish Remove="@(ResolvedFileToPublish)" Condition="'%(Extension)' == '.pdb'" />
+    </ItemGroup>
   </Target>
 
   <!-- ═══════════════════════════════════════════════════════════════════════
@@ -208,6 +241,9 @@
     <Message Importance="high" Text="  Upload:   $(_DdCanUpload)" />
     <Message Importance="high"
              Text="  iOS dSYM: $(_DdDsymPath)"
+             Condition="$(TargetFramework.Contains('-ios'))" />
+    <Message Importance="high"
+             Text="  iOS bundled Portable PDB: $(DatadogKeepPortablePdbs)"
              Condition="$(TargetFramework.Contains('-ios'))" />
     <Message Importance="high"
              Text="  Android mapping: $(OutputPath)mapping.txt"
