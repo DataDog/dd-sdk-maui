@@ -8,9 +8,13 @@
 # Regression guard for DatadogStripPdbFromBundle / DatadogKeepPortablePdbs
 # (Datadog.Maui.targets). Publishes the example iOS app twice:
 #
-#   1. Debug config (_BundlerDebug defaults to true whenever Configuration
-#      == 'Debug', same effect on PDB bundling as an explicit soft-debug
-#      build) with DatadogUploadSymbols=true and DatadogKeepPortablePdbs
+#   1. Debug config, which does NOT explicitly set MtouchDebug/MtouchUseLlvm
+#      (no soft-debug opt-in in the .csproj) but reaches the same AOT
+#      backend by default: Configuration=='Debug' alone makes mono-aot-cross
+#      run with --debug and without LLVM (verified from the actual AOT
+#      compiler invocation in the build log), which is what makes
+#      _BundlerDebug default to true and the PDB get bundled. Combined with
+#      DatadogUploadSymbols=true and DatadogKeepPortablePdbs
 #      left at its default (false) -> asserts NO .pdb ends up inside
 #      example.app. This is the case that actually exercises the strip
 #      logic (the <ResolvedFileToPublish Remove=.../> in
