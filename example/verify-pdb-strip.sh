@@ -24,6 +24,13 @@
 #      correctly disables the Remove when opted out; the PDB itself is
 #      added by the standard iOS SDK targets regardless of Datadog's
 #      target, not by anything of ours.
+#   3. Same AOT/soft-debug setup, but with DatadogUploadSymbols=false (its
+#      default) and DatadogKeepPortablePdbs left at its default (false)
+#      -> asserts a .pdb DOES end up inside example.app. DatadogStripPdbFromBundle
+#      is gated on DatadogUploadSymbols=='true' like every other target in
+#      Datadog.Maui.targets, so it must not run at all when the customer
+#      hasn't opted into Datadog's symbol upload -- this is the scenario a
+#      Copilot review comment on PR#77 flagged as untested.
 #
 # Publishing an iOS app always requires a device RID (the simulator RID is
 # rejected by Xamarin.Shared.Sdk.Publish.targets), which in turn requires
@@ -59,12 +66,13 @@ log_section "Restoring (${IOS_TFM}/${IOS_RID})"
 dotnet restore -p:TargetFramework="$IOS_TFM" -r "$IOS_RID"
 
 publish() {
-    local keep_flag="$1"
+    local upload_flag="$1"
+    local keep_flag="$2"
 
     rm -rf "bin/Debug/${IOS_TFM}"
 
     dotnet publish -c Debug -f "$IOS_TFM" -r "$IOS_RID" --no-restore \
-        -p:DatadogUploadSymbols=true \
+        -p:DatadogUploadSymbols="$upload_flag" \
         -p:DatadogKeepPortablePdbs="$keep_flag" \
         -p:CodesignKey=- \
         -p:CodesignProvision= \
@@ -80,8 +88,8 @@ count_pdbs_in_bundle() {
     find "$APP_BUNDLE" -name "*.pdb" | wc -l | tr -d ' '
 }
 
-log_section "Publishing with DatadogKeepPortablePdbs=false (default)"
-publish "false"
+log_section "Publishing with DatadogUploadSymbols=true, DatadogKeepPortablePdbs=false (default)"
+publish "true" "false"
 PDB_COUNT_STRIPPED=$(count_pdbs_in_bundle)
 if [ "$PDB_COUNT_STRIPPED" = "0" ]; then
     log_pass "No .pdb found in $APP_BUNDLE"
@@ -89,13 +97,22 @@ else
     log_fail "Expected 0 .pdb files in bundle, found $PDB_COUNT_STRIPPED"
 fi
 
-log_section "Publishing with DatadogKeepPortablePdbs=true"
-publish "true"
+log_section "Publishing with DatadogUploadSymbols=true, DatadogKeepPortablePdbs=true"
+publish "true" "true"
 PDB_COUNT_KEPT=$(count_pdbs_in_bundle)
 if [ "$PDB_COUNT_KEPT" -gt "0" ]; then
     log_pass "Found $PDB_COUNT_KEPT .pdb file(s) in $APP_BUNDLE, as expected with opt-out set"
 else
     log_fail "Expected at least one .pdb file in bundle with DatadogKeepPortablePdbs=true, found none"
+fi
+
+log_section "Publishing with DatadogUploadSymbols=false (default), DatadogKeepPortablePdbs=false (default)"
+publish "false" "false"
+PDB_COUNT_NO_UPLOAD=$(count_pdbs_in_bundle)
+if [ "$PDB_COUNT_NO_UPLOAD" -gt "0" ]; then
+    log_pass "Found $PDB_COUNT_NO_UPLOAD .pdb file(s) in $APP_BUNDLE, as expected -- strip target must not run when DatadogUploadSymbols isn't enabled"
+else
+    log_fail "Expected at least one .pdb file in bundle with DatadogUploadSymbols=false, found none (strip target ran when it shouldn't have)"
 fi
 
 log_section "PDB strip verification passed"
