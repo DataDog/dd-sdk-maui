@@ -52,6 +52,7 @@ All configuration is done via MSBuild properties. These can be set in your `.csp
 | `DatadogServiceName` | No | `$(AssemblyName)` | Service name used to identify your app in Datadog |
 | `DatadogSite` | No | `datadoghq.com` | Datadog site (e.g., `datadoghq.eu`, `us5.datadoghq.com`) |
 | `DatadogApiKey` | No | — | API key passed directly. If not set, the `DATADOG_API_KEY` environment variable is used instead |
+| `DatadogKeepPortablePdbs` | No | `false` | iOS only, and only applies when `DatadogUploadSymbols=true`. Some debug configurations (e.g. `soft-debug`) bundle the Portable PDB inside the `.app`; since symbolication is always done offline from the uploaded PDB, it's stripped from the bundle by default. Set to `true` to keep it in the bundle instead |
 
 ### Setting properties in `.csproj`
 

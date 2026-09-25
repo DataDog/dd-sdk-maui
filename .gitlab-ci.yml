@@ -92,6 +92,14 @@ build:example-ios-net9:
     - cd example
     - ./build.sh --ios --net9
 
+verify:pdb-strip-ios:
+  stage: test
+  needs: [build:sdk]
+  timeout: 15m
+  script:
+    - cd example
+    - ./verify-pdb-strip.sh
+
 build:example-android-net9:
   stage: test
   needs: [build:sdk]
