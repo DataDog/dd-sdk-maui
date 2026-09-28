@@ -109,12 +109,20 @@ namespace Datadog.Maui
         /// </summary>
         internal static RenderedStackTrace BuildStackTrace(Exception? exception, IReadOnlyList<string>? javaStackTrace = null)
         {
+            return BuildStackTrace(exception, javaStackTrace, BuildSdkFrameData);
+        }
+
+        internal static RenderedStackTrace BuildStackTrace(
+            Exception? exception,
+            IReadOnlyList<string>? javaStackTrace,
+            Func<StackFrame, MethodBase, int, Dictionary<string, object>> sdkFrameFactory)
+        {
             var lines = new List<string>();
             var frames = new List<Dictionary<string, object>>();
 
             if (exception != null)
             {
-                RenderException(exception, lines, frames, isInnerException: false);
+                RenderException(exception, lines, frames, sdkFrameFactory, isInnerException: false);
             }
             else
             {
@@ -136,6 +144,7 @@ namespace Datadog.Maui
             Exception exception,
             List<string> lines,
             List<Dictionary<string, object>> sdkFrames,
+            Func<StackFrame, MethodBase, int, Dictionary<string, object>> sdkFrameFactory,
             bool isInnerException)
         {
             AppendLines(lines, $"{(isInnerException ? " ---> " : string.Empty)}{exception.GetType().FullName}: {exception.Message}");
@@ -148,7 +157,7 @@ namespace Datadog.Maui
 
             foreach (var innerException in innerExceptions)
             {
-                RenderException(innerException, lines, sdkFrames, isInnerException: true);
+                RenderException(innerException, lines, sdkFrames, sdkFrameFactory, isInnerException: true);
             }
 
             try
@@ -156,12 +165,11 @@ namespace Datadog.Maui
                 var stackTrace = new StackTrace(exception, true);
                 foreach (var frame in stackTrace.GetFrames() ?? Array.Empty<StackFrame>())
                 {
-                    RenderFrame(frame, lines, sdkFrames);
+                    RenderFrame(frame, lines, sdkFrames, sdkFrameFactory);
                 }
             }
             catch (Exception ex)
             {
-                InternalLog.Log($"DdRumErrorTracking: Failed to render managed stack frames: {ex.Message}", SdkVerbosity.DEBUG);
                 InternalTelemetry.Error("DdRumErrorTracking: Failed to render managed stack frames", ex);
             }
 
@@ -174,13 +182,14 @@ namespace Datadog.Maui
         private static void RenderFrame(
             StackFrame frame,
             List<string> lines,
-            List<Dictionary<string, object>> sdkFrames)
+            List<Dictionary<string, object>> sdkFrames,
+            Func<StackFrame, MethodBase, int, Dictionary<string, object>> sdkFrameFactory)
         {
             MethodBase? method = null;
             try
             {
                 method = frame.GetMethod();
-                lines.Add(method == null ? "   at <unknown>" : FormatManagedFrame(frame, method));
+                lines.Add(method == null ? "   at <unknown>" : DdRumErrorTrackingFormatHelpers.FormatManagedFrame(frame, method));
             }
             catch (Exception frameEx)
             {
@@ -195,20 +204,7 @@ namespace Datadog.Maui
 
             try
             {
-                var frameData = new Dictionary<string, object>
-                {
-                    { "line_index", lines.Count - 1 },
-                    { "method_token", method.MetadataToken },
-                    { "il_offset", frame.GetILOffset() }
-                };
-
-                var assemblyId = AssemblyDebugId.TryGetDebugId(method.Module.Assembly);
-                if (assemblyId != null)
-                {
-                    frameData["assembly_id"] = assemblyId;
-                }
-
-                sdkFrames.Add(frameData);
+                sdkFrames.Add(sdkFrameFactory(frame, method, lines.Count - 1));
             }
             catch (Exception frameEx)
             {
@@ -216,6 +212,24 @@ namespace Datadog.Maui
             }
 
             AppendRuntimeFrameMarkers(frame, lines);
+        }
+
+        private static Dictionary<string, object> BuildSdkFrameData(StackFrame frame, MethodBase method, int lineIndex)
+        {
+            var frameData = new Dictionary<string, object>
+            {
+                { "line_index", lineIndex },
+                { "method_token", method.MetadataToken },
+                { "il_offset", frame.GetILOffset() }
+            };
+
+            var assemblyId = AssemblyDebugId.TryGetDebugId(method.Module.Assembly);
+            if (assemblyId != null)
+            {
+                frameData["assembly_id"] = assemblyId;
+            }
+
+            return frameData;
         }
 
         private static void AppendRuntimeFrameMarkers(StackFrame frame, List<string> lines)
@@ -251,31 +265,6 @@ namespace Datadog.Maui
             {
                 InternalLog.Log($"DdRumErrorTracking: Failed to render stack frame markers: {frameEx.Message}", SdkVerbosity.DEBUG);
             }
-        }
-
-        private static string FormatManagedFrame(StackFrame frame, MethodBase method)
-        {
-            var declaringType = method.DeclaringType?.FullName;
-            var qualifiedMethod = string.IsNullOrEmpty(declaringType)
-                ? method.Name
-                : $"{declaringType}.{method.Name}";
-            var parameters = string.Join(", ", method.GetParameters().Select(FormatParameter));
-            var rendered = $"   at {qualifiedMethod}({parameters})";
-
-            var fileName = frame.GetFileName();
-            var lineNumber = frame.GetFileLineNumber();
-            if (!string.IsNullOrEmpty(fileName) && lineNumber > 0)
-            {
-                rendered += $" in {fileName}:line {lineNumber}";
-            }
-
-            return rendered;
-        }
-
-        private static string FormatParameter(ParameterInfo parameter)
-        {
-            var typeName = parameter.ParameterType.FullName ?? parameter.ParameterType.Name;
-            return string.IsNullOrEmpty(parameter.Name) ? typeName : $"{typeName} {parameter.Name}";
         }
 
         private static void AppendLines(List<string> lines, string text)
