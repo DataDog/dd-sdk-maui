@@ -29,6 +29,10 @@
 -->
 <Project>
 
+  <!-- Build-time assembly debug-id manifest generation (RUM-18332) — see
+       Datadog.Maui.DebugId.targets for details. -->
+  <Import Project="Datadog.Maui.DebugId.targets" />
+
   <!-- Defaults -->
   <PropertyGroup>
     <DatadogUploadSymbols Condition="'$(DatadogUploadSymbols)' == ''">false</DatadogUploadSymbols>
