@@ -6,6 +6,7 @@
 
 using System.Reflection;
 using System.Runtime.CompilerServices;
+using System.Runtime.ExceptionServices;
 using Datadog.Maui.Configuration;
 using Datadog.Maui.Tests.Fixtures.CrossAssembly;
 using Xunit;
@@ -97,6 +98,7 @@ public class DdRumErrorTrackingTests : IDisposable
         Assert.NotEmpty(sdkFrames);
         Assert.All(sdkFrames, frame =>
         {
+            Assert.IsType<int>(frame["line_index"]);
             Assert.IsType<int>(frame["method_token"]);
             Assert.IsType<int>(frame["il_offset"]);
         });
@@ -148,29 +150,171 @@ public class DdRumErrorTrackingTests : IDisposable
         Assert.Null(DdRumErrorTracking.UnwrapJavaException(null));
     }
 
-    // ── BuildSdkFrames ──────────────────────────────────────────────
+    // ── BuildStackTrace ─────────────────────────────────────────────
 
     [Fact]
-    public void BuildSdkFrames_NullException_ReturnsEmptyList()
+    public void BuildStackTrace_NullException_ReturnsFallbackWithoutFrames()
     {
-        var frames = DdRumErrorTracking.BuildSdkFrames(null);
+        var result = DdRumErrorTracking.BuildStackTrace(null);
 
-        Assert.Empty(frames);
+        Assert.Equal("No stacktrace available", result.Text);
+        Assert.Empty(result.SdkFrames);
     }
 
     [Fact]
-    public void BuildSdkFrames_SimpleException_IncludesMethodTokenAndIlOffsetForEveryFrame()
+    public void BuildStackTrace_SdkFramesPointToTheirManagedLines()
     {
         var exception = CatchException(() => throw new InvalidOperationException("boom"));
 
-        var frames = DdRumErrorTracking.BuildSdkFrames(exception);
+        var result = DdRumErrorTracking.BuildStackTrace(exception);
+        var lines = result.Text.Split('\n');
 
-        Assert.NotEmpty(frames);
-        Assert.All(frames, frame =>
+        AssertSdkFramesPointToManagedLines(result, lines);
+    }
+
+    [Fact]
+    public void BuildStackTrace_MultilineExceptionMessageKeepsFrameIndexesAligned()
+    {
+        var exception = CatchException(() => throw new InvalidOperationException("first line\nsecond line"));
+
+        var result = DdRumErrorTracking.BuildStackTrace(exception);
+        var lines = result.Text.Split('\n');
+
+        Assert.Equal("System.InvalidOperationException: first line", lines[0]);
+        Assert.Equal("second line", lines[1]);
+        AssertSdkFramesPointToManagedLines(result, lines);
+        Assert.All(result.SdkFrames, frame => Assert.True(Assert.IsType<int>(frame["line_index"]) > 1));
+    }
+
+    [Fact]
+    public async Task BuildStackTrace_AsyncExceptionKeepsFrameIndexesAligned()
+    {
+        var exception = await CatchExceptionAsync(ThrowAfterAwait);
+
+        var result = DdRumErrorTracking.BuildStackTrace(exception);
+        var lines = result.Text.Split('\n');
+
+        Assert.Contains(lines, line => line.Contains(nameof(ThrowAfterAwait), StringComparison.Ordinal));
+        AssertSdkFramesPointToManagedLines(result, lines);
+    }
+
+    [Fact]
+    public void BuildStackTrace_AggregateExceptionKeepsAllInnerFrameIndexesAligned()
+    {
+        var first = CatchException(ThrowFirstAggregateInner);
+        var second = CatchException(ThrowSecondAggregateInner);
+        var exception = CatchException(() => throw new AggregateException("aggregate failure", first, second));
+
+        var result = DdRumErrorTracking.BuildStackTrace(exception);
+        var lines = result.Text.Split('\n');
+
+        Assert.Contains(lines, line => line.Contains("first inner failure", StringComparison.Ordinal));
+        Assert.Contains(lines, line => line.Contains("second inner failure", StringComparison.Ordinal));
+        Assert.Contains(lines, line => line.Contains(nameof(ThrowFirstAggregateInner), StringComparison.Ordinal));
+        Assert.Contains(lines, line => line.Contains(nameof(ThrowSecondAggregateInner), StringComparison.Ordinal));
+        Assert.Equal(2, lines.Count(line => line.Contains("End of inner exception stack trace", StringComparison.Ordinal)));
+        AssertSdkFramesPointToManagedLines(result, lines);
+    }
+
+    [Fact]
+    public void BuildStackTrace_MetadataExtractionFailurePreservesRenderedManagedLines()
+    {
+        var exception = CatchException(() => throw new InvalidOperationException("boom"));
+
+        var result = DdRumErrorTracking.BuildStackTrace(
+            exception,
+            javaStackTrace: null,
+            (_, _, _) => throw new InvalidOperationException("metadata unavailable"));
+
+        Assert.Contains(result.Text.Split('\n'), line => line.StartsWith("   at ", StringComparison.Ordinal));
+        Assert.Empty(result.SdkFrames);
+    }
+
+    [Fact]
+    public void BuildStackTrace_JavaTailDoesNotAffectManagedLineIndexes()
+    {
+        var exception = CatchException(() => throw new InvalidOperationException("boom"));
+        string[] javaStackTrace =
+        [
+            "java.lang.IllegalStateException: Java failure",
+            "   at example.JavaThrower.level3(JavaThrower.java:14)",
+            "   at example.JavaThrower.level2(JavaThrower.java:10)",
+        ];
+
+        var result = DdRumErrorTracking.BuildStackTrace(exception, javaStackTrace);
+        var lines = result.Text.Split('\n');
+        var javaStartIndex = lines.Length - javaStackTrace.Length;
+
+        Assert.True(javaStartIndex > 0);
+        Assert.Equal(javaStackTrace, lines.Skip(javaStartIndex));
+        Assert.All(result.SdkFrames, frame =>
         {
-            Assert.IsType<int>(frame["method_token"]);
-            Assert.IsType<int>(frame["il_offset"]);
+            var lineIndex = Assert.IsType<int>(frame["line_index"]);
+            Assert.True(lineIndex < javaStartIndex);
         });
+    }
+
+    [Fact]
+    public void BuildStackTrace_InnerExceptionFramesHaveStableLineIndexes()
+    {
+        var exception = CatchException(ThrowWithInnerException);
+
+        var result = DdRumErrorTracking.BuildStackTrace(exception);
+        var lines = result.Text.Split('\n');
+
+        Assert.Contains(lines, line => line.Contains("inner failure", StringComparison.Ordinal));
+        Assert.Contains(lines, line => line.Contains("outer failure", StringComparison.Ordinal));
+        Assert.All(result.SdkFrames, frame =>
+        {
+            var lineIndex = Assert.IsType<int>(frame["line_index"]);
+            Assert.StartsWith("   at ", lines[lineIndex]);
+        });
+    }
+
+    [Fact]
+    public void BuildStackTrace_ExceptionDispatchInfoRethrowPreservesBoundary()
+    {
+        var exception = CatchException(RethrowWithExceptionDispatchInfo);
+
+        var result = DdRumErrorTracking.BuildStackTrace(exception);
+        var lines = result.Text.Split('\n');
+        var boundaryIndex = Array.FindIndex(
+            lines,
+            line => line.Contains("End of stack trace from previous location", StringComparison.Ordinal));
+
+        Assert.True(boundaryIndex > 0);
+        Assert.Contains(lines.Take(boundaryIndex), line => line.Contains(nameof(ThrowBeforeDispatch), StringComparison.Ordinal));
+        Assert.Contains(lines.Skip(boundaryIndex + 1), line => line.Contains(nameof(RethrowWithExceptionDispatchInfo), StringComparison.Ordinal));
+        Assert.All(result.SdkFrames, frame =>
+        {
+            var lineIndex = Assert.IsType<int>(frame["line_index"]);
+            Assert.StartsWith("   at ", lines[lineIndex]);
+        });
+    }
+
+    [Fact]
+    public void BuildStackTrace_RethrowBoundaryBeforeJavaTailKeepsSectionsAndIndexesAligned()
+    {
+        var exception = CatchException(RethrowWithExceptionDispatchInfo);
+        string[] javaStackTrace =
+        [
+            "java.lang.IllegalStateException: Java failure",
+            "   at example.JavaThrower.level3(JavaThrower.java:14)",
+            "   at example.JavaThrower.level2(JavaThrower.java:10)",
+        ];
+
+        var result = DdRumErrorTracking.BuildStackTrace(exception, javaStackTrace);
+        var lines = result.Text.Split('\n');
+        var boundaryIndex = Array.FindIndex(
+            lines,
+            line => line.Contains("End of stack trace from previous location", StringComparison.Ordinal));
+        var javaStartIndex = lines.Length - javaStackTrace.Length;
+
+        Assert.True(boundaryIndex > 0);
+        Assert.True(boundaryIndex < javaStartIndex);
+        Assert.Equal(javaStackTrace, lines.Skip(javaStartIndex));
+        AssertSdkFramesPointToManagedLines(result, lines);
+        Assert.All(result.SdkFrames, frame => Assert.True(Assert.IsType<int>(frame["line_index"]) < javaStartIndex));
     }
 
     [Fact]
@@ -183,7 +327,7 @@ public class DdRumErrorTrackingTests : IDisposable
         AssemblyDebugId.SetManifestOverrideForTests(
             new Dictionary<string, string> { [thisAssembly.GetName().Name!] = expectedId });
 
-        var frames = DdRumErrorTracking.BuildSdkFrames(exception);
+        var frames = DdRumErrorTracking.BuildStackTrace(exception).SdkFrames;
 
         Assert.Contains(frames, f => Equals(f.GetValueOrDefault("assembly_id"), expectedId));
         Assert.DoesNotContain(frames, f => Equals(f.GetValueOrDefault("assembly_id"), mvid));
@@ -204,7 +348,7 @@ public class DdRumErrorTrackingTests : IDisposable
         });
 
         var exception = CatchException(InvokeCrossAssemblyThrower);
-        var frames = DdRumErrorTracking.BuildSdkFrames(exception);
+        var frames = DdRumErrorTracking.BuildStackTrace(exception).SdkFrames;
 
         Assert.Contains(frames, f => Equals(f.GetValueOrDefault("assembly_id"), expectedThisId));
         Assert.Contains(frames, f => Equals(f.GetValueOrDefault("assembly_id"), expectedOtherId));
@@ -212,6 +356,77 @@ public class DdRumErrorTrackingTests : IDisposable
 
     [MethodImpl(MethodImplOptions.NoInlining)]
     private static void InvokeCrossAssemblyThrower() => CrossAssemblyThrower.ThrowFromThisAssembly();
+
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    private static void ThrowWithInnerException()
+    {
+        try
+        {
+            throw new InvalidOperationException("inner failure");
+        }
+        catch (Exception inner)
+        {
+            throw new ApplicationException("outer failure", inner);
+        }
+    }
+
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    private static void RethrowWithExceptionDispatchInfo()
+    {
+        try
+        {
+            ThrowBeforeDispatch();
+        }
+        catch (Exception exception)
+        {
+            ExceptionDispatchInfo.Capture(exception).Throw();
+        }
+    }
+
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    private static void ThrowBeforeDispatch() => throw new InvalidOperationException("dispatched failure");
+
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    private static void ThrowFirstAggregateInner() => throw new InvalidOperationException("first inner failure");
+
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    private static void ThrowSecondAggregateInner() => throw new ArgumentException("second inner failure");
+
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    private static async Task ThrowAfterAwait()
+    {
+        await Task.Yield();
+        throw new InvalidOperationException("async failure");
+    }
+
+    private static async Task<Exception> CatchExceptionAsync(Func<Task> action)
+    {
+        try
+        {
+            await action();
+        }
+        catch (Exception ex)
+        {
+            return ex;
+        }
+
+        throw new InvalidOperationException("Expected action to throw.");
+    }
+
+    private static void AssertSdkFramesPointToManagedLines(
+        DdRumErrorTracking.RenderedStackTrace result,
+        string[] lines)
+    {
+        Assert.NotEmpty(result.SdkFrames);
+        Assert.All(result.SdkFrames, frame =>
+        {
+            var lineIndex = Assert.IsType<int>(frame["line_index"]);
+            Assert.InRange(lineIndex, 0, lines.Length - 1);
+            Assert.StartsWith("   at ", lines[lineIndex]);
+            Assert.IsType<int>(frame["method_token"]);
+            Assert.IsType<int>(frame["il_offset"]);
+        });
+    }
 
     private static Exception CatchException(Action action)
     {

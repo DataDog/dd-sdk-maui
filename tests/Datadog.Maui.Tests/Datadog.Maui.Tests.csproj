@@ -49,6 +49,7 @@
     <Compile Include="../../bindings/Datadog.Maui/Configuration/RumErrorSource.cs" Link="Linked/Configuration/RumErrorSource.cs" />
     <Compile Include="../../bindings/Datadog.Maui/Configuration/OperationFailure.cs" Link="Linked/Configuration/OperationFailure.cs" />
     <Compile Include="../../bindings/Datadog.Maui/DdRumErrorTracking.cs" Link="Linked/DdRumErrorTracking.cs" />
+    <Compile Include="../../bindings/Datadog.Maui/DdRumErrorTrackingFormatHelpers.cs" Link="Linked/DdRumErrorTrackingFormatHelpers.cs" />
     <Compile Include="../../bindings/Datadog.Maui/AssemblyDebugId.cs" Link="Linked/AssemblyDebugId.cs" />
     <Compile Include="../../bindings/Datadog.Maui/Configuration/DdRumActionEvent.cs" Link="Linked/Configuration/DdRumActionEvent.cs" />
     <Compile Include="../../bindings/Datadog.Maui/AutoTracking/ActionTargetResolver.cs" Link="Linked/AutoTracking/ActionTargetResolver.cs" />
