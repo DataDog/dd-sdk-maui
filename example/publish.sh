@@ -92,6 +92,8 @@ fi
 log_section "Cleaning previous build artifacts"
 rm -rf bin/Release obj/Release
 log_info "Cleaned bin/Release and obj/Release"
+rm -rf ~/.nuget/packages/datadog.*
+log_info "Cleared NuGet global cache for Datadog packages"
 
 # ── Publish ───────────────────────────────────────────────────────────────────
 
@@ -142,6 +144,66 @@ set -e
 # ── Summary ───────────────────────────────────────────────────────────────────
 
 log_section "Publish complete"
+
+# Reports which Datadog SDK packages the build restored, where each came from, and whether
+# it is byte-identical to the package ./build.sh put in local-packages/. The same versions
+# exist on nuget.org and NuGet takes whichever source answers first, so without this a
+# build can silently test the published SDK instead of local changes.
+report_sdk_packages() {
+    python3 - "$1" "../local-packages" <<'EOF'
+import base64, hashlib, json, os, sys
+
+tfm_prefix, local_dir = sys.argv[1], sys.argv[2]
+GREEN, RED, NC = "\033[0;32m", "\033[0;31m", "\033[0m"
+
+try:
+    assets = json.load(open("obj/project.assets.json"))
+except (OSError, ValueError):
+    print(f"{RED}✗{NC} Could not read obj/project.assets.json: unknown which Datadog SDK packages were used")
+    sys.exit(0)
+
+target = next((t for t in assets["targets"] if t.startswith(tfm_prefix) and "/" not in t), None)
+if target is None:
+    print(f"{RED}✗{NC} No {tfm_prefix} target in obj/project.assets.json")
+    sys.exit(0)
+
+cache_root = next(iter(assets.get("packageFolders", {})), os.path.expanduser("~/.nuget/packages/"))
+
+def read(path):
+    try:
+        with open(path) as f:
+            return f.read().strip()
+    except OSError:
+        return None
+
+all_local = True
+lines = []
+for key in sorted(k for k in assets["targets"][target] if k.startswith("Datadog.")):
+    name, version = key.split("/")
+    folder = os.path.join(cache_root, name.lower(), version.lower())
+    metadata = read(os.path.join(folder, ".nupkg.metadata"))
+    source = json.loads(metadata).get("source", "?") if metadata else "?"
+    cached_hash = read(os.path.join(folder, f"{name.lower()}.{version.lower()}.nupkg.sha512"))
+
+    local_nupkg = os.path.join(local_dir, f"{name}.{version}.nupkg")
+    local_hash = None
+    if os.path.exists(local_nupkg):
+        with open(local_nupkg, "rb") as f:
+            local_hash = base64.b64encode(hashlib.sha512(f.read()).digest()).decode()
+
+    if cached_hash is not None and cached_hash == local_hash:
+        lines.append(f"    {GREEN}✓{NC} {name} {version}: local build")
+    else:
+        all_local = False
+        reason = "from nuget.org" if "nuget.org" in source else "differs from local-packages/"
+        lines.append(f"    {RED}✗{NC} {name} {version}: {reason} (source: {source})")
+
+print(f"{GREEN if all_local else RED}{'✓' if all_local else '✗'}{NC} Datadog SDK packages used ({target}):")
+print("\n".join(lines))
+if not all_local:
+    print(f"{RED}  This build did NOT use your local SDK. Run ./build.sh from the repo root and publish again.{NC}")
+EOF
+}
 
 # Reports the managed symbolication inputs: the portable PDBs that
 # `datadog-ci ppdb-symbols upload` sends, and the debug-id manifest that maps
@@ -200,6 +262,9 @@ report_phases() {
 
     log_info "Full detailed log: $DETAILED_LOG"
 }
+
+echo ""
+report_sdk_packages "net10.0-$TARGET"
 
 if [ "$TARGET" = "ios" ]; then
     echo ""

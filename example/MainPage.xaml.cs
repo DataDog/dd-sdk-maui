@@ -207,6 +207,11 @@ public partial class MainPage : ContentPage
     private void OnManagedCrashClicked(object? sender, EventArgs e) =>
         throw new InvalidOperationException("C# crash example");
 
+    // Unlike the C# crash above, this exception never reaches a Java (or Objective-C) caller:
+    // it goes straight to AppDomain.UnhandledException.
+    private void OnManagedThreadCrashClicked(object? sender, EventArgs e) =>
+        new Thread(() => throw new InvalidOperationException("C# thread crash example")).Start();
+
     private void OnNativeCrashClicked(object? sender, EventArgs e) =>
         NativeCrashHelper.TriggerNativeCrash();
 

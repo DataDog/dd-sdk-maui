@@ -130,6 +130,94 @@ public class DdRumErrorTrackingTests : IDisposable
         Assert.Equal(false, rumBridge.LastContext?["_dd.error.is_crash"]);
     }
 
+    // ── ReportRaisedCrash (AndroidEnvironment.UnhandledExceptionRaiser) ──
+    // The event subscription itself only compiles for -android; these cover what it calls.
+
+    [Fact]
+    public void ReportRaisedCrash_ReportsFatalErrorFromRaiser()
+    {
+        DdRumErrorTracking.StartTracking();
+        var exception = CatchException(() => throw new InvalidOperationException("boom"));
+
+        DdRumErrorTracking.ReportRaisedCrash(exception);
+
+        Assert.Equal(1, rumBridge.AddErrorCallCount);
+        Assert.Equal("boom", rumBridge.LastMessage);
+        Assert.Equal("AndroidEnvironment.UnhandledExceptionRaiser", rumBridge.LastContext?["_dd.error.handler"]);
+        Assert.Equal(true, rumBridge.LastContext?["_dd.error.is_crash"]);
+    }
+
+    [Fact]
+    public void OnUnhandledException_SameExceptionAlreadyRaised_IsNotReportedAgain()
+    {
+        DdRumErrorTracking.StartTracking();
+        var exception = CatchException(() => throw new InvalidOperationException("boom"));
+        DdRumErrorTracking.ReportRaisedCrash(exception);
+
+        InvokeOnUnhandledException(exception);
+
+        Assert.Equal(1, rumBridge.AddErrorCallCount);
+    }
+
+    [Fact]
+    public void OnUnhandledException_DifferentExceptionAfterRaise_IsReported()
+    {
+        DdRumErrorTracking.StartTracking();
+        DdRumErrorTracking.ReportRaisedCrash(CatchException(() => throw new InvalidOperationException("first")));
+
+        InvokeOnUnhandledException(CatchException(() => throw new InvalidOperationException("second")));
+
+        Assert.Equal(2, rumBridge.AddErrorCallCount);
+        Assert.Equal("second", rumBridge.LastMessage);
+    }
+
+    // ── IsSkippedPlatformCrash ─────────────────────────────────────
+    // The Java.Lang.Throwable type check only compiles for -android, so these tests pass
+    // isPlatformThrowable directly and exercise the decision around it.
+
+    [Fact]
+    public void IsSkippedPlatformCrash_PureJavaCrashWithNativeReportingOff_IsSkipped()
+    {
+        // Never thrown in managed code, like a crash on a Java thread: no managed frames.
+        var exception = new Exception("java crash");
+
+        Assert.True(DdRumErrorTracking.IsSkippedPlatformCrash(exception, isPlatformThrowable: true, nativeCrashReportEnabled: false));
+    }
+
+    [Fact]
+    public void IsSkippedPlatformCrash_PureJavaCrashWithNativeReportingOn_IsReported()
+    {
+        var exception = new Exception("java crash");
+
+        Assert.False(DdRumErrorTracking.IsSkippedPlatformCrash(exception, isPlatformThrowable: true, nativeCrashReportEnabled: true));
+    }
+
+    [Fact]
+    public void IsSkippedPlatformCrash_JavaExceptionThrownThroughManagedCode_IsReported()
+    {
+        // A Java exception that escaped a C# call is thrown through managed frames.
+        var exception = CatchException(() => throw new Exception("java exception via C#"));
+
+        Assert.False(DdRumErrorTracking.IsSkippedPlatformCrash(exception, isPlatformThrowable: true, nativeCrashReportEnabled: false));
+    }
+
+    [Fact]
+    public void IsSkippedPlatformCrash_ThrowableWrappingManagedException_IsReported()
+    {
+        // A JavaProxyThrowable shell around a C# exception.
+        var exception = new Exception("proxy", new InvalidOperationException("boom"));
+
+        Assert.False(DdRumErrorTracking.IsSkippedPlatformCrash(exception, isPlatformThrowable: true, nativeCrashReportEnabled: false));
+    }
+
+    [Fact]
+    public void IsSkippedPlatformCrash_ManagedException_IsReported()
+    {
+        var exception = new InvalidOperationException("boom");
+
+        Assert.False(DdRumErrorTracking.IsSkippedPlatformCrash(exception, isPlatformThrowable: false, nativeCrashReportEnabled: false));
+    }
+
     // ── UnwrapJavaException ────────────────────────────────────────
     // TODO: The #if ANDROID branch (Java.Lang.Throwable → InnerException) only compiles for
     // the -android target framework. Still needs verification on a real Android run/device.
@@ -426,6 +514,13 @@ public class DdRumErrorTrackingTests : IDisposable
             Assert.IsType<int>(frame["method_token"]);
             Assert.IsType<int>(frame["il_offset"]);
         });
+    }
+
+    private static void InvokeOnUnhandledException(Exception exception)
+    {
+        var handler = typeof(DdRumErrorTracking).GetMethod("OnUnhandledException", BindingFlags.NonPublic | BindingFlags.Static);
+        Assert.NotNull(handler);
+        handler!.Invoke(null, [null, new UnhandledExceptionEventArgs(exception, isTerminating: true)]);
     }
 
     private static Exception CatchException(Action action)

@@ -150,7 +150,7 @@ DdSdk.Initialize(config);
 - `VersionSuffix` - Version suffix
 - `Verbosity` - SDK logging level
 - `FirstPartyHosts` - List of first-party hosts for distributed tracing. When set, the SDK automatically injects tracing headers (`x-datadog-trace-id`, `traceparent`, etc.) into outgoing `HttpClient` requests whose host matches any entry (including subdomains). The RUM resource event is annotated with `_dd.trace_id` and `_dd.span_id`, enabling click-through to the corresponding APM trace in the Datadog UI.
-- `NativeCrashReportEnabled` - Enable native iOS/Android crash reporting (default: `false`)
+- `NativeCrashReportEnabled` - Enable native iOS/Android crash reporting (default: `false`). On Android this covers NDK (C/C++) crashes and Java crashes that never pass through managed code. C# crashes, including Java exceptions that escape C# code, are always reported by RUM's unhandled exception handler, with C# frames attached.
 - `AdditionalConfiguration` - Additional configuration dictionary
 - `ProxyConfiguration` - Proxy configuration object (see Proxy Configuration section)
 
@@ -425,6 +425,8 @@ DdRum.StopSession();
 ```
 
 When RUM is enabled, C# error tracking is automatically started. Unhandled exceptions (`AppDomain.UnhandledException`) and unobserved task exceptions (`TaskScheduler.UnobservedTaskException`) are captured and reported as RUM errors.
+
+On Android, a C# exception that reaches a Java callback boundary is also captured through `AndroidEnvironment.UnhandledExceptionRaiser`, before Java's uncaught exception handlers run. This reports the crash with its C# frames ahead of the native JVM crash handler (enabled by `NativeCrashReportEnabled`), whose copy of the same crash RUM then drops as a duplicate. When `NativeCrashReportEnabled` is `false`, Java crashes that never passed through managed code are not reported.
 
 #### Error Event Mapper
 
