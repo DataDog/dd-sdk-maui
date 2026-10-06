@@ -22,8 +22,7 @@ export DATADOG_API_KEY=your-api-key
 |----------|------|---------------|-------------|
 | **iOS** | `.dSYM` bundle | Native crashes + AOT-compiled C# method names | `dotnet publish -r ios-arm64` |
 | **Android** | `mapping.txt` | R8/ProGuard obfuscated Java/Kotlin class and method names | `dotnet publish` with `AndroidLinkTool=r8` |
-
-Portable PDB files (C# source file + line numbers) are **not uploaded**. They are resolved on-device by the .NET runtime when a managed exception is caught. No server-side processing is needed for managed C# stack traces.
+| **Both** | Portable PDB | Managed C# stack traces (file/line info), correlated by build-time debug ID manifest | `dotnet publish` (Debug symbols enabled) |
 
 ## Quick start
 
@@ -120,7 +119,7 @@ The example app's `publish.sh` calls this automatically after uploading app symb
 
 The `Datadog.Maui` NuGet package ships a `.targets` file (`Datadog.Maui.targets`) under `buildTransitive/`. MSBuild automatically imports it into any project that references the package — no manual setup required.
 
-The targets file defines three MSBuild targets that run after `dotnet publish`:
+The targets file defines four MSBuild targets that run after `dotnet publish`:
 
 1. **`DatadogCheckCli`** — Verifies that `datadog-ci` is installed and the API key is available. If either check fails, a message is printed and upload is skipped.
 
@@ -128,7 +127,9 @@ The targets file defines three MSBuild targets that run after `dotnet publish`:
 
 3. **`DatadogUploadMapping`** (Android) — Locates `mapping.txt` in the build output and uploads it via `datadog-ci flutter-symbols upload --android-mapping`.
 
-4. **`DatadogSymbolReport`** — Prints a summary of what was uploaded (service, version, site, file paths).
+4. **`DatadogUploadPortablePdb`** (iOS + Android) — Uploads first-party Portable PDBs from the publish output directory via `datadog-ci ppdb-symbols upload`, correlated by the build-time debug ID manifest (`dd_debug_ids.json`) generated alongside the build.
+
+5. **`DatadogSymbolReport`** — Prints a summary of what was uploaded (service, version, site, file paths).
 
 ### Verbosity
 
@@ -148,7 +149,7 @@ After a Release publish, symbol files are located at:
 bin/Release/net10.0-ios/ios-arm64/
   example.app.dSYM/          <-- dSYM bundle (uploaded to Datadog)
   example.app/                <-- signed app bundle
-  example.pdb                 <-- portable PDB (resolved on-device)
+  example.pdb                 <-- portable PDB (uploaded to Datadog)
   publish/
     example.ipa               <-- distributable package
 ```
@@ -157,9 +158,12 @@ bin/Release/net10.0-ios/ios-arm64/
 ```
 bin/Release/net10.0-android/
   mapping.txt                 <-- R8 mapping (uploaded to Datadog, requires AndroidLinkTool=r8)
+  example.pdb                  <-- portable PDB (uploaded to Datadog)
   publish/
     com.datadog.maui.test.apk <-- distributable package
 ```
+
+Both Portable PDB uploads are correlated against `obj/<Configuration>/<TargetFramework>/dd_debug_ids.json`, a debug ID manifest generated at build time (see `Datadog.Maui.DebugId.targets`).
 
 ## Troubleshooting
 
@@ -174,6 +178,9 @@ dSYMs are only generated for device builds (`-r ios-arm64`). Simulator builds (`
 
 **"Skipping mapping upload — mapping.txt not found"**
 Ensure R8 is enabled in your `.csproj` with `<AndroidLinkTool>r8</AndroidLinkTool>` and `<AndroidCreateProguardMappingFile>true</AndroidCreateProguardMappingFile>`.
+
+**"Skipping Portable PDB upload — no debug-id manifest found"**
+The debug ID manifest (`dd_debug_ids.json`) is generated during `Build`, which `Publish` depends on. If it's missing, check that `DebugSymbols` and `DebugType` are set (`<DebugType>portable</DebugType>`) and that the build itself succeeded.
 
 **No Datadog output visible**
 Add `-v n -tl:off` to your `dotnet publish` command to disable the terminal logger and show all build messages.
