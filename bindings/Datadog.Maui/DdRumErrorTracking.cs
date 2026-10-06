@@ -5,6 +5,7 @@
  */
 
 using System;
+using System.Diagnostics;
 using Datadog.Maui.Configuration;
 
 namespace Datadog.Maui
@@ -59,32 +60,109 @@ namespace Datadog.Maui
 
         private static void OnUnhandledException(object sender, UnhandledExceptionEventArgs e)
         {
-            var exception = e.ExceptionObject as Exception;
-#if ANDROID
-            // On Android, this receives a JavaProxyThrowable wrapper.
-            // Extract the original C# exception from the inner exception.
-            if (exception is Java.Lang.Throwable javaThrowable && javaThrowable.InnerException != null)
-            {
-                exception = javaThrowable.InnerException;
-            }
-#endif
-            var message = exception?.Message ?? "Unhandled exception";
-            var stacktrace = exception?.ToString() ?? "No stacktrace available";
-            var isCrash = e.IsTerminating;
-
-            ReportError(message, stacktrace, isCrash, "AppDomain.UnhandledException");
+            HandleException(e.ExceptionObject as Exception, "Unhandled exception", e.IsTerminating, "AppDomain.UnhandledException");
         }
 
         private static void OnUnobservedTaskException(object? sender, UnobservedTaskExceptionEventArgs e)
         {
-            var exception = e.Exception.GetBaseException();
-            var message = exception.Message;
-            var stacktrace = exception.ToString();
-
-            ReportError(message, stacktrace, false, "TaskScheduler.UnobservedTaskException");
+            HandleException(e.Exception.GetBaseException(), "Unobserved task exception", false, "TaskScheduler.UnobservedTaskException");
         }
 
-        private static void ReportError(string message, string stacktrace, bool isCrash, string handler)
+        /// <summary>
+        /// Shared by both handlers so UnwrapJavaException is structurally guaranteed to apply
+        /// identically to both — see its own doc comment for why that matters.
+        /// </summary>
+        private static void HandleException(Exception? rawException, string defaultMessage, bool isCrash, string handler)
+        {
+            var exception = UnwrapJavaException(rawException);
+            var message = exception?.Message ?? defaultMessage;
+            var stacktrace = exception?.ToString() ?? "No stacktrace available";
+
+            ReportError(message, stacktrace, isCrash, handler, exception);
+        }
+
+        /// <summary>
+        /// On Android, an exception that crosses the JNI boundary can arrive wrapped in a
+        /// Java.Lang.Throwable (JavaProxyThrowable) shell. The real C# exception — and the
+        /// stack trace we actually want to report — is one level down, at InnerException.
+        /// Both handlers must apply this identically so the raw-text stacktrace and the
+        /// sdk_frames built in ReportError always describe the same exception instance;
+        /// unwrapping only one of the two would silently desync them.
+        /// </summary>
+        internal static Exception? UnwrapJavaException(Exception? exception)
+        {
+#if ANDROID
+            if (exception is Java.Lang.Throwable javaThrowable && javaThrowable.InnerException != null)
+            {
+                return javaThrowable.InnerException;
+            }
+#endif
+            return exception;
+        }
+
+        /// <summary>
+        /// Builds the structured, per-frame counterpart to the raw-text stacktrace.
+        /// Each frame carries the assembly's native PE debug-directory id (GUID+Stamp —
+        /// the same id build-time tooling reads off the compiled DLL/PDB, not
+        /// Module.ModuleVersionId/MVID), the method's metadata token, and its IL offset.
+        /// Frames whose assembly id can't be resolved (e.g. AOT/single-file bundling,
+        /// where Assembly.Location is empty) are still included, just without that field.
+        /// </summary>
+        internal static List<Dictionary<string, object>> BuildSdkFrames(Exception? exception)
+        {
+            var frames = new List<Dictionary<string, object>>();
+            if (exception == null)
+            {
+                return frames;
+            }
+
+            try
+            {
+                var stackTrace = new StackTrace(exception, false);
+                foreach (var frame in stackTrace.GetFrames() ?? Array.Empty<StackFrame>())
+                {
+                    // MetadataToken (and, in principle, GetILOffset) can throw for some
+                    // runtime-provided frames (e.g. DynamicMethod) — caught per-frame so one
+                    // bad frame is just omitted instead of discarding every frame gathered so
+                    // far in this exception's stack trace.
+                    try
+                    {
+                        var method = frame.GetMethod();
+                        if (method == null)
+                        {
+                            continue;
+                        }
+
+                        var frameData = new Dictionary<string, object>
+                        {
+                            { "method_token", method.MetadataToken },
+                            { "il_offset", frame.GetILOffset() }
+                        };
+
+                        var assemblyId = AssemblyDebugId.TryGetDebugId(method.Module.Assembly);
+                        if (assemblyId != null)
+                        {
+                            frameData["assembly_id"] = assemblyId;
+                        }
+
+                        frames.Add(frameData);
+                    }
+                    catch (Exception frameEx)
+                    {
+                        InternalLog.Log($"DdRumErrorTracking: Failed to build sdk_frames entry for a frame: {frameEx.Message}", SdkVerbosity.DEBUG);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                InternalLog.Log($"DdRumErrorTracking: Failed to build sdk_frames: {ex.Message}", SdkVerbosity.DEBUG);
+                InternalTelemetry.Error("DdRumErrorTracking: Failed to build sdk_frames", ex);
+            }
+
+            return frames;
+        }
+
+        private static void ReportError(string message, string stacktrace, bool isCrash, string handler, Exception? exception)
         {
             InternalLog.Log($"DdRumErrorTracking: Caught error via {handler}: {message}", SdkVerbosity.DEBUG);
 
@@ -93,6 +171,12 @@ namespace Datadog.Maui
                 { "_dd.error.is_crash", isCrash },
                 { "_dd.error.handler", handler }
             };
+
+            var sdkFrames = BuildSdkFrames(exception);
+            if (sdkFrames.Count > 0)
+            {
+                context["_dd.error.sdk_frames"] = sdkFrames;
+            }
 
             var timestampMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
 
