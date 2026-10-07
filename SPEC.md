@@ -1241,7 +1241,7 @@ The SDK automatically tracks MAUI page navigations and user interactions when en
 
 ### Phase 4: Error & Crash Reporting (Complete)
 - ✅ Native crash reporting (iOS: CrashReporting, Android: JVM crash handler + NdkCrashReports) via `DdSdkConfiguration.NativeCrashReportEnabled`
-- ✅ C# error tracking: `AppDomain.UnhandledException` and `TaskScheduler.UnobservedTaskException` handlers, plus `AndroidEnvironment.UnhandledExceptionRaiser` on Android so C# crashes reach RUM before the JVM crash handler's copy (which RUM then drops as a duplicate)
+- ✅ C# error tracking: `AppDomain.UnhandledException` and `TaskScheduler.UnobservedTaskException` handlers, plus a Java uncaught exception handler on Android, installed in front of the JVM crash handler, so uncaught C# crashes reach RUM before the JVM crash handler's copy (which RUM then drops as a duplicate)
 - ✅ With `NativeCrashReportEnabled` off, Android Java crashes that never passed through managed code are skipped (`DdRumErrorTracking.IsSkippedPlatformCrash`)
 - ✅ Manual error reporting via `DdRum.AddError(message, source, stacktrace, context, timestampMs)`
 - ✅ Error context includes `_dd.error.source_type: "maui"`, `_dd.error.is_crash`, and `_dd.error.handler`

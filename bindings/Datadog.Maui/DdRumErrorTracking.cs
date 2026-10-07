@@ -6,6 +6,7 @@
 
 using System;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 using Datadog.Maui.Configuration;
 
@@ -19,15 +20,19 @@ namespace Datadog.Maui
     {
         private static bool _isTracking;
 
-        // The crash already reported through AndroidEnvironment.UnhandledExceptionRaiser, so
+        // The crash already reported by the Java uncaught exception handler, so
         // AppDomain.UnhandledException doesn't report it a second time when it arrives there.
         private static Exception? _reportedCrash;
+
+#if ANDROID
+        private static JavaUncaughtExceptionHandler? _javaHandler;
+#endif
 
         /// <summary>
         /// Start tracking C# errors.
         /// Hooks into AppDomain.CurrentDomain.UnhandledException and
-        /// TaskScheduler.UnobservedTaskException on both platforms, plus
-        /// AndroidEnvironment.UnhandledExceptionRaiser on Android.
+        /// TaskScheduler.UnobservedTaskException on both platforms, plus Java's default
+        /// uncaught exception handler on Android.
         /// Safe to call multiple times — subsequent calls are no-ops.
         /// </summary>
         internal static void StartTracking()
@@ -41,7 +46,10 @@ namespace Datadog.Maui
             AppDomain.CurrentDomain.UnhandledException += OnUnhandledException;
             TaskScheduler.UnobservedTaskException += OnUnobservedTaskException;
 #if ANDROID
-            global::Android.Runtime.AndroidEnvironment.UnhandledExceptionRaiser += OnAndroidUnhandledException;
+            // Tracking starts after Datadog.initialize, so this lands in front of the native
+            // SDK's JVM crash handler in Java's handler chain.
+            _javaHandler = new JavaUncaughtExceptionHandler(Java.Lang.Thread.DefaultUncaughtExceptionHandler);
+            Java.Lang.Thread.DefaultUncaughtExceptionHandler = _javaHandler;
 #endif
 
             _isTracking = true;
@@ -61,7 +69,13 @@ namespace Datadog.Maui
             AppDomain.CurrentDomain.UnhandledException -= OnUnhandledException;
             TaskScheduler.UnobservedTaskException -= OnUnobservedTaskException;
 #if ANDROID
-            global::Android.Runtime.AndroidEnvironment.UnhandledExceptionRaiser -= OnAndroidUnhandledException;
+            // Only unlink ourselves if nothing has been installed in front of us since.
+            if (_javaHandler != null && ReferenceEquals(Java.Lang.Thread.DefaultUncaughtExceptionHandler, _javaHandler))
+            {
+                Java.Lang.Thread.DefaultUncaughtExceptionHandler = _javaHandler.Next;
+            }
+
+            _javaHandler = null;
 #endif
 
             _reportedCrash = null;
@@ -76,7 +90,7 @@ namespace Datadog.Maui
             var exception = e.ExceptionObject as Exception;
             if (exception != null && ReferenceEquals(UnwrapJavaException(exception), _reportedCrash))
             {
-                InternalLog.Log("DdRumErrorTracking: Crash already reported via AndroidEnvironment.UnhandledExceptionRaiser.", SdkVerbosity.DEBUG);
+                InternalLog.Log("DdRumErrorTracking: Crash already reported by the Java uncaught exception handler.", SdkVerbosity.DEBUG);
                 return;
             }
 
@@ -91,17 +105,26 @@ namespace Datadog.Maui
         }
 
         /// <summary>
-        /// True for a crash that never went through managed code: a platform throwable with no
-        /// managed inner exception and no managed stack frames. That is a native crash, reported
-        /// only when NativeCrashReportEnabled is set. A Java exception that escaped a C# call was
-        /// thrown through managed frames, so it is still reported as the app's own crash.
+        /// A crash that never went through managed code is a native crash, reported only when
+        /// NativeCrashReportEnabled is set. See IsPureJavaCrash.
         /// </summary>
         internal static bool IsSkippedPlatformCrash(Exception? exception, bool isPlatformThrowable, bool nativeCrashReportEnabled)
         {
-            return !nativeCrashReportEnabled
-                && isPlatformThrowable
+            return !nativeCrashReportEnabled && IsPureJavaCrash(exception, isPlatformThrowable);
+        }
+
+        /// <summary>
+        /// True for a crash that never went through managed code: a platform throwable with no
+        /// managed exception inside it (including a JavaProxyThrowable's) and no managed stack
+        /// frames. A Java exception that escaped a C# call was thrown through managed frames, so
+        /// it counts as the app's own crash.
+        /// </summary>
+        private static bool IsPureJavaCrash(Exception? exception, bool isPlatformThrowable)
+        {
+            return isPlatformThrowable
                 && exception != null
                 && exception.InnerException == null
+                && ReferenceEquals(UnwrapJavaException(exception), exception)
                 && new StackTrace(exception).FrameCount == 0;
         }
 
@@ -120,22 +143,53 @@ namespace Datadog.Maui
         }
 
 #if ANDROID
-        // Raised when a C# exception is about to be thrown back into Java, before Java's uncaught
-        // exception handlers run. Handled is left false so the crash proceeds as normal.
-        private static void OnAndroidUnhandledException(object? sender, global::Android.Runtime.RaiseThrowableEventArgs e)
+        // Java's default uncaught exception handler, so it only sees throwables that nothing
+        // caught. Sits in front of the native SDK's JVM crash handler, which runs next.
+        private sealed class JavaUncaughtExceptionHandler : Java.Lang.Object, Java.Lang.Thread.IUncaughtExceptionHandler
         {
-            ReportRaisedCrash(e.Exception);
+            internal JavaUncaughtExceptionHandler(Java.Lang.Thread.IUncaughtExceptionHandler? next)
+            {
+                Next = next;
+            }
+
+            internal Java.Lang.Thread.IUncaughtExceptionHandler? Next { get; }
+
+            public void UncaughtException(Java.Lang.Thread t, Java.Lang.Throwable e)
+            {
+                try
+                {
+                    ReportUncaughtCrash(e, isPlatformThrowable: true);
+                }
+                catch (Exception ex)
+                {
+                    InternalLog.Log($"DdRumErrorTracking: Failed to report uncaught exception: {ex.Message}", SdkVerbosity.ERROR);
+                }
+                finally
+                {
+                    Next?.UncaughtException(t, e);
+                }
+            }
         }
 #endif
 
         /// <summary>
-        /// Reports a C# crash ahead of the native SDK's JVM crash handler. RUM keeps the first
-        /// fatal error of a view, so the native copy of this crash is then dropped as a duplicate.
+        /// Reports a throwable that reached Java's uncaught exception handler as a crash, ahead of
+        /// the native SDK's JVM crash handler. RUM keeps the first fatal error of a view, so the
+        /// native copy is then dropped as a duplicate. Crashes that never went through managed code
+        /// are left to the JVM handler, which records them when NativeCrashReportEnabled is set.
         /// </summary>
-        internal static void ReportRaisedCrash(Exception exception)
+        internal static bool ReportUncaughtCrash(Exception exception, bool isPlatformThrowable)
         {
+            if (IsPureJavaCrash(exception, isPlatformThrowable))
+            {
+                return false;
+            }
+
+            // Report the unwrapped C# exception, as AppDomain.UnhandledException would, rather than
+            // the JavaProxyThrowable shell around it.
             _reportedCrash = UnwrapJavaException(exception);
-            HandleException(exception, "Unhandled exception", true, "AndroidEnvironment.UnhandledExceptionRaiser");
+            HandleException(_reportedCrash, "Unhandled exception", true, "Java.Lang.Thread.UncaughtExceptionHandler");
+            return true;
         }
 
         /// <summary>
@@ -159,12 +213,23 @@ namespace Datadog.Maui
         /// sdk_frames built in ReportError always describe the same exception instance;
         /// unwrapping only one of the two would silently desync them.
         /// </summary>
+        [UnconditionalSuppressMessage("Trimming", "IL2075", Justification = "Mono.Android reads JavaProxyThrowable.InnerException itself, so trimming keeps the field.")]
         internal static Exception? UnwrapJavaException(Exception? exception)
         {
 #if ANDROID
-            if (exception is Java.Lang.Throwable javaThrowable && javaThrowable.InnerException != null)
+            if (exception is Java.Lang.Throwable javaThrowable)
             {
-                return javaThrowable.InnerException;
+                // Android.Runtime.JavaProxyThrowable (internal to Mono.Android) keeps the C# exception
+                // in its own InnerException field and leaves Exception.InnerException null.
+                if (javaThrowable.GetType().GetField("InnerException")?.GetValue(javaThrowable) is Exception proxied)
+                {
+                    return proxied;
+                }
+
+                if (javaThrowable.InnerException != null)
+                {
+                    return javaThrowable.InnerException;
+                }
             }
 #endif
             return exception;

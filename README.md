@@ -426,7 +426,7 @@ DdRum.StopSession();
 
 When RUM is enabled, C# error tracking is automatically started. Unhandled exceptions (`AppDomain.UnhandledException`) and unobserved task exceptions (`TaskScheduler.UnobservedTaskException`) are captured and reported as RUM errors.
 
-On Android, a C# exception that reaches a Java callback boundary is also captured through `AndroidEnvironment.UnhandledExceptionRaiser`, before Java's uncaught exception handlers run. This reports the crash with its C# frames ahead of the native JVM crash handler (enabled by `NativeCrashReportEnabled`), whose copy of the same crash RUM then drops as a duplicate. When `NativeCrashReportEnabled` is `false`, Java crashes that never passed through managed code are not reported.
+On Android, a C# exception that escapes into Java and is not caught there is also captured by a Java uncaught exception handler that the SDK installs in front of the native JVM crash handler (enabled by `NativeCrashReportEnabled`). This reports the crash with its C# frames first, and RUM then drops the native handler's copy of the same crash as a duplicate. Exceptions that Java code catches are not reported as crashes. When `NativeCrashReportEnabled` is `false`, Java crashes that never passed through managed code are not reported.
 
 #### Error Event Mapper
 

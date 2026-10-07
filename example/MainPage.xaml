@@ -190,6 +190,22 @@
                 HorizontalOptions="Fill" />
 
             <Button
+                x:Name="JavaCaughtExceptionBtn"
+                Text="Throw C# Exception Caught by Java"
+                SemanticProperties.Hint="Throws a C# exception inside a Java callback that Java catches, so the app keeps running"
+                Clicked="OnJavaCaughtExceptionClicked"
+                BackgroundColor="DarkOrange"
+                TextColor="White"
+                HorizontalOptions="Fill">
+                <Button.IsVisible>
+                    <OnPlatform x:TypeArguments="x:Boolean">
+                        <On Platform="Android" Value="True" />
+                        <On Platform="iOS" Value="False" />
+                    </OnPlatform>
+                </Button.IsVisible>
+            </Button>
+
+            <Button
                 x:Name="NativeCrashBtn"
                 Text="Trigger Native Crash"
                 SemanticProperties.Hint="Triggers a native crash for testing"
