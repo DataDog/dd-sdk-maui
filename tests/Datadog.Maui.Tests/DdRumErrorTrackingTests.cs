@@ -198,6 +198,80 @@ public class DdRumErrorTrackingTests : IDisposable
         Assert.Equal("second", rumBridge.LastMessage);
     }
 
+    [Fact]
+    public void ReportUncaughtCrash_ReportFails_AppDomainStillReportsTheCrash()
+    {
+        DdRumErrorTracking.StartTracking();
+        var exception = CatchException(() => throw new InvalidOperationException("boom"));
+        rumBridge.AddErrorThrows = new InvalidOperationException("bridge failure");
+
+        Assert.Throws<InvalidOperationException>(() => DdRumErrorTracking.ReportUncaughtCrash(exception, isPlatformThrowable: false));
+        rumBridge.AddErrorThrows = null;
+        InvokeOnUnhandledException(exception);
+
+        // The failed report must not mark the crash as reported, or the fallback would skip it.
+        Assert.Equal(1, rumBridge.AddErrorCallCount);
+        Assert.Equal("AppDomain.UnhandledException", rumBridge.LastContext?["_dd.error.handler"]);
+    }
+
+    // ── OnJavaUncaughtException (the Java handler's body) ──────────
+
+    [Fact]
+    public void OnJavaUncaughtException_ReportsBeforeHandingOnToTheNextHandler()
+    {
+        DdRumErrorTracking.StartTracking();
+        var exception = CatchException(() => throw new InvalidOperationException("boom"));
+        var reportsSeenByNext = -1;
+
+        DdRumErrorTracking.OnJavaUncaughtException(exception, isPlatformThrowable: false, () => reportsSeenByNext = rumBridge.AddErrorCallCount);
+
+        Assert.Equal(1, reportsSeenByNext);
+    }
+
+    [Fact]
+    public void OnJavaUncaughtException_ReportFails_StillHandsOnToTheNextHandler()
+    {
+        DdRumErrorTracking.StartTracking();
+        var exception = CatchException(() => throw new InvalidOperationException("boom"));
+        rumBridge.AddErrorThrows = new InvalidOperationException("bridge failure");
+        var nextCalled = false;
+
+        DdRumErrorTracking.OnJavaUncaughtException(exception, isPlatformThrowable: false, () => nextCalled = true);
+
+        Assert.True(nextCalled);
+    }
+
+    [Fact]
+    public void OnJavaUncaughtException_PureJavaCrash_IsOnlyHandedOn()
+    {
+        DdRumErrorTracking.StartTracking();
+        var nextCalled = false;
+
+        DdRumErrorTracking.OnJavaUncaughtException(new Exception("java crash"), isPlatformThrowable: true, () => nextCalled = true);
+
+        Assert.True(nextCalled);
+        Assert.Equal(0, rumBridge.AddErrorCallCount);
+    }
+
+    // ── ReadProxiedException (JavaProxyThrowable's hidden field) ───
+
+    [Fact]
+    public void ReadProxiedException_ProxyShapedException_ReturnsTheCSharpException()
+    {
+        var inner = new InvalidOperationException("boom");
+
+        Assert.Same(inner, DdRumErrorTracking.ReadProxiedException(new FakeProxyThrowable(inner)));
+    }
+
+    [Fact]
+    public void ReadProxiedException_OrdinaryExceptionWithInnerException_ReturnsNull()
+    {
+        // Exception.InnerException is a property, not a public field, so it must not match.
+        var exception = new Exception("outer", new InvalidOperationException("inner"));
+
+        Assert.Null(DdRumErrorTracking.ReadProxiedException(exception));
+    }
+
     // ── IsSkippedPlatformCrash ─────────────────────────────────────
     // The Java.Lang.Throwable type check only compiles for -android, so these tests pass
     // isPlatformThrowable directly and exercise the decision around it.
@@ -543,6 +617,19 @@ public class DdRumErrorTrackingTests : IDisposable
             Assert.IsType<int>(frame["method_token"]);
             Assert.IsType<int>(frame["il_offset"]);
         });
+    }
+
+    // Same shape as Android.Runtime.JavaProxyThrowable: the C# exception sits in its own public
+    // field, hiding Exception.InnerException, which stays null.
+    private sealed class FakeProxyThrowable : Exception
+    {
+        public readonly new Exception InnerException;
+
+        public FakeProxyThrowable(Exception innerException)
+            : base("proxy")
+        {
+            InnerException = innerException;
+        }
     }
 
     private static void InvokeOnUnhandledException(Exception exception)

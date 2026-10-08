@@ -156,21 +156,31 @@ namespace Datadog.Maui
 
             public void UncaughtException(Java.Lang.Thread t, Java.Lang.Throwable e)
             {
-                try
-                {
-                    ReportUncaughtCrash(e, isPlatformThrowable: true);
-                }
-                catch (Exception ex)
-                {
-                    InternalLog.Log($"DdRumErrorTracking: Failed to report uncaught exception: {ex.Message}", SdkVerbosity.ERROR);
-                }
-                finally
-                {
-                    Next?.UncaughtException(t, e);
-                }
+                OnJavaUncaughtException(e, isPlatformThrowable: true, () => Next?.UncaughtException(t, e));
             }
         }
 #endif
+
+        /// <summary>
+        /// Body of the Android Java uncaught exception handler: reports the crash, then always hands
+        /// it on to the next handler (the native SDK's JVM handler, then .NET's), even if reporting
+        /// failed, so they still see the crash and the process still terminates.
+        /// </summary>
+        internal static void OnJavaUncaughtException(Exception exception, bool isPlatformThrowable, Action next)
+        {
+            try
+            {
+                ReportUncaughtCrash(exception, isPlatformThrowable);
+            }
+            catch (Exception ex)
+            {
+                InternalLog.Log($"DdRumErrorTracking: Failed to report uncaught exception: {ex.Message}", SdkVerbosity.ERROR);
+            }
+            finally
+            {
+                next();
+            }
+        }
 
         /// <summary>
         /// Reports a throwable that reached Java's uncaught exception handler as a crash, ahead of
@@ -187,8 +197,12 @@ namespace Datadog.Maui
 
             // Report the unwrapped C# exception, as AppDomain.UnhandledException would, rather than
             // the JavaProxyThrowable shell around it.
-            _reportedCrash = UnwrapJavaException(exception);
-            HandleException(_reportedCrash, "Unhandled exception", true, "Java.Lang.Thread.UncaughtExceptionHandler");
+            var unwrapped = UnwrapJavaException(exception);
+            HandleException(unwrapped, "Unhandled exception", true, "Java.Lang.Thread.UncaughtExceptionHandler");
+
+            // Marked only once the report went through, so if it failed, AppDomain.UnhandledException
+            // still reports the crash instead of skipping it as a duplicate.
+            _reportedCrash = unwrapped;
             return true;
         }
 
@@ -213,15 +227,12 @@ namespace Datadog.Maui
         /// sdk_frames built in ReportError always describe the same exception instance;
         /// unwrapping only one of the two would silently desync them.
         /// </summary>
-        [UnconditionalSuppressMessage("Trimming", "IL2075", Justification = "Mono.Android reads JavaProxyThrowable.InnerException itself, so trimming keeps the field.")]
         internal static Exception? UnwrapJavaException(Exception? exception)
         {
 #if ANDROID
             if (exception is Java.Lang.Throwable javaThrowable)
             {
-                // Android.Runtime.JavaProxyThrowable (internal to Mono.Android) keeps the C# exception
-                // in its own InnerException field and leaves Exception.InnerException null.
-                if (javaThrowable.GetType().GetField("InnerException")?.GetValue(javaThrowable) is Exception proxied)
+                if (ReadProxiedException(javaThrowable) is Exception proxied)
                 {
                     return proxied;
                 }
@@ -233,6 +244,19 @@ namespace Datadog.Maui
             }
 #endif
             return exception;
+        }
+
+        /// <summary>
+        /// The C# exception carried by Android.Runtime.JavaProxyThrowable (internal to Mono.Android),
+        /// which keeps it in its own public InnerException field and leaves Exception.InnerException
+        /// null. Null for any other exception.
+        /// </summary>
+        [UnconditionalSuppressMessage("Trimming", "IL2075", Justification = "Mono.Android reads JavaProxyThrowable.InnerException itself, so trimming keeps the field.")]
+        internal static Exception? ReadProxiedException(Exception exception)
+        {
+            return exception.GetType()
+                .GetField("InnerException", BindingFlags.Public | BindingFlags.Instance)?
+                .GetValue(exception) as Exception;
         }
 
         /// <summary>

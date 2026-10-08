@@ -19,6 +19,9 @@ internal class MockRumBridge : DdRum.IRumBridge
     public Dictionary<string, object>? LastContext { get; private set; }
     public long LastTimestampMs { get; private set; }
 
+    // When set, AddError throws it instead of recording the error.
+    public Exception? AddErrorThrows { get; set; }
+
     // Views
     public List<(string Key, string Name, Dictionary<string, object> Context, long TimestampMs)> StartViewCalls { get; } = new();
     public List<(string Key, Dictionary<string, object> Context, long TimestampMs)> StopViewCalls { get; } = new();
@@ -53,6 +56,11 @@ internal class MockRumBridge : DdRum.IRumBridge
     public void AddError(string message, RumErrorSource source, string stacktrace,
                          Dictionary<string, object> context, long timestampMs)
     {
+        if (AddErrorThrows != null)
+        {
+            throw AddErrorThrows;
+        }
+
         AddErrorCallCount++;
         LastMessage = message;
         LastSource = source;
@@ -100,6 +108,7 @@ internal class MockRumBridge : DdRum.IRumBridge
 
     public void Reset()
     {
+        AddErrorThrows = null;
         AddErrorCallCount = 0;
         LastMessage = null;
         LastSource = null;
