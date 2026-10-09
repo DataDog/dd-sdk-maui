@@ -28,6 +28,7 @@ import io.mockk.just
 import io.mockk.mockk
 import io.mockk.mockkStatic
 import io.mockk.runs
+import io.mockk.slot
 import io.mockk.unmockkStatic
 import io.mockk.verify
 import org.junit.After
@@ -370,6 +371,51 @@ class DatadogWrapperTest {
             unmockkStatic(NdkCrashReports::class)
         }
     }
+
+    // -- JVM crash reports follow nativeCrashReportEnabled --
+
+    @Test
+    fun initialize_withNativeCrashReportEnabled_enablesJvmCrashReports() {
+        assertEquals(true, initializeAndReadCrashReportsEnabled(nativeCrashReportEnabled = true))
+    }
+
+    @Test
+    fun initialize_withNativeCrashReportDisabled_disablesJvmCrashReports() {
+        assertEquals(false, initializeAndReadCrashReportsEnabled(nativeCrashReportEnabled = false))
+    }
+
+    private fun initializeAndReadCrashReportsEnabled(nativeCrashReportEnabled: Boolean): Boolean {
+        mockkStatic(Datadog::class)
+        mockkStatic(NdkCrashReports::class)
+        val config = slot<Configuration>()
+        every { Datadog.initialize(any(), capture(config), any()) } returns null
+        every { Datadog.setVerbosity(any()) } returns Unit
+        every { NdkCrashReports.enable() } just runs
+
+        try {
+            DatadogWrapper.initialize(
+                context = mockContext,
+                clientToken = "pub-test-token",
+                environment = "test",
+                service = null,
+                site = "us1",
+                verbosity = "error",
+                trackingConsent = "pending",
+                nativeCrashReportEnabled = nativeCrashReportEnabled
+            )
+
+            return config.captured.readCrashReportsEnabled()
+        } finally {
+            unmockkStatic(Datadog::class)
+            unmockkStatic(NdkCrashReports::class)
+        }
+    }
+
+    // crashReportsEnabled is internal to dd-sdk-android-core, so it has to be read reflectively.
+    private fun Configuration.readCrashReportsEnabled(): Boolean =
+        Configuration::class.java.getDeclaredField("crashReportsEnabled")
+            .apply { isAccessible = true }
+            .getBoolean(this)
 
     // -- Set tracking consent --
 

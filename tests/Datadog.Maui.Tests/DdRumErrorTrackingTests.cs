@@ -130,9 +130,200 @@ public class DdRumErrorTrackingTests : IDisposable
         Assert.Equal(false, rumBridge.LastContext?["_dd.error.is_crash"]);
     }
 
+    // ── ReportUncaughtCrash (Java's default uncaught exception handler) ──
+    // The handler itself only compiles for -android; these cover what it calls.
+
+    [Fact]
+    public void ReportUncaughtCrash_CSharpException_ReportsFatalError()
+    {
+        DdRumErrorTracking.StartTracking();
+        var exception = CatchException(() => throw new InvalidOperationException("boom"));
+
+        var reported = DdRumErrorTracking.ReportUncaughtCrash(exception, isPlatformThrowable: false);
+
+        Assert.True(reported);
+        Assert.Equal(1, rumBridge.AddErrorCallCount);
+        Assert.Equal("boom", rumBridge.LastMessage);
+        Assert.Equal("Java.Lang.Thread.UncaughtExceptionHandler", rumBridge.LastContext?["_dd.error.handler"]);
+        Assert.Equal(true, rumBridge.LastContext?["_dd.error.is_crash"]);
+    }
+
+    [Fact]
+    public void ReportUncaughtCrash_PureJavaCrash_IsLeftToTheJvmHandler()
+    {
+        DdRumErrorTracking.StartTracking();
+        // Never thrown in managed code, like a crash on a Java thread: no managed frames.
+        var exception = new Exception("java crash");
+
+        var reported = DdRumErrorTracking.ReportUncaughtCrash(exception, isPlatformThrowable: true);
+
+        Assert.False(reported);
+        Assert.Equal(0, rumBridge.AddErrorCallCount);
+    }
+
+    [Fact]
+    public void ReportUncaughtCrash_JavaExceptionThrownThroughManagedCode_ReportsFatalError()
+    {
+        DdRumErrorTracking.StartTracking();
+        // A Java exception that escaped a C# call carries managed frames.
+        var exception = CatchException(() => throw new Exception("java exception via C#"));
+
+        var reported = DdRumErrorTracking.ReportUncaughtCrash(exception, isPlatformThrowable: true);
+
+        Assert.True(reported);
+        Assert.Equal(1, rumBridge.AddErrorCallCount);
+    }
+
+    [Fact]
+    public void OnUnhandledException_SameExceptionAlreadyReportedAsUncaught_IsNotReportedAgain()
+    {
+        DdRumErrorTracking.StartTracking();
+        var exception = CatchException(() => throw new InvalidOperationException("boom"));
+        DdRumErrorTracking.ReportUncaughtCrash(exception, isPlatformThrowable: false);
+
+        InvokeOnUnhandledException(exception);
+
+        Assert.Equal(1, rumBridge.AddErrorCallCount);
+    }
+
+    [Fact]
+    public void OnUnhandledException_DifferentExceptionAfterUncaughtCrash_IsReported()
+    {
+        DdRumErrorTracking.StartTracking();
+        DdRumErrorTracking.ReportUncaughtCrash(CatchException(() => throw new InvalidOperationException("first")), isPlatformThrowable: false);
+
+        InvokeOnUnhandledException(CatchException(() => throw new InvalidOperationException("second")));
+
+        Assert.Equal(2, rumBridge.AddErrorCallCount);
+        Assert.Equal("second", rumBridge.LastMessage);
+    }
+
+    [Fact]
+    public void ReportUncaughtCrash_ReportFails_AppDomainStillReportsTheCrash()
+    {
+        DdRumErrorTracking.StartTracking();
+        var exception = CatchException(() => throw new InvalidOperationException("boom"));
+        rumBridge.AddErrorThrows = new InvalidOperationException("bridge failure");
+
+        Assert.Throws<InvalidOperationException>(() => DdRumErrorTracking.ReportUncaughtCrash(exception, isPlatformThrowable: false));
+        rumBridge.AddErrorThrows = null;
+        InvokeOnUnhandledException(exception);
+
+        // The failed report must not mark the crash as reported, or the fallback would skip it.
+        Assert.Equal(1, rumBridge.AddErrorCallCount);
+        Assert.Equal("AppDomain.UnhandledException", rumBridge.LastContext?["_dd.error.handler"]);
+    }
+
+    // ── OnJavaUncaughtException (the Java handler's body) ──────────
+
+    [Fact]
+    public void OnJavaUncaughtException_ReportsBeforeHandingOnToTheNextHandler()
+    {
+        DdRumErrorTracking.StartTracking();
+        var exception = CatchException(() => throw new InvalidOperationException("boom"));
+        var reportsSeenByNext = -1;
+
+        DdRumErrorTracking.OnJavaUncaughtException(exception, isPlatformThrowable: false, () => reportsSeenByNext = rumBridge.AddErrorCallCount);
+
+        Assert.Equal(1, reportsSeenByNext);
+    }
+
+    [Fact]
+    public void OnJavaUncaughtException_ReportFails_StillHandsOnToTheNextHandler()
+    {
+        DdRumErrorTracking.StartTracking();
+        var exception = CatchException(() => throw new InvalidOperationException("boom"));
+        rumBridge.AddErrorThrows = new InvalidOperationException("bridge failure");
+        var nextCalled = false;
+
+        DdRumErrorTracking.OnJavaUncaughtException(exception, isPlatformThrowable: false, () => nextCalled = true);
+
+        Assert.True(nextCalled);
+    }
+
+    [Fact]
+    public void OnJavaUncaughtException_PureJavaCrash_IsOnlyHandedOn()
+    {
+        DdRumErrorTracking.StartTracking();
+        var nextCalled = false;
+
+        DdRumErrorTracking.OnJavaUncaughtException(new Exception("java crash"), isPlatformThrowable: true, () => nextCalled = true);
+
+        Assert.True(nextCalled);
+        Assert.Equal(0, rumBridge.AddErrorCallCount);
+    }
+
+    // ── ReadProxiedException (JavaProxyThrowable's hidden field) ───
+
+    [Fact]
+    public void ReadProxiedException_ProxyShapedException_ReturnsTheCSharpException()
+    {
+        var inner = new InvalidOperationException("boom");
+
+        Assert.Same(inner, DdRumErrorTracking.ReadProxiedException(new FakeProxyThrowable(inner)));
+    }
+
+    [Fact]
+    public void ReadProxiedException_OrdinaryExceptionWithInnerException_ReturnsNull()
+    {
+        // Exception.InnerException is a property, not a public field, so it must not match.
+        var exception = new Exception("outer", new InvalidOperationException("inner"));
+
+        Assert.Null(DdRumErrorTracking.ReadProxiedException(exception));
+    }
+
+    // ── IsSkippedPlatformCrash ─────────────────────────────────────
+    // The Java.Lang.Throwable type check only compiles for -android, so these tests pass
+    // isPlatformThrowable directly and exercise the decision around it.
+
+    [Fact]
+    public void IsSkippedPlatformCrash_PureJavaCrashWithNativeReportingOff_IsSkipped()
+    {
+        // Never thrown in managed code, like a crash on a Java thread: no managed frames.
+        var exception = new Exception("java crash");
+
+        Assert.True(DdRumErrorTracking.IsSkippedPlatformCrash(exception, isPlatformThrowable: true, nativeCrashReportEnabled: false));
+    }
+
+    [Fact]
+    public void IsSkippedPlatformCrash_PureJavaCrashWithNativeReportingOn_IsReported()
+    {
+        var exception = new Exception("java crash");
+
+        Assert.False(DdRumErrorTracking.IsSkippedPlatformCrash(exception, isPlatformThrowable: true, nativeCrashReportEnabled: true));
+    }
+
+    [Fact]
+    public void IsSkippedPlatformCrash_JavaExceptionThrownThroughManagedCode_IsReported()
+    {
+        // A Java exception that escaped a C# call is thrown through managed frames.
+        var exception = CatchException(() => throw new Exception("java exception via C#"));
+
+        Assert.False(DdRumErrorTracking.IsSkippedPlatformCrash(exception, isPlatformThrowable: true, nativeCrashReportEnabled: false));
+    }
+
+    [Fact]
+    public void IsSkippedPlatformCrash_ThrowableWrappingManagedException_IsReported()
+    {
+        // A JavaProxyThrowable shell around a C# exception.
+        var exception = new Exception("proxy", new InvalidOperationException("boom"));
+
+        Assert.False(DdRumErrorTracking.IsSkippedPlatformCrash(exception, isPlatformThrowable: true, nativeCrashReportEnabled: false));
+    }
+
+    [Fact]
+    public void IsSkippedPlatformCrash_ManagedException_IsReported()
+    {
+        var exception = new InvalidOperationException("boom");
+
+        Assert.False(DdRumErrorTracking.IsSkippedPlatformCrash(exception, isPlatformThrowable: false, nativeCrashReportEnabled: false));
+    }
+
     // ── UnwrapJavaException ────────────────────────────────────────
-    // TODO: The #if ANDROID branch (Java.Lang.Throwable → InnerException) only compiles for
-    // the -android target framework. Still needs verification on a real Android run/device.
+    // The #if ANDROID branch only compiles for the -android target framework, so it is covered by
+    // running the example app: a C# crash reaches Java's uncaught exception handler as a
+    // JavaProxyThrowable, whose C# exception sits in its own InnerException field, not
+    // Exception.InnerException.
 
     [Fact]
     public void UnwrapJavaException_PlainException_ReturnsSameInstance()
@@ -426,6 +617,26 @@ public class DdRumErrorTrackingTests : IDisposable
             Assert.IsType<int>(frame["method_token"]);
             Assert.IsType<int>(frame["il_offset"]);
         });
+    }
+
+    // Same shape as Android.Runtime.JavaProxyThrowable: the C# exception sits in its own public
+    // field, hiding Exception.InnerException, which stays null.
+    private sealed class FakeProxyThrowable : Exception
+    {
+        public readonly new Exception InnerException;
+
+        public FakeProxyThrowable(Exception innerException)
+            : base("proxy")
+        {
+            InnerException = innerException;
+        }
+    }
+
+    private static void InvokeOnUnhandledException(Exception exception)
+    {
+        var handler = typeof(DdRumErrorTracking).GetMethod("OnUnhandledException", BindingFlags.NonPublic | BindingFlags.Static);
+        Assert.NotNull(handler);
+        handler!.Invoke(null, [null, new UnhandledExceptionEventArgs(exception, isTerminating: true)]);
     }
 
     private static Exception CatchException(Action action)

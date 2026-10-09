@@ -207,6 +207,23 @@ public partial class MainPage : ContentPage
     private void OnManagedCrashClicked(object? sender, EventArgs e) =>
         throw new InvalidOperationException("C# crash example");
 
+    // Unlike the C# crash above, this exception never reaches a Java (or Objective-C) caller:
+    // it goes straight to AppDomain.UnhandledException.
+    private void OnManagedThreadCrashClicked(object? sender, EventArgs e) =>
+        new Thread(() => throw new InvalidOperationException("C# thread crash example")).Start();
+
+    // Not a crash: the C# exception crosses into Java inside the executor's FutureTask, which
+    // catches it and stores it in the Future. The app must keep running and report no crash.
+    private void OnJavaCaughtExceptionClicked(object? sender, EventArgs e)
+    {
+#if ANDROID
+
+        var executor = Java.Util.Concurrent.Executors.NewSingleThreadExecutor()!;
+        executor.Submit(new Java.Lang.Runnable(() => throw new InvalidOperationException("C# exception caught by Java")));
+        executor.Shutdown();
+#endif
+    }
+
     private void OnNativeCrashClicked(object? sender, EventArgs e) =>
         NativeCrashHelper.TriggerNativeCrash();
 

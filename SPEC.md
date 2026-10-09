@@ -1229,7 +1229,7 @@ The SDK automatically tracks MAUI page navigations and user interactions when en
 ### Phase 3: RUM Configuration & Enablement (In Progress)
 - ✅ `DdRumConfiguration` with all RUM parameters
 - ✅ `DdRum.Enable()` wired to native iOS and Android
-- ✅ Native crash reporting (iOS: CrashReporting, Android: NdkCrashReports)
+- ✅ Native crash reporting (iOS: CrashReporting, Android: JVM crash handler + NdkCrashReports)
 - ✅ First-party hosts configuration (`DdSdkConfiguration.FirstPartyHosts`)
 - ✅ Vitals, view tracking, interaction tracking, long tasks configuration
 - ✅ Unit tests at all three layers
@@ -1240,8 +1240,9 @@ The SDK automatically tracks MAUI page navigations and user interactions when en
 - 🔲 RUM tracking API (views, actions, resources) — RUM-15184
 
 ### Phase 4: Error & Crash Reporting (Complete)
-- ✅ Native crash reporting (iOS: CrashReporting, Android: NdkCrashReports) via `DdSdkConfiguration.NativeCrashReportEnabled`
-- ✅ C# error tracking: `AppDomain.UnhandledException` and `TaskScheduler.UnobservedTaskException` handlers
+- ✅ Native crash reporting (iOS: CrashReporting, Android: JVM crash handler + NdkCrashReports) via `DdSdkConfiguration.NativeCrashReportEnabled`
+- ✅ C# error tracking: `AppDomain.UnhandledException` and `TaskScheduler.UnobservedTaskException` handlers, plus a Java uncaught exception handler on Android, installed in front of the JVM crash handler, so uncaught C# crashes reach RUM before the JVM crash handler's copy (which RUM then drops as a duplicate)
+- ✅ With `NativeCrashReportEnabled` off, Android Java crashes that never passed through managed code are skipped (`DdRumErrorTracking.IsSkippedPlatformCrash`)
 - ✅ Manual error reporting via `DdRum.AddError(message, source, stacktrace, context, timestampMs)`
 - ✅ Error context includes `_dd.error.source_type: "maui"`, `_dd.error.is_crash`, and `_dd.error.handler`
 - ✅ `ErrorEventMapper` for modifying or dropping error events before they are sent

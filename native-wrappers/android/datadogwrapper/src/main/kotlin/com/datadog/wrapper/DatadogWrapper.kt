@@ -236,6 +236,9 @@ class DatadogWrapper {
                     }
                 }
 
+                // Native crash reporting covers Java crashes (the SDK's JVM handler) and C/C++
+                // crashes (NDK). C# crashes are reported by the MAUI layer, which reports them
+                // before this handler runs so RUM keeps the C# version and drops this one.
                 builder.setCrashReportsEnabled(nativeCrashReportEnabled)
 
                 Datadog.initialize(context, builder.build(), mapTrackingConsent(trackingConsent))

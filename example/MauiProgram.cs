@@ -48,6 +48,7 @@ public static class MauiProgram
                 {
                     new() { Match = "datadoghq.com", HeaderTypes = new List<TracingHeaderType> { TracingHeaderType.Datadog, TracingHeaderType.TraceContext } }
                 },
+                NativeCrashReportEnabled = true,
             })
             .UseDatadogLogs(new DdLogsConfiguration { })
             .UseDatadogTrace(new DdTraceConfiguration { })
