@@ -116,7 +116,7 @@ dd-sdk-maui/
 │   ├── Datadog.Android.Internal/    # dd-sdk-android-internal bindings
 │   ├── Datadog.Android.Core/        # dd-sdk-android-core bindings
 │   ├── Datadog.Android.Logs/        # dd-sdk-android-logs bindings
-│   ├── Datadog.Android.Rum/         # dd-sdk-android-rum AAR binding
+│   ├── Datadog.Android.Rum/         # dd-sdk-android-rum AAR binding (+ ndk, rum-internal, rum-prelaunch)
 │   ├── Datadog.Android.Binding/     # Kotlin wrapper bindings
 │   │   ├── Jars/
 │   │   │   └── datadogwrapper-release.aar
@@ -378,6 +378,19 @@ Android runtime dependencies (OkHttp, Gson, Kotlin, AndroidX) are declared one o
 **Never declare the same dependency both ways.** The Maven jar's classes get packaged into our AAR, outside
 NuGet's version resolution, so a consuming app pulling a different version of that library hits a dex-merge
 duplicate-class failure. This was issue #72 (okio via AndroidX DataStore/Firebase).
+
+**Datadog modules** (`com.datadoghq:*`) are always `AndroidMavenLibrary` entries with
+`VerifyDependencies="false"`, so a Datadog dependency a module's POM adds is **not** pulled in automatically.
+The RUM binding packages these runtime-only (`Bind="false"`) alongside `dd-sdk-android-rum`:
+- `dd-sdk-android-ndk` — NDK crash reporting
+- `dd-sdk-android-rum-internal` — startup/TTID code split out of `-rum` in 3.15.0; without it `Rum.enable`
+  crashes with `NoClassDefFoundError: PreLaunchRumAppStartupDetector`
+- `dd-sdk-android-rum-prelaunch` — a `ContentProvider` that captures TTID before the SDK is initialized, so
+  apps that start Datadog late still report it (same as dd-sdk-reactnative). Also declared in the wrapper's
+  `build.gradle.kts`
+
+When bumping the Android SDK, diff the `com.datadoghq` dependencies in each module's POM against the csproj
+entries — neither `resolve-android-deps.sh` nor `verify-artifacts.sh` catches a new Datadog module.
 
 The mapping between Maven artifacts and NuGet packages is tracked in `android-transitive-deps.json`. Key fields:
 - `maven_version`: what Gradle resolves for this artifact

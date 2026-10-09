@@ -39,6 +39,7 @@ dependencies {
     implementation("com.datadoghq:dd-sdk-android-logs:3.15.0")
     implementation("com.datadoghq:dd-sdk-android-trace:3.15.0")
     implementation("com.datadoghq:dd-sdk-android-rum:3.15.0")
+    implementation("com.datadoghq:dd-sdk-android-rum-prelaunch:3.15.0")
     implementation("com.datadoghq:dd-sdk-android-ndk:3.15.0")
     implementation("com.datadoghq:dd-sdk-android-session-replay:3.15.0")
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
