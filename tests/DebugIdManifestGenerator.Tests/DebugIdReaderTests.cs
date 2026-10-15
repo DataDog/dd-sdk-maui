@@ -5,7 +5,10 @@
  */
 
 using System.Buffers.Binary;
+using System.Reflection;
 using System.Reflection.Metadata;
+using System.Reflection.Metadata.Ecma335;
+using System.Reflection.PortableExecutable;
 using Datadog.Maui.Tools.DebugIdManifestGenerator;
 using Xunit;
 
@@ -164,6 +167,42 @@ public class DebugIdReaderTests
         {
             tempDir.Delete(recursive: true);
         }
+    }
+
+    [Fact]
+    public void BuildManifest_LeavesOutAnAssemblyWithoutACodeViewEntry()
+    {
+        // Linkers that rewrite an assembly without symbols (e.g. Android's) drop its CodeView
+        // entry. Such an assembly must get no manifest line at all, so it can't be paired with
+        // a PDB uploaded for an earlier version of it (RUM-18989).
+        var tempDir = Directory.CreateTempSubdirectory();
+        try
+        {
+            var noCodeViewDll = Path.Combine(tempDir.FullName, "NoCodeView.dll");
+            WriteAssemblyWithoutDebugDirectory(noCodeViewDll);
+
+            var manifest = DebugIdReader.BuildManifest([noCodeViewDll, SelfDll]);
+
+            Assert.False(manifest.ContainsKey("NoCodeView"));
+            Assert.True(manifest.ContainsKey(Path.GetFileNameWithoutExtension(SelfDll)));
+        }
+        finally
+        {
+            tempDir.Delete(recursive: true);
+        }
+    }
+
+    private static void WriteAssemblyWithoutDebugDirectory(string path)
+    {
+        var metadata = new MetadataBuilder();
+        metadata.AddModule(0, metadata.GetOrAddString(Path.GetFileName(path)), metadata.GetOrAddGuid(Guid.NewGuid()), default, default);
+        metadata.AddAssembly(metadata.GetOrAddString(Path.GetFileNameWithoutExtension(path)), new Version(1, 0, 0, 0), default, default, 0, AssemblyHashAlgorithm.None);
+        metadata.AddTypeDefinition(default, default, metadata.GetOrAddString("<Module>"), default, MetadataTokens.FieldDefinitionHandle(1), MetadataTokens.MethodDefinitionHandle(1));
+
+        var peBuilder = new ManagedPEBuilder(PEHeaderBuilder.CreateLibraryHeader(), new MetadataRootBuilder(metadata), new BlobBuilder());
+        var blob = new BlobBuilder();
+        peBuilder.Serialize(blob);
+        File.WriteAllBytes(path, blob.ToArray());
     }
 
     [Fact]
