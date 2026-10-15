@@ -46,12 +46,14 @@ static int StagePdbs(string[] stageArgs)
 
     var manifestPath = stageArgs[0];
     var outputDirectory = stageArgs[1];
-    var candidatePaths = ReadPathArguments([stageArgs[2]]);
-    var onlyAssembliesNamedLike = stageArgs.Length == 4 ? ReadPathArguments([stageArgs[3]]) : null;
 
     List<PdbStager.Result> results;
     try
     {
+        // Response files are read inside the try too, so a missing or unreadable one is
+        // reported like any other staging failure (one line, exit code 1).
+        var candidatePaths = ReadPathArguments([stageArgs[2]]);
+        var onlyAssembliesNamedLike = stageArgs.Length == 4 ? ReadPathArguments([stageArgs[3]]) : null;
         results = PdbStager.Stage(PdbStager.ReadManifest(manifestPath), candidatePaths, outputDirectory, onlyAssembliesNamedLike);
     }
     catch (Exception ex)

@@ -154,6 +154,31 @@ public sealed class ProgramTests : IDisposable
         Assert.DoesNotContain("   at ", stdErr);
     }
 
+    [Fact]
+    public void StageMode_ReportsAMissingResponseFileInOneLineAndExitsOne()
+    {
+        var manifest = WriteManifest(new() { [SelfName] = DebugIdReader.TryReadDebugId(SelfDll)! });
+
+        var (exitCode, _, stdErr) = RunTool("--stage-pdbs", manifest, Path.Combine(_workDir.FullName, "staged"), "@" + Path.Combine(_workDir.FullName, "missing.rsp"));
+
+        Assert.Equal(1, exitCode);
+        Assert.Contains("staging Portable PDBs failed", stdErr);
+        Assert.DoesNotContain("   at ", stdErr);
+    }
+
+    [Fact]
+    public void StageMode_ReportsAMissingRestrictionResponseFileInOneLineAndExitsOne()
+    {
+        var manifest = WriteManifest(new() { [SelfName] = DebugIdReader.TryReadDebugId(SelfDll)! });
+        var candidates = WriteFile("candidates.rsp", PlaceCandidate(SelfName + ".pdb", SelfPdb));
+
+        var (exitCode, _, stdErr) = RunTool("--stage-pdbs", manifest, Path.Combine(_workDir.FullName, "staged"), "@" + candidates, "@" + Path.Combine(_workDir.FullName, "missing.rsp"));
+
+        Assert.Equal(1, exitCode);
+        Assert.Contains("staging Portable PDBs failed", stdErr);
+        Assert.DoesNotContain("   at ", stdErr);
+    }
+
     // Arguments are "|"-separated (attribute arguments can't be string arrays here).
     [Theory]
     [InlineData("--stage-pdbs")]

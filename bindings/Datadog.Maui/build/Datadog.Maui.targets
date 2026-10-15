@@ -215,6 +215,7 @@
        ═══════════════════════════════════════════════════════════════════════ -->
   <Target Name="DatadogUploadPortablePdb"
           AfterTargets="Publish"
+          DependsOnTargets="_DdComputeLinkedDirectories"
           Condition="'$(DatadogUploadSymbols)' == 'true' AND ($(TargetFramework.Contains('-ios')) Or $(TargetFramework.Contains('-android')))">
 
     <!-- Uploads, for the app's assemblies, the Portable PDB that matches the assembly the
@@ -256,10 +257,9 @@
            PDBs still count as candidate files for assemblies that are on the list. -->
       <_DdPpdbInOutput Include="$(OutputPath)**\*.pdb" Exclude="$(OutputPath)**\*.app\**" />
       <_DdPpdbBundled Include="$(OutputPath)**\*.app\**\*.pdb" />
-      <!-- iOS, and Android with a single RuntimeIdentifier: $(IntermediateOutputPath) already
-           includes the RID, so linked/ sits directly under it. Android with several ABIs:
-           one <rid>/linked/ per ABI under a RID-less $(IntermediateOutputPath). -->
-      <_DdPpdbCandidate Include="$(IntermediateOutputPath)linked\*.pdb;$(IntermediateOutputPath)*\linked\*.pdb" />
+      <!-- Linker output of the RIDs this build targets (see _DdComputeLinkedDirectories in
+           Datadog.Maui.DebugId.targets). -->
+      <_DdPpdbCandidate Include="$(_DdLinkedPdbGlobs)" />
       <_DdPpdbCandidate Include="$(IntermediateOutputPath)*.pdb" />
       <_DdPpdbCandidate Include="@(_DdPpdbInOutput);@(_DdPpdbBundled)" />
     </ItemGroup>

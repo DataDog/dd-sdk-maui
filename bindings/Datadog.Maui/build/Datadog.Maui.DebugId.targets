@@ -105,6 +105,36 @@
     <Exec Command="dotnet exec &quot;$(_DdDebugIdManifestGeneratorDll)&quot; &quot;$(_DdDebugIdManifestPath)&quot; &quot;@$(_DdDebugIdManifestAssembliesFile)&quot;" />
   </Target>
 
+  <!-- Glob patterns for the linker (ILLink) output folders of the RIDs this build targets,
+       used by _DdRewriteDebugIdManifestPostLink (assemblies) and Datadog.Maui.targets'
+       DatadogUploadPortablePdb (PDBs). With a single RuntimeIdentifier (iOS, or Android built
+       with -r) $(IntermediateOutputPath) already includes the RID, and the linking build uses
+       that same path (it gets the same RuntimeIdentifier), so the folder is
+       $(IntermediateOutputPath)linked/. With several Android ABIs (the default,
+       $(RuntimeIdentifiers)), each RID links in its own $(IntermediateOutputPath)<rid>/linked/.
+       Listing the targeted RIDs explicitly, instead of a <rid> wildcard, keeps folders left
+       over from an earlier build with a different ABI set out of the build. (The linker
+       doesn't delete files it no longer writes, so a targeted folder can still hold an
+       assembly from an earlier build that this build doesn't ship; its manifest line is
+       harmless because no frame comes from it.)
+
+       Only the Android manifest pass also requires PublishTrimmed=true. The upload must not:
+       iOS sets PublishTrimmed only in RID-specific builds, so it can be empty where the
+       upload runs, and a stale linked PDB can't be staged anyway — staging requires its GUID
+       to match the current manifest. -->
+  <Target Name="_DdComputeLinkedDirectories">
+    <ItemGroup>
+      <_DdTargetedRid Include="$(RuntimeIdentifiers)" Condition="'$(RuntimeIdentifier)' == ''" />
+    </ItemGroup>
+
+    <PropertyGroup>
+      <_DdLinkedAssemblyGlobs Condition="'$(RuntimeIdentifier)' != ''">$(IntermediateOutputPath)linked\*.dll</_DdLinkedAssemblyGlobs>
+      <_DdLinkedAssemblyGlobs Condition="'$(RuntimeIdentifier)' == ''">@(_DdTargetedRid->'$(IntermediateOutputPath)%(Identity)\linked\*.dll')</_DdLinkedAssemblyGlobs>
+      <_DdLinkedPdbGlobs Condition="'$(RuntimeIdentifier)' != ''">$(IntermediateOutputPath)linked\*.pdb</_DdLinkedPdbGlobs>
+      <_DdLinkedPdbGlobs Condition="'$(RuntimeIdentifier)' == ''">@(_DdTargetedRid->'$(IntermediateOutputPath)%(Identity)\linked\*.pdb')</_DdLinkedPdbGlobs>
+    </PropertyGroup>
+  </Target>
+
   <!-- Android: regenerate the manifest from the assemblies the APK actually ships, once the
        linker (ILLink) has run. In Release builds every shipped assembly — the app's own and
        every reference — goes through ILLink, which writes them all to
@@ -126,17 +156,13 @@
        The two folders hold the same assemblies; the only one _RemoveRegisterAttribute changes
        is Mono.Android, which has no CodeView entry either way.
 
-       Where linked/ sits depends on the RID setup: with several ABIs (the default) each one
-       links in its own $(IntermediateOutputPath)<rid>/linked/, matched with a wildcard since
-       the RIDs depend on which ABIs are targeted; with a single RuntimeIdentifier the inner
-       and outer intermediate paths are the same (Microsoft.Android.Sdk.AssemblyResolution
-       .targets), so it's $(IntermediateOutputPath)linked/. Both patterns are globbed. The APK
-       carries one manifest for all ABIs and the generator keeps the last entry on a duplicate
-       name; builds for multiple ABIs were confirmed to produce identical linked output.
-       Known limitation: a <rid>/linked/ folder left over from an earlier build with a
-       different RID set is globbed too, and could contribute a stale id (the upload then
-       fails safe — no PDB matches it — but that assembly goes unsymbolicated until a clean
-       build).
+       Only the linked/ folders of the RIDs THIS build targets are read (see
+       _DdComputeLinkedDirectories), and only when this build trims: a linked/ folder left
+       over from an earlier build — with a different ABI set, or before trimming was turned
+       off — holds assemblies this APK doesn't ship, and their ids could otherwise end up in
+       the manifest and resolve frames against a PDB uploaded back then. The APK carries one
+       manifest for all ABIs and the generator keeps the last entry on a duplicate name;
+       builds for multiple ABIs were confirmed to produce identical linked output.
 
        BeforeTargets="_GenerateAndroidAssetsDir", NOT BeforeTargets="UpdateAndroidAssets" —
        confirmed empirically via -v:diag that the actual file-copy from
@@ -146,11 +172,12 @@
        target's own BeforeTargets insertions do, so hooking UpdateAndroidAssets itself is one
        step too late; the copy has already run by then.
 
-       On Debug builds (no linking) the linked/ glob is empty and this falls back to the same
+       On Debug builds (no trimming) no linked/ folder is read and this falls back to the same
        inputs _DdGenerateDebugIdManifest already used, so this target is a harmless re-run
        there, not a special case to guard against. -->
   <Target Name="_DdRewriteDebugIdManifestPostLink"
           BeforeTargets="_GenerateAndroidAssetsDir"
+          DependsOnTargets="_DdComputeLinkedDirectories"
           Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">
 
     <PropertyGroup>
@@ -158,7 +185,7 @@
     </PropertyGroup>
 
     <ItemGroup>
-      <_DdLinkedAssemblies Include="$(IntermediateOutputPath)linked\*.dll;$(IntermediateOutputPath)*\linked\*.dll" />
+      <_DdLinkedAssemblies Include="$(_DdLinkedAssemblyGlobs)" Condition="'$(PublishTrimmed)' == 'true'" />
     </ItemGroup>
 
     <!-- Start from an empty list instead of adding to the one _DdGenerateDebugIdManifest
