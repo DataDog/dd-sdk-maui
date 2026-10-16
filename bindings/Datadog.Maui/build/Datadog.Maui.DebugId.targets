@@ -31,21 +31,21 @@
        bundle-resource check), well before Compile — with no file at all there, the build
        fails outright ("Bundle Resource ... not found on disk"). Android has no
        equivalent eager check, but running this early there too is harmless.
-    2. _DdGenerateDebugIdManifest writes the first complete manifest, using the app's own
-       assembly as it exists right after CoreCompile. This is CORRECT for Debug builds
-       (no IL trimming happens, so this is the only copy of the assembly that will ever
-       exist) but was found to be WRONG for Release builds of both platforms: `dotnet
-       build -c Release` runs IL trimming (Android's R8/ILLink, iOS's mono linker) as
-       part of build, not just publish, and trimming regenerates the app's own DLL/PDB
-       with a brand-new CodeView GUID+Stamp — so by the time the real packaging step
-       reads this manifest, the app's own assembly has already been silently replaced by
-       a differently-identified file, and the shipped manifest would report the WRONG,
-       stale id for the app's own assembly in every Release build.
+    2. _DdGenerateDebugIdManifest writes the first complete manifest, from the app's own
+       assembly as it exists right after CoreCompile plus every @(ReferencePath). This is
+       CORRECT when nothing rewrites assemblies afterwards (Android Debug, iOS simulator
+       Debug), but WRONG whenever the linker runs as part of the build (`dotnet build`, not
+       just publish) and rewrites assemblies: iOS device builds (the managed static
+       registrar, run inside the linker, rewrites the app's own assembly and others with a
+       new CodeView GUID), iOS IL stripping (re-stamps every shipped assembly), and Android
+       Release trimming (rewrites trimmed library assemblies and drops their CodeView entry).
+       The first-pass ids would then describe assemblies the app doesn't actually ship.
     3. _DdRewriteDebugIdManifestPostLink (Android) / _DdRewriteDebugIdManifestPostLink_iOS
-       (iOS) regenerate the manifest a second time from the POST-trim assembly, once
-       trimming has actually finished, and are no-ops (Condition fails, target doesn't
-       run) when trimming didn't happen (Debug) — see each target's own comment for why
-       the two platforms need different final hooks.
+       (iOS) regenerate the manifest a second time, from scratch, from the assemblies the
+       app actually ships once linking/stripping has finished — so an assembly that lost its
+       CodeView entry gets no manifest line at all rather than keeping its stale first-pass
+       id (RUM-18989). See each target's own comment for why the two platforms need
+       different final hooks.
 -->
 <Project>
 
@@ -105,56 +105,100 @@
     <Exec Command="dotnet exec &quot;$(_DdDebugIdManifestGeneratorDll)&quot; &quot;$(_DdDebugIdManifestPath)&quot; &quot;@$(_DdDebugIdManifestAssembliesFile)&quot;" />
   </Target>
 
-  <!-- Android: regenerate the manifest from the app's own POST-trim/shrink assembly.
-       Confirmed empirically (obj/.../<rid>/linked/shrunk/$(TargetFileName)) is the file
-       that carries the debug id Android Release builds actually ship — R8/ILLink
-       replaces the plain post-CoreCompile DLL with this one, with a new CodeView
-       GUID+Stamp. The <rid> segment (e.g. android-arm64) is matched with a wildcard
-       rather than hardcoded, since it depends on which ABIs are targeted; builds for
-       multiple ABIs were confirmed to produce byte-identical linked/shrunk output for
-       this assembly (same input IL, deterministic build), so picking any one match is
-       safe. BeforeTargets="_GenerateAndroidAssetsDir", NOT
-       BeforeTargets="UpdateAndroidAssets" — confirmed empirically via -v:diag that the
-       actual file-copy from $(IntermediateOutputPath)dd_debug_ids.json into the
-       obj/.../assets/ staging dir (which the final .apk is later built from) happens
-       inside _GenerateAndroidAssetsDir, which is a DependsOnTargets dependency of
-       UpdateAndroidAssets — dependencies run before a target's own BeforeTargets
-       insertions do, so hooking UpdateAndroidAssets itself is one step too late; the
-       copy has already run by then. On Debug builds (no linking) the wildcard match is
-       empty and this falls back to the same plain path _DdGenerateDebugIdManifest
-       already used, so this target is a harmless no-op re-run there, not a special
-       case to guard against. -->
+  <!-- Glob patterns for the linker (ILLink) output folders of the RIDs this build targets,
+       used by _DdRewriteDebugIdManifestPostLink (assemblies) and Datadog.Maui.targets'
+       DatadogUploadPortablePdb (PDBs). With a single RuntimeIdentifier (iOS, or Android built
+       with -r) $(IntermediateOutputPath) already includes the RID, and the linking build uses
+       that same path (it gets the same RuntimeIdentifier), so the folder is
+       $(IntermediateOutputPath)linked/. With several Android ABIs (the default,
+       $(RuntimeIdentifiers)), each RID links in its own $(IntermediateOutputPath)<rid>/linked/.
+       Listing the targeted RIDs explicitly, instead of a <rid> wildcard, keeps folders left
+       over from an earlier build with a different ABI set out of the build. (The linker
+       doesn't delete files it no longer writes, so a targeted folder can still hold an
+       assembly from an earlier build that this build doesn't ship; its manifest line is
+       harmless because no frame comes from it.)
+
+       Only the Android manifest pass also requires PublishTrimmed=true. The upload must not:
+       iOS sets PublishTrimmed only in RID-specific builds, so it can be empty where the
+       upload runs, and a stale linked PDB can't be staged anyway — staging requires its GUID
+       to match the current manifest. -->
+  <Target Name="_DdComputeLinkedDirectories">
+    <ItemGroup>
+      <_DdTargetedRid Include="$(RuntimeIdentifiers)" Condition="'$(RuntimeIdentifier)' == ''" />
+    </ItemGroup>
+
+    <PropertyGroup>
+      <_DdLinkedAssemblyGlobs Condition="'$(RuntimeIdentifier)' != ''">$(IntermediateOutputPath)linked\*.dll</_DdLinkedAssemblyGlobs>
+      <_DdLinkedAssemblyGlobs Condition="'$(RuntimeIdentifier)' == ''">@(_DdTargetedRid->'$(IntermediateOutputPath)%(Identity)\linked\*.dll')</_DdLinkedAssemblyGlobs>
+      <_DdLinkedPdbGlobs Condition="'$(RuntimeIdentifier)' != ''">$(IntermediateOutputPath)linked\*.pdb</_DdLinkedPdbGlobs>
+      <_DdLinkedPdbGlobs Condition="'$(RuntimeIdentifier)' == ''">@(_DdTargetedRid->'$(IntermediateOutputPath)%(Identity)\linked\*.pdb')</_DdLinkedPdbGlobs>
+    </PropertyGroup>
+  </Target>
+
+  <!-- Android: regenerate the manifest from the assemblies the APK actually ships, once the
+       linker (ILLink) has run. In Release builds every shipped assembly — the app's own and
+       every reference — goes through ILLink, which writes them all to
+       $(IntermediateLinkDir) = $(IntermediateOutputPath)<rid>/linked/ (the shared trimmer,
+       microsoft.net.illink.tasks' Microsoft.NET.ILLink.targets, computes ManagedAssemblyToLink
+       from @(ResolvedFileToPublish)). With Android's default partial trimming the app's own
+       assembly is copied there unchanged (same CodeView id as the compiler output), while
+       trimmed library assemblies are rewritten with NO CodeView entry at all: Android's
+       _PrepareLinking sets TrimmerRemoveSymbols=true unless AndroidIncludeDebugSymbols is
+       true, and Xamarin.Android.Common.targets resets AndroidIncludeDebugSymbols to False for
+       every optimized build that embeds assemblies in the APK (i.e. Release), whatever the
+       project sets.
+
+       Read linked/, not linked/shrunk/: shrunk/ is a later copy made by
+       _RemoveRegisterAttribute, which runs well after this target (and is skipped entirely
+       when AndroidIncludeDebugSymbols=true), so a shrunk/ glob matched nothing here and this
+       rewrite silently did nothing (RUM-18989). Confirmed from a binlog: _RunILLink →
+       this target → _GenerateAndroidAssetsDir/_CreateBaseApk → (later) _RemoveRegisterAttribute.
+       The two folders hold the same assemblies; the only one _RemoveRegisterAttribute changes
+       is Mono.Android, which has no CodeView entry either way.
+
+       Only the linked/ folders of the RIDs THIS build targets are read (see
+       _DdComputeLinkedDirectories), and only when this build trims: a linked/ folder left
+       over from an earlier build — with a different ABI set, or before trimming was turned
+       off — holds assemblies this APK doesn't ship, and their ids could otherwise end up in
+       the manifest and resolve frames against a PDB uploaded back then. The APK carries one
+       manifest for all ABIs and the generator keeps the last entry on a duplicate name;
+       builds for multiple ABIs were confirmed to produce identical linked output.
+
+       BeforeTargets="_GenerateAndroidAssetsDir", NOT BeforeTargets="UpdateAndroidAssets" —
+       confirmed empirically via -v:diag that the actual file-copy from
+       $(IntermediateOutputPath)dd_debug_ids.json into the obj/.../assets/ staging dir (which
+       the final .apk is later built from) happens inside _GenerateAndroidAssetsDir, which is
+       a DependsOnTargets dependency of UpdateAndroidAssets — dependencies run before a
+       target's own BeforeTargets insertions do, so hooking UpdateAndroidAssets itself is one
+       step too late; the copy has already run by then.
+
+       On Debug builds (no trimming) no linked/ folder is read and this falls back to the same
+       inputs _DdGenerateDebugIdManifest already used, so this target is a harmless re-run
+       there, not a special case to guard against. -->
   <Target Name="_DdRewriteDebugIdManifestPostLink"
           BeforeTargets="_GenerateAndroidAssetsDir"
+          DependsOnTargets="_DdComputeLinkedDirectories"
           Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">
 
     <PropertyGroup>
       <_DdDebugIdManifestPath>$(IntermediateOutputPath)dd_debug_ids.json</_DdDebugIdManifestPath>
     </PropertyGroup>
 
-    <!-- linked/shrunk holds every assembly that survived trimming/shrinking — referenced
-         library assemblies as well as the app's own — each re-emitted with a fresh CodeView
-         GUID+Stamp. Confirmed from the SDKs' own build logic, not just the app-own-assembly
-         case observed empirically above: the shared trimmer
-         (microsoft.net.illink.tasks\build\Microsoft.NET.ILLink.targets) computes
-         ManagedAssemblyToLink from @(ResolvedFileToPublish) — i.e. the app's assembly AND
-         every reference — and its ILLink task writes all of them into
-         $(IntermediateLinkDir) = $(IntermediateOutputPath)linked\. Android's own shrink pass
-         (Xamarin.Android.Common.targets / Microsoft.Android.Sdk.AssemblyResolution.targets)
-         likewise builds _ShrunkAssemblies from @(_ResolvedAssemblies) — again all resolved
-         assemblies, not the app's own alone. Glob the whole directory rather than just
-         $(TargetFileName), so referenced assemblies get their post-link id too instead of the
-         stale pre-link one from @(ReferencePath). The generator's "last one wins on a
-         duplicate simple name" behavior (DebugIdReader.BuildManifest) means listing these
-         AFTER @(ReferencePath) is sufficient to override the stale entries; any assembly with
-         no post-link copy here (nothing was trimmed, e.g. Debug builds) simply keeps its
-         pre-link @(ReferencePath) id. -->
     <ItemGroup>
-      <_DdLinkedAssemblies Include="$(IntermediateOutputPath)*\linked\shrunk\*.dll" />
+      <_DdLinkedAssemblies Include="$(_DdLinkedAssemblyGlobs)" Condition="'$(PublishTrimmed)' == 'true'" />
     </ItemGroup>
 
+    <!-- Start from an empty list instead of adding to the one _DdGenerateDebugIdManifest
+         built (items persist across targets within a build). When linking ran, the manifest
+         must describe ONLY the linked assemblies: an assembly the linker rewrote without a
+         CodeView entry is skipped by the generator, and must not fall back to its pre-link
+         @(ReferencePath) id — that id belongs to the unmodified assembly (shipped as-is by
+         Debug builds), so a PDB uploaded for it would resolve this build's rewritten
+         assembly to wrong lines (RUM-18989). Leaving it out means its frames carry no
+         assembly_id and stay unsymbolicated instead. -->
     <ItemGroup>
-      <_DdDebugIdManifestAssemblies Include="@(ReferencePath)" />
+      <_DdDebugIdManifestAssemblies Remove="@(_DdDebugIdManifestAssemblies)" />
+      <_DdDebugIdManifestAssemblies Include="@(ReferencePath)" Condition="'@(_DdLinkedAssemblies)' == ''" />
       <_DdDebugIdManifestAssemblies Include="$(IntermediateOutputPath)$(TargetFileName)" Condition="'@(_DdLinkedAssemblies)' == ''" />
       <_DdDebugIdManifestAssemblies Include="@(_DdLinkedAssemblies)" Condition="'@(_DdLinkedAssemblies)' != ''" />
     </ItemGroup>
@@ -184,11 +228,12 @@
        the iOS SDK's Xamarin.Shared.Sdk.targets), a further target _StripAssemblyIL runs
        AFTER _LoadLinkerOutput and re-emits EVERY published assembly (not just the app's
        own — anything in @(ResolvedFileToPublish) with a .dll extension) into
-       $(DeviceSpecificIntermediateOutputPath)stripped, each with a fresh CodeView
-       GUID+Stamp, and that stripped copy — not linked/ — is what _StripAssemblyIL itself
-       swaps into @(ResolvedFileToPublish) and what later gets copied into the .app. So
-       reading linked/ shipped a stale id for every reference assembly too, not only the
-       app's own. Reading @(ResolvedFileToPublish) instead of guessing a path directly
+       $(DeviceSpecificIntermediateOutputPath)stripped, each with a fresh CodeView Stamp
+       (the GUID is kept — only the stamp changes, to the build time — so the linker's PDB
+       still matches the stripped assembly by GUID), and that stripped copy — not linked/ —
+       is what _StripAssemblyIL itself swaps into @(ResolvedFileToPublish) and what later
+       gets copied into the .app. So reading linked/ shipped a stale id (wrong stamp) for
+       every stripped assembly, not only the app's own. Reading @(ResolvedFileToPublish) instead of guessing a path directly
        tracks whatever _StripAssemblyIL (if it ran) already substituted, so this is
        correct whether or not stripping happened, without needing our own condition on
        $(EnableAssemblyILStripping) — a target's Condition failing doesn't remove its
@@ -224,7 +269,16 @@
       <_DdAppBundleManifestPath>$(AppBundleDir)/dd_debug_ids.json</_DdAppBundleManifestPath>
     </PropertyGroup>
 
+    <!-- Start from an empty list instead of adding to the one _DdGenerateDebugIdManifest
+         built (items persist across targets within a build), so the manifest lists exactly
+         the assemblies the .app ships. Otherwise an assembly the linker rewrote without a
+         CodeView entry (it had no PDB to start from, e.g. Datadog.Maui from its NuGet
+         package) is skipped by the generator here, and its stale pre-link @(ReferencePath)
+         id survives from the first pass — an id that describes the unmodified assembly, not
+         the rewritten one this .app ships (RUM-18989). It also drops entries for referenced
+         assemblies that aren't shipped at all. -->
     <ItemGroup>
+      <_DdDebugIdManifestAssemblies Remove="@(_DdDebugIdManifestAssemblies)" />
       <_DdDebugIdManifestAssemblies Include="@(ResolvedFileToPublish)" Condition="'%(Extension)' == '.dll' And '%(ResolvedFileToPublish.Culture)' == ''" />
     </ItemGroup>
 

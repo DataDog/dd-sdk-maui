@@ -149,7 +149,7 @@ The targets file defines four MSBuild targets that run after `dotnet publish`:
 
 3. **`DatadogUploadMapping`** (Android) — Locates `mapping.txt` in the build output and uploads it via `datadog-ci flutter-symbols upload --android-mapping`.
 
-4. **`DatadogUploadPortablePdb`** (iOS + Android) — Uploads first-party Portable PDBs from the publish output directory via `datadog-ci ppdb-symbols upload`, correlated by the build-time debug ID manifest (`dd_debug_ids.json`) generated alongside the build.
+4. **`DatadogUploadPortablePdb`** (iOS + Android) — Uploads first-party Portable PDBs via `datadog-ci ppdb-symbols upload`, correlated by the build-time debug ID manifest (`dd_debug_ids.json`) generated alongside the build. For each first-party assembly (the ones whose PDB lands in the build output directory), it uploads the PDB that matches the assembly the app actually ships, staged in `obj/…/dd_ppdb_upload/`. On iOS device builds the linker rewrites the app's assembly and writes a new matching PDB under `obj/…/linked/`; the copy in the build output directory describes the pre-link assembly and would resolve frames to the wrong lines, so it is not uploaded there.
 
 5. **`DatadogSymbolReport`** — Prints a summary of what was uploaded (service, version, site, file paths).
 

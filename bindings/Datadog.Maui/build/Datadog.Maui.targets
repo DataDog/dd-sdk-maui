@@ -32,11 +32,13 @@
   What gets uploaded:
     iOS:     .dSYM bundle (covers native + AOT-compiled C# crashes)
     Android: ProGuard/R8 mapping.txt (covers obfuscated Java/Kotlin names)
-    Both:    Portable PDB (covers managed C# stack traces, first-party assembly only)
+    Both:    Portable PDB (covers managed C# stack traces, first-party assemblies only)
 
   Note: the Portable PDB upload correlates by the build-time debug-id manifest
   (RUM-18332, see Datadog.Maui.DebugId.targets) rather than re-deriving the id
-  at upload time, so it stays correct across IL trimming/AOT stripping.
+  at upload time, so it stays correct across IL trimming/AOT stripping. For each
+  assembly it uploads the PDB whose id matches the shipped assembly — on iOS device
+  builds that's the linker's PDB under obj/…/linked/, not the bin/ copy (RUM-18989).
 
   iOS Portable PDB bundle stripping:
     Symbolication of managed (C#) exceptions is always done offline, backend-side,
@@ -168,8 +170,8 @@
          DatadogUploadPortablePdb above, so the on-device copy is never read and
          only adds size — remove it from the bundle unless the customer opted to
          keep it (DatadogKeepPortablePdbs=true). This only removes the file from
-         the publish item group, not from disk — the copy DatadogUploadPortablePdb
-         reads from $(OutputPath) is untouched. -->
+         the publish item group, not from disk — the copies DatadogUploadPortablePdb
+         picks from (obj/…/linked/, obj/, $(OutputPath)) are untouched. -->
     <ItemGroup>
       <ResolvedFileToPublish Remove="@(ResolvedFileToPublish)" Condition="'%(Extension)' == '.pdb'" />
     </ItemGroup>
@@ -213,12 +215,26 @@
        ═══════════════════════════════════════════════════════════════════════ -->
   <Target Name="DatadogUploadPortablePdb"
           AfterTargets="Publish"
+          DependsOnTargets="_DdComputeLinkedDirectories"
           Condition="'$(DatadogUploadSymbols)' == 'true' AND ($(TargetFramework.Contains('-ios')) Or $(TargetFramework.Contains('-android')))">
 
-    <!-- Uploads the app's Portable PDB file(s) from $(OutputPath) (bin/…) after Publish,
-         so Datadog can symbolicate managed (C#) exceptions. See SYMBOLS.md's "Symbol file
-         locations" section for where these files land; datadog-ci's `ppdb-symbols upload`
-         usage example points at the same directory.
+    <!-- Uploads, for the app's assemblies, the Portable PDB that matches the assembly the
+         app actually ships, so Datadog can symbolicate managed (C#) exceptions.
+
+         Which assemblies: the ones whose PDB lands in $(OutputPath) (bin/…), outside the .app
+         bundle — the app's own, its project references, and any package PDBs copied there
+         (e.g. CopyDebugSymbolFilesFromPackages) — the same set the previous whole-bin/ upload
+         sent. Which file: not necessarily the bin/ copy.
+         On iOS device builds the managed static registrar (run inside the linker) rewrites
+         the app's assembly, which shifts its MethodDef tokens and gives it a new CodeView
+         GUID; the linker writes the matching PDB under obj/…/linked/, while bin/ keeps the
+         compiler's PDB for the pre-link assembly. datadog-ci pairs a PDB with a manifest id
+         by file name only, so uploading bin/ there made every frame resolve one method off
+         (RUM-18989). The DebugIdManifestGenerator tool's staging mode instead copies, per
+         manifest entry, the candidate whose PDB GUID matches the manifest's (GUID only — IL
+         stripping re-stamps shipped assemblies) into a staging directory, and only that
+         directory is uploaded. Candidates are listed most-likely-first: linker output, then
+         the compiler output in obj/, then bin/ (including anything bundled in the .app).
 
          $(_DdDebugIdManifestPath) is usually already set by Datadog.Maui.DebugId.targets
          (imported above). It's recomputed here as a fallback for split build/publish
@@ -227,20 +243,91 @@
          this keeps the target self-sufficient in that case. -->
     <PropertyGroup>
       <_DdDebugIdManifestPath Condition="'$(_DdDebugIdManifestPath)' == ''">$(IntermediateOutputPath)dd_debug_ids.json</_DdDebugIdManifestPath>
+      <!-- No trailing separator: it's passed quoted on the command line, where a trailing
+           backslash would escape the closing quote on Windows. -->
+      <_DdPpdbStagingDir>$(IntermediateOutputPath)dd_ppdb_upload</_DdPpdbStagingDir>
+      <_DdPpdbCandidatesFile>$(IntermediateOutputPath)dd_ppdb_candidates.rsp</_DdPpdbCandidatesFile>
+      <_DdPpdbOutputPdbsFile>$(IntermediateOutputPath)dd_ppdb_output_pdbs.rsp</_DdPpdbOutputPdbsFile>
     </PropertyGroup>
+
+    <ItemGroup>
+      <!-- The PDBs in the build output decide WHICH assemblies get uploaded, so leave out
+           anything bundled inside the .app: with DatadogKeepPortablePdbs=true, soft-debug
+           builds bundle framework PDBs there too (e.g. Microsoft.iOS.pdb, ~21 MB). Bundled
+           PDBs still count as candidate files for assemblies that are on the list. -->
+      <_DdPpdbInOutput Include="$(OutputPath)**\*.pdb" Exclude="$(OutputPath)**\*.app\**" />
+      <_DdPpdbBundled Include="$(OutputPath)**\*.app\**\*.pdb" />
+      <!-- Linker output of the RIDs this build targets (see _DdComputeLinkedDirectories in
+           Datadog.Maui.DebugId.targets). -->
+      <_DdPpdbCandidate Include="$(_DdLinkedPdbGlobs)" />
+      <_DdPpdbCandidate Include="$(IntermediateOutputPath)*.pdb" />
+      <_DdPpdbCandidate Include="@(_DdPpdbInOutput);@(_DdPpdbBundled)" />
+    </ItemGroup>
+
+    <!-- Empty the staging directory up front, so PDBs staged by an earlier build can't be
+         left behind when staging is skipped or fails this time (the tool also empties it,
+         but only once it gets that far). -->
+    <ItemGroup>
+      <_DdPpdbPreviouslyStaged Include="$(_DdPpdbStagingDir)\*.pdb" />
+    </ItemGroup>
+    <Delete Files="@(_DdPpdbPreviouslyStaged)" ContinueOnError="true" />
 
     <Message Importance="high"
              Text="Datadog: Skipping Portable PDB upload — no debug-id manifest found at $(_DdDebugIdManifestPath)."
              Condition="'$(_DdCanUpload)' == 'true' AND !Exists('$(_DdDebugIdManifestPath)')" />
 
     <Message Importance="high"
-             Text="Datadog: Uploading Portable PDB(s) from $(OutputPath)"
-             Condition="'$(_DdCanUpload)' == 'true' AND Exists('$(_DdDebugIdManifestPath)')" />
+             Text="Datadog: Skipping Portable PDB upload — no Portable PDB found in $(OutputPath)."
+             Condition="'$(_DdCanUpload)' == 'true' AND Exists('$(_DdDebugIdManifestPath)') AND '@(_DdPpdbInOutput)' == ''" />
+
+    <PropertyGroup>
+      <_DdPpdbSkipReason Condition="'$(_DdCanUpload)' == 'true' AND !Exists('$(_DdDebugIdManifestPath)')">no debug-id manifest</_DdPpdbSkipReason>
+      <_DdPpdbSkipReason Condition="'$(_DdCanUpload)' == 'true' AND Exists('$(_DdDebugIdManifestPath)') AND '@(_DdPpdbInOutput)' == ''">no Portable PDB in the build output</_DdPpdbSkipReason>
+    </PropertyGroup>
+
+    <PropertyGroup>
+      <_DdPpdbCanStage Condition="'$(_DdCanUpload)' == 'true' AND Exists('$(_DdDebugIdManifestPath)') AND '@(_DdPpdbInOutput)' != ''">true</_DdPpdbCanStage>
+    </PropertyGroup>
+
+    <WriteLinesToFile File="$(_DdPpdbCandidatesFile)" Lines="@(_DdPpdbCandidate->'%(FullPath)')" Overwrite="true" Condition="'$(_DdPpdbCanStage)' == 'true'" />
+    <WriteLinesToFile File="$(_DdPpdbOutputPdbsFile)" Lines="@(_DdPpdbInOutput->'%(FullPath)')" Overwrite="true" Condition="'$(_DdPpdbCanStage)' == 'true'" />
+
+    <Exec Command="dotnet exec &quot;$(_DdDebugIdManifestGeneratorDll)&quot; --stage-pdbs &quot;$(_DdDebugIdManifestPath)&quot; &quot;$(_DdPpdbStagingDir)&quot; &quot;@$(_DdPpdbCandidatesFile)&quot; &quot;@$(_DdPpdbOutputPdbsFile)&quot;"
+          Condition="'$(_DdPpdbCanStage)' == 'true'"
+          IgnoreExitCode="true"
+          ContinueOnError="true">
+      <Output TaskParameter="ExitCode" PropertyName="_DdPpdbStageExitCode" />
+    </Exec>
+
+    <!-- Staging exit codes (see the tool's Program.cs): 0 = all good; 2 = staged, but some
+         assembly had candidate PDBs and none matched what the app ships (reported as a
+         warning by DatadogSymbolReport); anything else = staging failed. -->
+    <PropertyGroup>
+      <_DdPpdbStageOk Condition="'$(_DdPpdbStageExitCode)' == '0' OR '$(_DdPpdbStageExitCode)' == '2'">true</_DdPpdbStageOk>
+      <_DdPpdbUnmatched Condition="'$(_DdPpdbStageExitCode)' == '2'">true</_DdPpdbUnmatched>
+      <_DdPpdbStageFailed Condition="'$(_DdPpdbStageExitCode)' != '' AND '$(_DdPpdbStageOk)' != 'true'">true</_DdPpdbStageFailed>
+    </PropertyGroup>
+
+    <ItemGroup Condition="'$(_DdPpdbStageOk)' == 'true'">
+      <_DdPpdbStaged Include="$(_DdPpdbStagingDir)\*.pdb" />
+    </ItemGroup>
+
+    <Message Importance="high"
+             Text="Datadog: Skipping Portable PDB upload — no Portable PDB matches the debug id of an assembly the app ships (see the lines above)."
+             Condition="'$(_DdPpdbStageOk)' == 'true' AND '@(_DdPpdbStaged)' == ''" />
+
+    <PropertyGroup>
+      <_DdPpdbSkipReason Condition="'$(_DdPpdbStageOk)' == 'true' AND '@(_DdPpdbStaged)' == ''">no matching Portable PDB</_DdPpdbSkipReason>
+    </PropertyGroup>
+
+    <Message Importance="high"
+             Text="Datadog: Uploading Portable PDB(s) staged in $(_DdPpdbStagingDir)"
+             Condition="'@(_DdPpdbStaged)' != ''" />
 
     <!-- ppdb-symbols upload has no service-name/version options (unlike flutter-symbols
          upload) — the debug-id manifest is the sole correlation key for these uploads. -->
-    <Exec Command="datadog-ci ppdb-symbols upload &quot;$(OutputPath)&quot; --debug-id-manifest &quot;$(_DdDebugIdManifestPath)&quot;"
-          Condition="'$(_DdCanUpload)' == 'true' AND Exists('$(_DdDebugIdManifestPath)')"
+    <Exec Command="datadog-ci ppdb-symbols upload &quot;$(_DdPpdbStagingDir)&quot; --debug-id-manifest &quot;$(_DdDebugIdManifestPath)&quot;"
+          Condition="'@(_DdPpdbStaged)' != ''"
           EnvironmentVariables="$(_DdUploadEnv)"
           IgnoreExitCode="true"
           ContinueOnError="true">
@@ -248,6 +335,7 @@
     </Exec>
 
     <PropertyGroup>
+      <_DdUploadFailed Condition="'$(_DdPpdbStageFailed)' == 'true'">true</_DdUploadFailed>
       <_DdUploadFailed Condition="'$(_DdPpdbUploadExitCode)' != '' AND '$(_DdPpdbUploadExitCode)' != '0'">true</_DdUploadFailed>
     </PropertyGroup>
   </Target>
@@ -282,8 +370,11 @@
       <_DdMappingStatus Condition="'$(_DdMappingUploadExitCode)' != '' AND '$(_DdMappingUploadExitCode)' != '0'">FAILED (exit $(_DdMappingUploadExitCode))</_DdMappingStatus>
 
       <_DdPpdbStatus Condition="'$(_DdPpdbUploadExitCode)' == ''">not run</_DdPpdbStatus>
+      <_DdPpdbStatus Condition="'$(_DdPpdbUploadExitCode)' == '' AND '$(_DdPpdbSkipReason)' != ''">skipped ($(_DdPpdbSkipReason))</_DdPpdbStatus>
       <_DdPpdbStatus Condition="'$(_DdPpdbUploadExitCode)' == '0'">uploaded</_DdPpdbStatus>
       <_DdPpdbStatus Condition="'$(_DdPpdbUploadExitCode)' != '' AND '$(_DdPpdbUploadExitCode)' != '0'">FAILED (exit $(_DdPpdbUploadExitCode))</_DdPpdbStatus>
+      <_DdPpdbStatus Condition="'$(_DdPpdbStageFailed)' == 'true'">FAILED (staging, exit $(_DdPpdbStageExitCode))</_DdPpdbStatus>
+      <_DdPpdbStatus Condition="'$(_DdPpdbUnmatched)' == 'true'">$(_DdPpdbStatus); some assemblies had no matching Portable PDB</_DdPpdbStatus>
     </PropertyGroup>
 
     <Message Importance="high" Text="" />
@@ -304,15 +395,21 @@
              Text="  Android mapping: $(_DdMappingStatus) — $(OutputPath)mapping.txt"
              Condition="$(TargetFramework.Contains('-android'))" />
     <Message Importance="high"
-             Text="  Portable PDB: $(_DdPpdbStatus) — $(OutputPath) (manifest: $(_DdDebugIdManifestPath))"
+             Text="  Portable PDB: $(_DdPpdbStatus) — $(_DdPpdbStagingDir) (manifest: $(_DdDebugIdManifestPath))"
              Condition="$(TargetFramework.Contains('-ios')) Or $(TargetFramework.Contains('-android'))" />
     <Message Importance="high" Text="" />
 
     <Warning Condition="'$(_DdUploadFailed)' == 'true' AND '$(DatadogFailOnSymbolUploadError)' != 'true'"
-             Text="Datadog: one or more symbol uploads FAILED (see the summary above). Crashes from this build will not symbolicate. Check DATADOG_API_KEY is valid for site $(_DdSiteDisplay). Pass -p:DatadogFailOnSymbolUploadError=true to turn this into a build error." />
+             Text="Datadog: one or more symbol uploads FAILED (see the summary above). Crashes from this build will not symbolicate. Check the Datadog lines above; for upload errors, check DATADOG_API_KEY is valid for site $(_DdSiteDisplay). Pass -p:DatadogFailOnSymbolUploadError=true to turn this into a build error." />
+
+    <Warning Condition="'$(_DdPpdbUnmatched)' == 'true' AND '$(DatadogFailOnSymbolUploadError)' != 'true'"
+             Text="Datadog: no Portable PDB matching the shipped assembly was found for one or more assemblies (see the 'not uploading a Portable PDB' lines above). C# frames from those assemblies will not symbolicate. Pass -p:DatadogFailOnSymbolUploadError=true to turn this into a build error." />
 
     <Error Condition="'$(_DdUploadFailed)' == 'true' AND '$(DatadogFailOnSymbolUploadError)' == 'true'"
-           Text="Datadog: one or more symbol uploads FAILED (see the summary above). Crashes from this build will not symbolicate. Check DATADOG_API_KEY is valid for site $(_DdSiteDisplay)." />
+           Text="Datadog: one or more symbol uploads FAILED (see the summary above). Crashes from this build will not symbolicate. Check the Datadog lines above; for upload errors, check DATADOG_API_KEY is valid for site $(_DdSiteDisplay)." />
+
+    <Error Condition="'$(_DdPpdbUnmatched)' == 'true' AND '$(DatadogFailOnSymbolUploadError)' == 'true'"
+           Text="Datadog: no Portable PDB matching the shipped assembly was found for one or more assemblies (see the 'not uploading a Portable PDB' lines above). C# frames from those assemblies will not symbolicate." />
   </Target>
 
 </Project>
