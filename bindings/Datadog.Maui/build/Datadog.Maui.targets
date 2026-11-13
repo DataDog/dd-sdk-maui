@@ -142,17 +142,46 @@
              Text="Datadog: Uploading iOS dSYM from $(_DdDsymPath)"
              Condition="'$(_DdCanUpload)' == 'true' AND Exists('$(_DdDsymPath)')" />
 
+    <!-- IgnoreStandardErrorWarningFormat: datadog-ci prints lines such as "⚠️ An error occurred
+         while invoking git: Error: …" (no git repository) or "WARN: Error: Could not flush
+         metrics …", which Exec would otherwise read as MSBuild errors and report as exit -1,
+         even for a successful upload.
+         The exit code alone doesn't tell the outcome either: like the other datadog-ci upload
+         commands, `dsyms upload` exits 0 when an upload failed or nothing was found (only
+         errors that abort the command exit non-zero). Its output is captured and its command
+         summary read instead, which prints exactly one of:
+           "Uploaded N dSYM(s) in …"                          every dSYM uploaded
+           "Some dSYMs have been skipped."                    some dSYMs were skipped
+           "Some dSYMS have not been uploaded correctly."     an upload failed after retries
+           "No dSYMs detected. …"                             no dSYM found
+         A summary that matches none of these is reported as unverified rather than failed. The
+         output is checked as one joined text, because file paths in it may contain quotes. -->
     <Exec Command="datadog-ci dsyms upload &quot;$(_DdDsymDir)&quot;"
           Condition="'$(_DdCanUpload)' == 'true' AND Exists('$(_DdDsymPath)')"
           EnvironmentVariables="$(_DdUploadEnv)"
+          ConsoleToMSBuild="true"
+          IgnoreStandardErrorWarningFormat="true"
           IgnoreExitCode="true"
           ContinueOnError="true">
       <Output TaskParameter="ExitCode" PropertyName="_DdDsymUploadExitCode" />
+      <Output TaskParameter="ConsoleOutput" ItemName="_DdDsymUploadOutput" />
     </Exec>
+
+    <PropertyGroup Condition="'$(_DdDsymUploadExitCode)' == '0'">
+      <_DdDsymUploadText>@(_DdDsymUploadOutput, ' | ')</_DdDsymUploadText>
+      <_DdDsymUploadedCount>$([System.Text.RegularExpressions.Regex]::Match($(_DdDsymUploadText), 'Uploaded (\d+) dSYMs? in').Groups[1].Value)</_DdDsymUploadedCount>
+
+      <_DdDsymUploadProblem Condition="$(_DdDsymUploadText.Contains('No dSYMs detected'))">datadog-ci found no dSYM in $(_DdDsymDir)</_DdDsymUploadProblem>
+      <_DdDsymUploadProblem Condition="$(_DdDsymUploadText.Contains('Some dSYMs have been skipped'))">datadog-ci skipped some dSYMs</_DdDsymUploadProblem>
+      <_DdDsymUploadProblem Condition="$(_DdDsymUploadText.Contains('Some dSYMS have not been uploaded correctly'))">some dSYM uploads failed</_DdDsymUploadProblem>
+
+      <_DdDsymUploadUnverified Condition="'$(_DdDsymUploadProblem)' == '' AND '$(_DdDsymUploadedCount)' == ''">true</_DdDsymUploadUnverified>
+    </PropertyGroup>
 
     <!-- _DdUploadFailed accumulates across the three upload targets; read by DatadogSymbolReport. -->
     <PropertyGroup>
       <_DdUploadFailed Condition="'$(_DdDsymUploadExitCode)' != '' AND '$(_DdDsymUploadExitCode)' != '0'">true</_DdUploadFailed>
+      <_DdUploadFailed Condition="'$(_DdDsymUploadProblem)' != ''">true</_DdUploadFailed>
     </PropertyGroup>
   </Target>
 
@@ -197,16 +226,38 @@
              Text="Datadog: Uploading Android mapping from $(_DdMappingPath)"
              Condition="'$(_DdCanUpload)' == 'true' AND Exists('$(_DdMappingPath)')" />
 
+    <!-- IgnoreStandardErrorWarningFormat and the captured output: see DatadogUploadDsym.
+         `flutter-symbols upload` also exits 0 when the upload failed. For the mapping file it
+         prints "Mapping upload failed" and its command summary prints exactly one of:
+           "Uploaded symbol N file(s) in …"                       the mapping was uploaded
+           "Some symbol files have been skipped."                 skipped
+           "Some symbol files may not been uploaded correctly."   the upload failed after retries
+           "No actions were taken. …"                             nothing was uploaded -->
     <Exec Command="datadog-ci flutter-symbols upload --android-mapping --android-mapping-location &quot;$(_DdMappingPath)&quot; --service-name &quot;$(DatadogServiceName)&quot; --version &quot;$(ApplicationDisplayVersion)&quot;"
           Condition="'$(_DdCanUpload)' == 'true' AND Exists('$(_DdMappingPath)')"
           EnvironmentVariables="$(_DdUploadEnv)"
+          ConsoleToMSBuild="true"
+          IgnoreStandardErrorWarningFormat="true"
           IgnoreExitCode="true"
           ContinueOnError="true">
       <Output TaskParameter="ExitCode" PropertyName="_DdMappingUploadExitCode" />
+      <Output TaskParameter="ConsoleOutput" ItemName="_DdMappingUploadOutput" />
     </Exec>
+
+    <PropertyGroup Condition="'$(_DdMappingUploadExitCode)' == '0'">
+      <_DdMappingUploadText>@(_DdMappingUploadOutput, ' | ')</_DdMappingUploadText>
+      <_DdMappingUploadedCount>$([System.Text.RegularExpressions.Regex]::Match($(_DdMappingUploadText), 'Uploaded symbol (\d+) files? in').Groups[1].Value)</_DdMappingUploadedCount>
+
+      <_DdMappingUploadProblem Condition="$(_DdMappingUploadText.Contains('No actions were taken'))">datadog-ci uploaded nothing</_DdMappingUploadProblem>
+      <_DdMappingUploadProblem Condition="$(_DdMappingUploadText.Contains('Some symbol files have been skipped'))">datadog-ci skipped the mapping</_DdMappingUploadProblem>
+      <_DdMappingUploadProblem Condition="$(_DdMappingUploadText.Contains('Mapping upload failed')) OR $(_DdMappingUploadText.Contains('Some symbol files may not been uploaded'))">the mapping upload failed</_DdMappingUploadProblem>
+
+      <_DdMappingUploadUnverified Condition="'$(_DdMappingUploadProblem)' == '' AND '$(_DdMappingUploadedCount)' == ''">true</_DdMappingUploadUnverified>
+    </PropertyGroup>
 
     <PropertyGroup>
       <_DdUploadFailed Condition="'$(_DdMappingUploadExitCode)' != '' AND '$(_DdMappingUploadExitCode)' != '0'">true</_DdUploadFailed>
+      <_DdUploadFailed Condition="'$(_DdMappingUploadProblem)' != ''">true</_DdUploadFailed>
     </PropertyGroup>
   </Target>
 
@@ -324,19 +375,60 @@
              Text="Datadog: Uploading Portable PDB(s) staged in $(_DdPpdbStagingDir)"
              Condition="'@(_DdPpdbStaged)' != ''" />
 
+    <!-- datadog-ci searches the folder with a glob pattern (<folder>/**/*.pdb), where a
+         backslash escapes the next character instead of separating path segments, so a
+         Windows path like obj\Release\…\dd_ppdb_upload matches no file and the upload
+         silently does nothing (dd-sdk-maui#97). Forward slashes work on every platform:
+         Windows accepts them in paths, and on macOS/Linux Exec already turns backslashes
+         into forward slashes. Only this argument is a glob; the manifest is opened as a
+         plain file. -->
+    <PropertyGroup>
+      <_DdPpdbUploadDir>$(_DdPpdbStagingDir.Replace('\', '/'))</_DdPpdbUploadDir>
+    </PropertyGroup>
+
     <!-- ppdb-symbols upload has no service-name/version options (unlike flutter-symbols
-         upload) — the debug-id manifest is the sole correlation key for these uploads. -->
-    <Exec Command="datadog-ci ppdb-symbols upload &quot;$(_DdPpdbStagingDir)&quot; --debug-id-manifest &quot;$(_DdDebugIdManifestPath)&quot;"
+         upload) — the debug-id manifest is the sole correlation key for these uploads.
+         IgnoreStandardErrorWarningFormat and the captured output: see DatadogUploadDsym. -->
+    <Exec Command="datadog-ci ppdb-symbols upload &quot;$(_DdPpdbUploadDir)&quot; --debug-id-manifest &quot;$(_DdDebugIdManifestPath)&quot;"
           Condition="'@(_DdPpdbStaged)' != ''"
           EnvironmentVariables="$(_DdUploadEnv)"
+          ConsoleToMSBuild="true"
+          IgnoreStandardErrorWarningFormat="true"
           IgnoreExitCode="true"
           ContinueOnError="true">
       <Output TaskParameter="ExitCode" PropertyName="_DdPpdbUploadExitCode" />
+      <Output TaskParameter="ConsoleOutput" ItemName="_DdPpdbUploadOutput" />
     </Exec>
+
+    <!-- datadog-ci exits 0 even when it found no file, skipped files or failed to upload
+         some (only errors that abort the command exit non-zero: an invalid API key, invalid
+         arguments, a missing or unreadable folder, a missing or invalid manifest), so the
+         exit code alone can't tell an upload happened. Its command summary prints exactly one of:
+           "Uploaded symbol N file(s) in …"        every file uploaded
+           "Some symbol files have been skipped."  a file had no (or an ambiguous) manifest entry
+           "Some symbol files may not been uploaded correctly."  an upload failed after retries
+           "No actions were taken. …"             no file found
+         The upload counts as done only when every staged PDB was uploaded. A summary that
+         matches none of these (e.g. reworded by a later datadog-ci) is reported as
+         unverified rather than failed. The output is checked as one joined text, not line by
+         line in item conditions, because file paths in it may contain quotes. -->
+    <PropertyGroup Condition="'$(_DdPpdbUploadExitCode)' == '0'">
+      <_DdPpdbUploadText>@(_DdPpdbUploadOutput, ' | ')</_DdPpdbUploadText>
+      <_DdPpdbStagedCount>@(_DdPpdbStaged->Count())</_DdPpdbStagedCount>
+      <_DdPpdbUploadedCount>$([System.Text.RegularExpressions.Regex]::Match($(_DdPpdbUploadText), 'Uploaded symbol (\d+) files? in').Groups[1].Value)</_DdPpdbUploadedCount>
+
+      <_DdPpdbUploadProblem Condition="$(_DdPpdbUploadText.Contains('No actions were taken'))">datadog-ci found none of the $(_DdPpdbStagedCount) staged Portable PDB(s) in $(_DdPpdbUploadDir) (path not matched)</_DdPpdbUploadProblem>
+      <_DdPpdbUploadProblem Condition="$(_DdPpdbUploadText.Contains('Some symbol files have been skipped'))">datadog-ci skipped some Portable PDBs</_DdPpdbUploadProblem>
+      <_DdPpdbUploadProblem Condition="$(_DdPpdbUploadText.Contains('Some symbol files may not been uploaded'))">some Portable PDB uploads failed</_DdPpdbUploadProblem>
+      <_DdPpdbUploadProblem Condition="'$(_DdPpdbUploadProblem)' == '' AND '$(_DdPpdbUploadedCount)' != '' AND '$(_DdPpdbUploadedCount)' != '$(_DdPpdbStagedCount)'">datadog-ci uploaded $(_DdPpdbUploadedCount) of $(_DdPpdbStagedCount) staged Portable PDBs</_DdPpdbUploadProblem>
+
+      <_DdPpdbUploadUnverified Condition="'$(_DdPpdbUploadProblem)' == '' AND '$(_DdPpdbUploadedCount)' == ''">true</_DdPpdbUploadUnverified>
+    </PropertyGroup>
 
     <PropertyGroup>
       <_DdUploadFailed Condition="'$(_DdPpdbStageFailed)' == 'true'">true</_DdUploadFailed>
       <_DdUploadFailed Condition="'$(_DdPpdbUploadExitCode)' != '' AND '$(_DdPpdbUploadExitCode)' != '0'">true</_DdUploadFailed>
+      <_DdUploadFailed Condition="'$(_DdPpdbUploadProblem)' != ''">true</_DdUploadFailed>
     </PropertyGroup>
   </Target>
 
@@ -362,16 +454,22 @@
          was skipped (wrong platform, missing artifact, or upload disabled). -->
     <PropertyGroup>
       <_DdDsymStatus Condition="'$(_DdDsymUploadExitCode)' == ''">not run</_DdDsymStatus>
-      <_DdDsymStatus Condition="'$(_DdDsymUploadExitCode)' == '0'">uploaded</_DdDsymStatus>
+      <_DdDsymStatus Condition="'$(_DdDsymUploadExitCode)' == '0'">uploaded ($(_DdDsymUploadedCount) dSYM(s))</_DdDsymStatus>
+      <_DdDsymStatus Condition="'$(_DdDsymUploadUnverified)' == 'true'">upload not verified (datadog-ci summary not recognized; build with -v:n to see its output)</_DdDsymStatus>
+      <_DdDsymStatus Condition="'$(_DdDsymUploadProblem)' != ''">FAILED ($(_DdDsymUploadProblem))</_DdDsymStatus>
       <_DdDsymStatus Condition="'$(_DdDsymUploadExitCode)' != '' AND '$(_DdDsymUploadExitCode)' != '0'">FAILED (exit $(_DdDsymUploadExitCode))</_DdDsymStatus>
 
       <_DdMappingStatus Condition="'$(_DdMappingUploadExitCode)' == ''">not run</_DdMappingStatus>
       <_DdMappingStatus Condition="'$(_DdMappingUploadExitCode)' == '0'">uploaded</_DdMappingStatus>
+      <_DdMappingStatus Condition="'$(_DdMappingUploadUnverified)' == 'true'">upload not verified (datadog-ci summary not recognized; build with -v:n to see its output)</_DdMappingStatus>
+      <_DdMappingStatus Condition="'$(_DdMappingUploadProblem)' != ''">FAILED ($(_DdMappingUploadProblem))</_DdMappingStatus>
       <_DdMappingStatus Condition="'$(_DdMappingUploadExitCode)' != '' AND '$(_DdMappingUploadExitCode)' != '0'">FAILED (exit $(_DdMappingUploadExitCode))</_DdMappingStatus>
 
       <_DdPpdbStatus Condition="'$(_DdPpdbUploadExitCode)' == ''">not run</_DdPpdbStatus>
       <_DdPpdbStatus Condition="'$(_DdPpdbUploadExitCode)' == '' AND '$(_DdPpdbSkipReason)' != ''">skipped ($(_DdPpdbSkipReason))</_DdPpdbStatus>
-      <_DdPpdbStatus Condition="'$(_DdPpdbUploadExitCode)' == '0'">uploaded</_DdPpdbStatus>
+      <_DdPpdbStatus Condition="'$(_DdPpdbUploadExitCode)' == '0'">uploaded ($(_DdPpdbUploadedCount) of $(_DdPpdbStagedCount))</_DdPpdbStatus>
+      <_DdPpdbStatus Condition="'$(_DdPpdbUploadUnverified)' == 'true'">upload not verified (datadog-ci summary not recognized; build with -v:n to see its output)</_DdPpdbStatus>
+      <_DdPpdbStatus Condition="'$(_DdPpdbUploadProblem)' != ''">FAILED ($(_DdPpdbUploadProblem))</_DdPpdbStatus>
       <_DdPpdbStatus Condition="'$(_DdPpdbUploadExitCode)' != '' AND '$(_DdPpdbUploadExitCode)' != '0'">FAILED (exit $(_DdPpdbUploadExitCode))</_DdPpdbStatus>
       <_DdPpdbStatus Condition="'$(_DdPpdbStageFailed)' == 'true'">FAILED (staging, exit $(_DdPpdbStageExitCode))</_DdPpdbStatus>
       <_DdPpdbStatus Condition="'$(_DdPpdbUnmatched)' == 'true'">$(_DdPpdbStatus); some assemblies had no matching Portable PDB</_DdPpdbStatus>
@@ -401,6 +499,16 @@
 
     <Warning Condition="'$(_DdUploadFailed)' == 'true' AND '$(DatadogFailOnSymbolUploadError)' != 'true'"
              Text="Datadog: one or more symbol uploads FAILED (see the summary above). Crashes from this build will not symbolicate. Check the Datadog lines above; for upload errors, check DATADOG_API_KEY is valid for site $(_DdSiteDisplay). Pass -p:DatadogFailOnSymbolUploadError=true to turn this into a build error." />
+
+    <!-- Not a failure (the uploads may well have worked), so it stays a warning even with
+         DatadogFailOnSymbolUploadError=true; it only makes the unconfirmed uploads visible. -->
+    <ItemGroup>
+      <_DdUnverifiedUpload Include="iOS dSYM" Condition="'$(_DdDsymUploadUnverified)' == 'true'" />
+      <_DdUnverifiedUpload Include="Android mapping" Condition="'$(_DdMappingUploadUnverified)' == 'true'" />
+      <_DdUnverifiedUpload Include="Portable PDB" Condition="'$(_DdPpdbUploadUnverified)' == 'true'" />
+    </ItemGroup>
+    <Warning Condition="'@(_DdUnverifiedUpload)' != ''"
+             Text="Datadog: could not confirm these symbol uploads: @(_DdUnverifiedUpload, ', '). datadog-ci's command summary was not recognized (build with -v:n to see its output). Crashes from this build may not symbolicate if an upload did not happen." />
 
     <Warning Condition="'$(_DdPpdbUnmatched)' == 'true' AND '$(DatadogFailOnSymbolUploadError)' != 'true'"
              Text="Datadog: no Portable PDB matching the shipped assembly was found for one or more assemblies (see the 'not uploading a Portable PDB' lines above). C# frames from those assemblies will not symbolicate. Pass -p:DatadogFailOnSymbolUploadError=true to turn this into a build error." />
