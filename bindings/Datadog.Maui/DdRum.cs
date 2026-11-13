@@ -11,6 +11,8 @@ using Foundation;
 using NativeDdRum = Datadog.iOS.Binding.DdRum;
 #endif
 
+using System.Diagnostics;
+using System.Runtime.CompilerServices;
 using Datadog.Maui.AutoTracking;
 using Datadog.Maui.Configuration;
 
@@ -299,6 +301,75 @@ namespace Datadog.Maui
 #elif IOS
             NativeDdRum.AddError(message, sourceStr, stacktrace, DdSdk.ToNSDictionary(ctx), timestampMs);
 #endif
+        }
+
+        /// <summary>
+        /// Report an exception the app handled itself, such as one caught in a <c>catch</c> block.
+        /// Unlike the overload that takes a stacktrace string, this one sends the exception's frames
+        /// in a form Datadog can symbolicate, so the error shows file and line numbers from the
+        /// uploaded Portable PDBs, the same as uncaught exceptions do. The stack text, inner
+        /// exceptions and, on Android, the frames of a Java exception are rendered the same way
+        /// as for crashes. The error is reported as handled, not as a crash.
+        /// If an ErrorEventMapper was set in DdRumConfiguration, it will be applied before sending.
+        /// </summary>
+        /// <param name="exception">The exception to report.</param>
+        /// <param name="message">Error message. Optional (defaults to the exception's message).</param>
+        /// <param name="source">Error source. Optional (defaults to <see cref="RumErrorSource.Source"/>).</param>
+        /// <param name="context">Additional context attributes. Optional.</param>
+        /// <param name="timestampMs">Timestamp in milliseconds since epoch. Optional (0 = use current time).</param>
+        /// <param name="fingerprint">Custom fingerprint for error grouping. Optional. When set, overrides the default grouping.</param>
+        /// <param name="stackTrace">
+        /// Stack to report instead of the exception's own. Optional. Use it for an exception that is
+        /// created to be reported but never thrown, which has no stack of its own: capture
+        /// <c>new System.Diagnostics.StackTrace(true)</c> where the exception is created and pass it
+        /// here. When it's not set and the exception was never thrown, the stack of the caller of
+        /// this method is reported.
+        /// </param>
+        // Not inlined, so the frame skipped below is always this method's own.
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        public static void AddError(Exception exception, string? message = null,
+                                     RumErrorSource source = RumErrorSource.Source,
+                                     Dictionary<string, object>? context = null, long timestampMs = 0,
+                                     string? fingerprint = null, StackTrace? stackTrace = null)
+        {
+            if (exception is null)
+            {
+                InternalLog.Log("DdRum.AddError: exception is null, nothing to report", SdkVerbosity.WARN);
+                return;
+            }
+
+            // Called from the app's catch blocks, so a failure while reporting (e.g. reading a
+            // disposed Java exception, or a custom Message that throws) must not escape.
+            try
+            {
+                // An exception that was never thrown has no frames. Captured here, in the public
+                // method itself, so skipping one frame leaves out exactly this method.
+                if (stackTrace is null && !HasStackFrames(exception))
+                {
+                    stackTrace = new StackTrace(skipFrames: 1, fNeedFileInfo: true);
+                }
+
+                DdRumErrorTracking.ReportHandledException(exception, message, source, context, timestampMs, fingerprint, stackTrace);
+            }
+            catch (Exception ex)
+            {
+                InternalLog.Log($"DdRum.AddError: Failed to report the exception: {ex.Message}", SdkVerbosity.ERROR);
+                InternalTelemetry.Error("DdRum.AddError: Failed to report a handled exception", ex);
+            }
+        }
+
+        private static bool HasStackFrames(Exception exception)
+        {
+            try
+            {
+                var unwrapped = DdRumErrorTracking.UnwrapJavaException(exception) ?? exception;
+                return new StackTrace(unwrapped, false).FrameCount > 0;
+            }
+            catch (Exception ex)
+            {
+                InternalLog.Log($"DdRum.AddError: Failed to read the exception's frames: {ex.Message}", SdkVerbosity.DEBUG);
+                return false;
+            }
         }
 
         // ── Views ────────────────────────────────────────────

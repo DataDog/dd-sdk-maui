@@ -264,23 +264,27 @@ namespace Datadog.Maui
         /// zero-based and addresses the final newline-delimited stack string. Because the
         /// text line and metadata entry are emitted together, a frame whose metadata can't
         /// be read cannot shift the mapping for any later frame.
+        /// When <paramref name="stackTrace"/> is set, it replaces the outer exception's own
+        /// frames (used for exceptions reported without being thrown); inner exceptions
+        /// always render their own.
         /// </summary>
-        internal static RenderedStackTrace BuildStackTrace(Exception? exception, IReadOnlyList<string>? javaStackTrace = null)
+        internal static RenderedStackTrace BuildStackTrace(Exception? exception, IReadOnlyList<string>? javaStackTrace = null, StackTrace? stackTrace = null)
         {
-            return BuildStackTrace(exception, javaStackTrace, BuildSdkFrameData);
+            return BuildStackTrace(exception, javaStackTrace, BuildSdkFrameData, stackTrace);
         }
 
         internal static RenderedStackTrace BuildStackTrace(
             Exception? exception,
             IReadOnlyList<string>? javaStackTrace,
-            Func<StackFrame, MethodBase, int, Dictionary<string, object>> sdkFrameFactory)
+            Func<StackFrame, MethodBase, int, Dictionary<string, object>> sdkFrameFactory,
+            StackTrace? stackTrace = null)
         {
             var lines = new List<string>();
             var frames = new List<Dictionary<string, object>>();
 
             if (exception != null)
             {
-                RenderException(exception, lines, frames, sdkFrameFactory, isInnerException: false);
+                RenderException(exception, lines, frames, sdkFrameFactory, isInnerException: false, stackTrace);
             }
             else
             {
@@ -303,7 +307,8 @@ namespace Datadog.Maui
             List<string> lines,
             List<Dictionary<string, object>> sdkFrames,
             Func<StackFrame, MethodBase, int, Dictionary<string, object>> sdkFrameFactory,
-            bool isInnerException)
+            bool isInnerException,
+            StackTrace? stackTrace = null)
         {
             AppendLines(lines, $"{(isInnerException ? " ---> " : string.Empty)}{exception.GetType().FullName}: {exception.Message}");
 
@@ -320,7 +325,7 @@ namespace Datadog.Maui
 
             try
             {
-                var stackTrace = new StackTrace(exception, true);
+                stackTrace ??= new StackTrace(exception, true);
                 foreach (var frame in stackTrace.GetFrames() ?? Array.Empty<StackFrame>())
                 {
                     RenderFrame(frame, lines, sdkFrames, sdkFrameFactory);
@@ -448,6 +453,70 @@ namespace Datadog.Maui
 #else
             return null;
 #endif
+        }
+
+        /// <summary>
+        /// Reports an exception the app caught itself (DdRum.AddError's Exception overload) the
+        /// way uncaught ones are reported: the same unwrapping, stack text and sdk_frames (and,
+        /// on Android, the Java frames of a Java exception), but as a non-crash, with the
+        /// caller's message, source, context, timestamp and fingerprint.
+        /// <paramref name="stackTrace"/>, when set, replaces the exception's own frames.
+        /// </summary>
+        internal static void ReportHandledException(
+            Exception rawException,
+            string? message,
+            RumErrorSource source,
+            Dictionary<string, object>? context,
+            long timestampMs,
+            string? fingerprint,
+            StackTrace? stackTrace)
+        {
+            var exception = UnwrapJavaException(rawException) ?? rawException;
+            var renderedStackTrace = BuildStackTrace(exception, BuildJavaStackTrace(rawException), stackTrace);
+            ReportIlOffsetZeroAsUnknown(renderedStackTrace.SdkFrames);
+
+            // The SDK's keys win over the caller's: sdk_frames must describe the stack text
+            // built here, so a caller-supplied value is dropped even when no frame was built.
+            var errorContext = context != null ? new Dictionary<string, object>(context) : new Dictionary<string, object>();
+            errorContext["_dd.error.is_crash"] = false;
+            errorContext["_dd.error.handler"] = HandledExceptionHandler;
+            errorContext.Remove("_dd.error.sdk_frames");
+            if (renderedStackTrace.SdkFrames.Count > 0)
+            {
+                errorContext["_dd.error.sdk_frames"] = renderedStackTrace.SdkFrames;
+            }
+
+            // A custom exception's Message can return null, which the native SDKs don't accept.
+            var errorMessage = message ?? exception.Message ?? exception.GetType().FullName ?? "Exception";
+            DdRum.AddError(errorMessage, source, renderedStackTrace.Text, errorContext, timestampMs, fingerprint);
+        }
+
+        internal const string HandledExceptionHandler = "DdRum.AddError";
+
+        /// <summary>
+        /// Sends IL offset 0 as -1 ("unknown") in the handled-exception path's sdk_frames.
+        /// </summary>
+        /// <remarks>
+        /// With an IL offset, the backend looks up the line at that exact offset; with -1, it
+        /// uses the method's first line. For offset 0 the two only differ when the method starts
+        /// with a hidden sequence point (async state machines' MoveNext, many lambdas): the
+        /// backend's line table drops hidden points, so the exact lookup finds nothing and the
+        /// frame is left without file and line, while the first-line lookup still finds one.
+        /// When the method has a real line at offset 0, both give that line. So -1 is never
+        /// worse than 0. This matters for stacks captured on the current thread (a never-thrown
+        /// exception, or a stack the caller passed): under LLVM AOT (iOS device builds) Mono
+        /// reports offset 0 for them, where an exception's own frames report -1.
+        /// Applied on both platforms, and only here: crashes keep the runtime's offsets.
+        /// </remarks>
+        internal static void ReportIlOffsetZeroAsUnknown(List<Dictionary<string, object>> sdkFrames)
+        {
+            foreach (var frame in sdkFrames)
+            {
+                if (frame.TryGetValue("il_offset", out var ilOffset) && ilOffset is 0)
+                {
+                    frame["il_offset"] = -1;
+                }
+            }
         }
 
         private static void ReportError(string message, RenderedStackTrace renderedStackTrace, bool isCrash, string handler)
