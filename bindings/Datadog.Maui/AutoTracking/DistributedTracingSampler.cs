@@ -12,8 +12,11 @@ namespace Datadog.Maui.AutoTracking
     /// Deterministic Knuth-factor sampler.
     ///
     /// Uses the last UUID group of the RUM session ID as the sampling seed so that all
-    /// requests within the same session are sampled consistently. Falls back to the trace
-    /// ID's low bits when the session ID is unavailable.
+    /// requests within the same session are sampled consistently. With a session, the
+    /// decision is rebased on the session: traces are sampled at
+    /// <c>sessionSampleRate × traceSampleRate</c>, as the iOS and Android SDKs do, so traced
+    /// sessions are always sampled-in RUM sessions. Falls back to the trace ID's low bits at
+    /// the trace rate when the session ID is unavailable.
     /// </summary>
     internal static class DistributedTracingSampler
     {
@@ -23,20 +26,37 @@ namespace Datadog.Maui.AutoTracking
         /// <summary>
         /// Returns true if the trace should be sampled.
         /// </summary>
-        /// <param name="sampleRate">Percentage 0–100 (e.g. 20.0 = 20%).</param>
+        /// <param name="traceSampleRate">Percentage 0–100 (e.g. 20.0 = 20%).</param>
         /// <param name="sessionId">Current RUM session UUID (nullable). Used as primary seed.</param>
         /// <param name="traceIdLow">Low 64 bits of the trace ID. Used as fallback seed.</param>
-        internal static bool ShouldSample(double sampleRate, string? sessionId, ulong traceIdLow)
+        /// <param name="sessionSampleRate">
+        /// RUM session sample rate, percentage 0–100. The decision is rebased on it when a
+        /// session ID is available; ignored otherwise.
+        /// </param>
+        internal static bool ShouldSample(double traceSampleRate, string? sessionId, ulong traceIdLow,
+            double sessionSampleRate = 100.0)
         {
-            if (sampleRate >= 100.0) return true;
-            if (sampleRate <= 0.0) return false;
+            if (traceSampleRate <= 0.0) return false;
 
-            ulong lowBits = ParseSessionIdLowBits(sessionId) ?? traceIdLow;
-            ulong maxSampledId = GetMaxSampledTraceId(sampleRate);
+            var sessionLowBits = ParseSessionIdLowBits(sessionId);
+            if (sessionLowBits.HasValue)
+            {
+                var combinedSampleRate = ClampRate(sessionSampleRate) * (ClampRate(traceSampleRate) / 100.0);
+                if (combinedSampleRate >= 100.0) return true;
 
-            // ulong multiplication overflows naturally (mod 2^64)
-            return unchecked(lowBits * KnuthFactor) < maxSampledId;
+                return IsSampled(sessionLowBits.Value, GetMaxSampledTraceId(combinedSampleRate));
+            }
+
+            if (traceSampleRate >= 100.0) return true;
+
+            return IsSampled(traceIdLow, GetMaxSampledTraceId(traceSampleRate));
         }
+
+        // ulong multiplication overflows naturally (mod 2^64)
+        private static bool IsSampled(ulong lowBits, ulong maxSampledId)
+            => unchecked(lowBits * KnuthFactor) < maxSampledId;
+
+        private static double ClampRate(double rate) => Math.Clamp(rate, 0.0, 100.0);
 
         // MAX_TRACE_ID * (sampleRate / 100).
         private static ulong GetMaxSampledTraceId(double sampleRate)

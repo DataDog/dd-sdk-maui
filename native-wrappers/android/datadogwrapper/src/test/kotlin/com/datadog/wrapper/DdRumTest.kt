@@ -8,6 +8,9 @@ package com.datadog.wrapper
 
 import android.util.Log
 import com.datadog.android.Datadog
+import com.datadog.android.api.feature.Feature
+import com.datadog.android.api.feature.FeatureScope
+import com.datadog.android.api.feature.FeatureSdkCore
 import com.datadog.android.rum.GlobalRumMonitor
 import com.datadog.android.rum.Rum
 import com.datadog.android.rum.RumActionType
@@ -77,6 +80,75 @@ class DdRumTest {
     @After
     fun tearDown() {
         unmockkAll()
+    }
+
+    // ── enableRum publishes trace sample rate ────────────────
+
+    // Runs each tracing context update against a fresh map and records the result.
+    private fun recordTracingContextWrites(core: FeatureSdkCore): MutableList<Map<String, Any?>> {
+        val writes = mutableListOf<Map<String, Any?>>()
+        every { core.updateFeatureContext(Feature.TRACING_FEATURE_NAME, any(), any()) } answers {
+            val context = mutableMapOf<String, Any?>()
+            thirdArg<(MutableMap<String, Any?>) -> Unit>().invoke(context)
+            writes.add(context)
+        }
+        return writes
+    }
+
+    @Test
+    fun `enableRum without tracing feature registers stand-in and publishes trace sample rate`() {
+        val featureCore = mockk<FeatureSdkCore>(relaxed = true)
+        every { Datadog.getInstance() } returns featureCore
+        every { featureCore.getFeature(Feature.TRACING_FEATURE_NAME) } returns null
+        val writes = recordTracingContextWrites(featureCore)
+
+        DdRum.enableRum(mapOf("applicationId" to "app-id", "resourceTraceSampleRate" to 20.0))
+
+        verify {
+            featureCore.registerFeature(match { it.name == Feature.TRACING_FEATURE_NAME })
+        }
+        assertEquals(1, writes.size)
+        // Must be a Float: RUM treats any other type as no rate.
+        assertEquals(20.0f, writes[0][DdRum.TRACE_SAMPLE_RATE_KEY])
+    }
+
+    @Test
+    fun `enableRum with tracing feature publishes trace sample rate without registering`() {
+        val featureCore = mockk<FeatureSdkCore>(relaxed = true)
+        every { Datadog.getInstance() } returns featureCore
+        every { featureCore.getFeature(Feature.TRACING_FEATURE_NAME) } returns mockk<FeatureScope>()
+        val writes = recordTracingContextWrites(featureCore)
+
+        DdRum.enableRum(mapOf("applicationId" to "app-id", "resourceTraceSampleRate" to 35.5))
+
+        verify(exactly = 0) { featureCore.registerFeature(any()) }
+        assertEquals(1, writes.size)
+        assertEquals(35.5f, writes[0][DdRum.TRACE_SAMPLE_RATE_KEY])
+    }
+
+    @Test
+    fun `enableRum clamps published trace sample rate to 0-100`() {
+        val featureCore = mockk<FeatureSdkCore>(relaxed = true)
+        every { Datadog.getInstance() } returns featureCore
+        val writes = recordTracingContextWrites(featureCore)
+
+        DdRum.enableRum(mapOf("applicationId" to "app-id", "resourceTraceSampleRate" to 150.0))
+        DdRum.enableRum(mapOf("applicationId" to "app-id", "resourceTraceSampleRate" to -5.0))
+
+        assertEquals(2, writes.size)
+        assertEquals(100.0f, writes[0][DdRum.TRACE_SAMPLE_RATE_KEY])
+        assertEquals(0.0f, writes[1][DdRum.TRACE_SAMPLE_RATE_KEY])
+    }
+
+    @Test
+    fun `enableRum without resourceTraceSampleRate does not publish trace sample rate`() {
+        val featureCore = mockk<FeatureSdkCore>(relaxed = true)
+        every { Datadog.getInstance() } returns featureCore
+
+        DdRum.enableRum(mapOf("applicationId" to "app-id"))
+
+        verify(exactly = 0) { featureCore.registerFeature(any()) }
+        verify(exactly = 0) { featureCore.updateFeatureContext(any(), any(), any()) }
     }
 
     // ── enableRum basic ──────────────────────────────────────
