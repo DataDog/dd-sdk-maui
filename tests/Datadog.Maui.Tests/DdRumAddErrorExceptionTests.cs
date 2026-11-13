@@ -214,6 +214,12 @@ public class DdRumAddErrorExceptionTests : IDisposable
         public override string Message => throw new InvalidOperationException("Message getter failed");
     }
 
+    // Reading Message throws the exception itself, so a handler that logs ex.Message throws again.
+    private sealed class SelfThrowingMessageException : Exception
+    {
+        public override string Message => throw this;
+    }
+
     private sealed class NullMessageException : Exception
     {
         public override string Message => null!;
@@ -324,6 +330,14 @@ public class DdRumAddErrorExceptionTests : IDisposable
     public void DoesNotThrowWhenTheExceptionCannotBeRead()
     {
         var exception = Record.Exception(() => DdRum.AddError(new ThrowingMessageException()));
+
+        Assert.Null(exception);
+    }
+
+    [Fact]
+    public void DoesNotThrowWhenReadingTheFailureThrowsAgain()
+    {
+        var exception = Record.Exception(() => DdRum.AddError(new SelfThrowingMessageException()));
 
         Assert.Null(exception);
     }

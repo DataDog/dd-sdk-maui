@@ -332,16 +332,16 @@ namespace Datadog.Maui
                                      Dictionary<string, object>? context = null, long timestampMs = 0,
                                      string? fingerprint = null, StackTrace? stackTrace = null)
         {
-            if (exception is null)
-            {
-                InternalLog.Log("DdRum.AddError: exception is null, nothing to report", SdkVerbosity.WARN);
-                return;
-            }
-
             // Called from the app's catch blocks, so a failure while reporting (e.g. reading a
             // disposed Java exception, or a custom Message that throws) must not escape.
             try
             {
+                if (exception is null)
+                {
+                    InternalLog.Log("DdRum.AddError: exception is null, nothing to report", SdkVerbosity.WARN);
+                    return;
+                }
+
                 // An exception that was never thrown has no frames. Captured here, in the public
                 // method itself, so skipping one frame leaves out exactly this method.
                 if (stackTrace is null && !HasStackFrames(exception))
@@ -353,8 +353,26 @@ namespace Datadog.Maui
             }
             catch (Exception ex)
             {
-                InternalLog.Log($"DdRum.AddError: Failed to report the exception: {ex.Message}", SdkVerbosity.ERROR);
-                InternalTelemetry.Error("DdRum.AddError: Failed to report a handled exception", ex);
+                // Best effort: reading the failure can throw again (a Message getter that throws
+                // the exception itself lands here), and nothing may escape this method. Separate
+                // guards, so a log line that fails doesn't also skip the telemetry.
+                try
+                {
+                    InternalLog.Log($"DdRum.AddError: Failed to report the exception: {ex.Message}", SdkVerbosity.ERROR);
+                }
+                catch
+                {
+                    // Nothing left to log the failure with.
+                }
+
+                try
+                {
+                    InternalTelemetry.Error("DdRum.AddError: Failed to report a handled exception", ex);
+                }
+                catch
+                {
+                    // Nothing left to report the failure with.
+                }
             }
         }
 
@@ -367,7 +385,16 @@ namespace Datadog.Maui
             }
             catch (Exception ex)
             {
-                InternalLog.Log($"DdRum.AddError: Failed to read the exception's frames: {ex.Message}", SdkVerbosity.DEBUG);
+                // Best effort, for the same reason as in AddError: ex.Message can throw again.
+                try
+                {
+                    InternalLog.Log($"DdRum.AddError: Failed to read the exception's frames: {ex.Message}", SdkVerbosity.DEBUG);
+                }
+                catch
+                {
+                    // Nothing left to report the failure with.
+                }
+
                 return false;
             }
         }
