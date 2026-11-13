@@ -227,7 +227,10 @@ class DdRum {
                 // MAUI traces requests in C#, so native RUM can't learn the trace sample rate from
                 // the native instrumentation; publish it in the tracing feature context, where RUM
                 // reads it to report the view's `trace_sample_rate`.
-                val resourceTraceSampleRate = (configuration["resourceTraceSampleRate"] as? Number)?.toFloat()
+                // Clamped like the C# tracker and the native RateBasedSampler, so the view reports
+                // the rate traces are actually sampled at.
+                val resourceTraceSampleRate = (configuration["resourceTraceSampleRate"] as? Number)
+                    ?.toFloat()?.coerceIn(0f, 100f)
                 val sdkCore = Datadog.getInstance() as? FeatureSdkCore
                 if (resourceTraceSampleRate != null && sdkCore != null) {
                     // The core drops context writes to unregistered features, so register a no-op

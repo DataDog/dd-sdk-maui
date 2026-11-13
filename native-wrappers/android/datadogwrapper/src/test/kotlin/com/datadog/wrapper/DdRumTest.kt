@@ -127,6 +127,20 @@ class DdRumTest {
     }
 
     @Test
+    fun `enableRum clamps published trace sample rate to 0-100`() {
+        val featureCore = mockk<FeatureSdkCore>(relaxed = true)
+        every { Datadog.getInstance() } returns featureCore
+        val writes = recordTracingContextWrites(featureCore)
+
+        DdRum.enableRum(mapOf("applicationId" to "app-id", "resourceTraceSampleRate" to 150.0))
+        DdRum.enableRum(mapOf("applicationId" to "app-id", "resourceTraceSampleRate" to -5.0))
+
+        assertEquals(2, writes.size)
+        assertEquals(100.0f, writes[0][DdRum.TRACE_SAMPLE_RATE_KEY])
+        assertEquals(0.0f, writes[1][DdRum.TRACE_SAMPLE_RATE_KEY])
+    }
+
+    @Test
     fun `enableRum without resourceTraceSampleRate does not publish trace sample rate`() {
         val featureCore = mockk<FeatureSdkCore>(relaxed = true)
         every { Datadog.getInstance() } returns featureCore
