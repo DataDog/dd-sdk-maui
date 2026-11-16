@@ -96,4 +96,54 @@ public class DistributedTracingSamplerTests
         // Expect roughly 40-60% sampled for 1000 sequential trace IDs.
         Assert.InRange(sampled, 400, 600);
     }
+
+    // ── Combined sampling rebased on the session ──────────────────────────────
+    //
+    // Shared vectors with dd-sdk-reactnative and dd-sdk-flutter so all three SDKs make
+    // identical decisions. Hash positions (percent of the 64-bit range):
+    //   session …0469 = 0.357%, …0015 = 26.490%, …d860b2b9437a = 68.673%, …0053 = 99.938%
+    //   trace 15352856648520921629 = 8.204%, 4751997750760398084 = 89.610%
+
+    [Theory]
+    // combined 25% keeps low-hash session
+    [InlineData("00000000-0000-0000-0000-000000000469", 50.0, 4751997750760398084UL, 50.0, true)]
+    // combined 25% drops high-hash session
+    [InlineData("00000000-0000-0000-0000-000000000053", 50.0, 15352856648520921629UL, 50.0, false)]
+    // combined 25% drops it; raw 50% would keep it
+    [InlineData("00000000-0000-0000-0000-000000000015", 50.0, 15352856648520921629UL, 50.0, false)]
+    // 100% session leaves trace rate unchanged
+    [InlineData("00000000-0000-0000-0000-000000000015", 100.0, 4751997750760398084UL, 50.0, true)]
+    // 0% session drops all
+    [InlineData("00000000-0000-0000-0000-000000000469", 0.0, 15352856648520921629UL, 100.0, false)]
+    // 0% trace drops all
+    [InlineData("00000000-0000-0000-0000-000000000469", 100.0, 15352856648520921629UL, 0.0, false)]
+    // combined 40%; raw 80% would keep it
+    [InlineData("a1b2c3d4-e5f6-7890-abcd-d860b2b9437a", 50.0, 15352856648520921629UL, 80.0, false)]
+    public void ShouldSample_WithSessionId_SamplesAtCombinedRate(
+        string sessionId, double sessionSampleRate, ulong traceIdLow, double traceSampleRate, bool expected)
+    {
+        Assert.Equal(expected,
+            DistributedTracingSampler.ShouldSample(traceSampleRate, sessionId, traceIdLow, sessionSampleRate));
+    }
+
+    [Fact]
+    public void ShouldSample_WithSessionId_100PercentTraceRate_StillRebasedOnSession()
+    {
+        // A 100% trace rate must not short-circuit: a 50% session rate still gives 50%.
+        // Session …0053 hashes to 99.938%, above the combined 50% threshold.
+        Assert.False(DistributedTracingSampler.ShouldSample(
+            100.0, "00000000-0000-0000-0000-000000000053", 0UL, sessionSampleRate: 50.0));
+        // Session …0469 hashes to 0.357%, below it.
+        Assert.True(DistributedTracingSampler.ShouldSample(
+            100.0, "00000000-0000-0000-0000-000000000469", 0UL, sessionSampleRate: 50.0));
+    }
+
+    [Fact]
+    public void ShouldSample_NullSessionId_IgnoresSessionSampleRate()
+    {
+        // Without a session, the trace ID decides at the trace rate; the 0% session rate is ignored.
+        // Trace 15352856648520921629 hashes to 8.204%, below 50%.
+        Assert.True(DistributedTracingSampler.ShouldSample(
+            50.0, null, 15352856648520921629UL, sessionSampleRate: 0.0));
+    }
 }

@@ -8,6 +8,8 @@ package com.datadog.wrapper
 
 import android.util.Log
 import com.datadog.android.Datadog
+import com.datadog.android.api.feature.Feature
+import com.datadog.android.api.feature.FeatureSdkCore
 import com.datadog.android.trace.DatadogTracing
 import com.datadog.android.trace.GlobalDatadogTracer
 import com.datadog.android.trace.Trace
@@ -33,7 +35,21 @@ class DdTrace {
             }
 
             val traceConfig = builder.build()
+
+            // Trace.enable replaces any stand-in tracing feature registered by DdRum.enableRum,
+            // along with the trace sample rate it published. Carry the rate over to the real one.
+            val sdkCore = Datadog.getInstance() as? FeatureSdkCore
+            val traceSampleRate = sdkCore
+                ?.getFeatureContext(Feature.TRACING_FEATURE_NAME)
+                ?.get(DdRum.TRACE_SAMPLE_RATE_KEY) as? Float
+
             Trace.enable(traceConfig, Datadog.getInstance())
+
+            if (sdkCore != null && traceSampleRate != null) {
+                sdkCore.updateFeatureContext(Feature.TRACING_FEATURE_NAME) {
+                    it[DdRum.TRACE_SAMPLE_RATE_KEY] = traceSampleRate
+                }
+            }
 
             val newTracer = DatadogTracing.newTracerBuilder(
                 Datadog.getInstance()

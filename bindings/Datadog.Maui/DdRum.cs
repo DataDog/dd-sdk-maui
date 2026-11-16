@@ -201,7 +201,8 @@ namespace Datadog.Maui
 
             if (configuration.AutomaticResourceTracking)
             {
-                resourceTracker = new DdAutoResourceTracker(configuration.ResourceTraceSampleRate);
+                resourceTracker = new DdAutoResourceTracker(
+                    configuration.ResourceTraceSampleRate, configuration.SessionSampleRate);
                 resourceTracker.Start();
                 InternalLog.Log("DdRum: Automatic resource tracking enabled", SdkVerbosity.INFO);
             }

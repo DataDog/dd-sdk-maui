@@ -6,8 +6,11 @@
 
 package com.datadog.wrapper
 
+import android.content.Context
 import android.util.Log
 import com.datadog.android.Datadog
+import com.datadog.android.api.feature.Feature
+import com.datadog.android.api.feature.FeatureSdkCore
 import com.datadog.android.rum.GlobalRumMonitor
 import com.datadog.android.rum.Rum
 import com.datadog.android.rum.RumConfiguration
@@ -25,6 +28,10 @@ import com.datadog.android.rum.RumSessionListener
 
 class DdRum {
     companion object {
+        // Must match TracingInterceptor.OKHTTP_INTERCEPTOR_SAMPLE_RATE in dd-sdk-android-okhttp
+        // and RumViewScope.TRACE_SAMPLE_RATE in dd-sdk-android-rum.
+        internal const val TRACE_SAMPLE_RATE_KEY = "okhttp_interceptor_sample_rate"
+
         // Stored for future resource tracking configuration
         var initialResourceThreshold: Double? = null
             private set
@@ -216,6 +223,33 @@ class DdRum {
 
                 val rumConfig = builder.build()
                 Rum.enable(rumConfig, Datadog.getInstance())
+
+                // MAUI traces requests in C#, so native RUM can't learn the trace sample rate from
+                // the native instrumentation; publish it in the tracing feature context, where RUM
+                // reads it to report the view's `trace_sample_rate`.
+                // Clamped like the C# tracker and the native RateBasedSampler, so the view reports
+                // the rate traces are actually sampled at.
+                val resourceTraceSampleRate = (configuration["resourceTraceSampleRate"] as? Number)
+                    ?.toFloat()?.coerceIn(0f, 100f)
+                val sdkCore = Datadog.getInstance() as? FeatureSdkCore
+                if (resourceTraceSampleRate != null && sdkCore != null) {
+                    // The core drops context writes to unregistered features, so register a no-op
+                    // stand-in when Trace isn't enabled. DdTrace.enableTrace carries the rate over
+                    // when the real Trace feature replaces the stand-in along with its context.
+                    if (sdkCore.getFeature(Feature.TRACING_FEATURE_NAME) == null) {
+                        sdkCore.registerFeature(object : Feature {
+                            override val name: String = Feature.TRACING_FEATURE_NAME
+                            override fun onInitialize(appContext: Context) = Unit
+                            override fun onStop() = Unit
+                        })
+                    }
+
+                    // RUM reads the rate as a Float, and treats any other type as no rate. A native
+                    // OkHttp interceptor in the host app overwrites it with its own whenever it traces.
+                    sdkCore.updateFeatureContext(Feature.TRACING_FEATURE_NAME) {
+                        it[TRACE_SAMPLE_RATE_KEY] = resourceTraceSampleRate
+                    }
+                }
             } catch (e: Exception) {
                 Log.e("DatadogWrapper", "DdRum.enableRum failed", e)
             }

@@ -8,6 +8,8 @@ package com.datadog.wrapper
 
 import android.util.Log
 import com.datadog.android.Datadog
+import com.datadog.android.api.feature.Feature
+import com.datadog.android.api.feature.FeatureSdkCore
 import com.datadog.android.trace.DatadogTracing
 import com.datadog.android.trace.GlobalDatadogTracer
 import com.datadog.android.trace.Trace
@@ -115,6 +117,43 @@ class DdTraceTest {
                 .useCustomEndpoint(customEndpoint)
         }
         verify { Trace.enable(any(), any()) }
+    }
+
+    @Test
+    fun `enableTrace after RUM published trace sample rate carries it over Trace enable`() {
+        val featureCore = mockk<FeatureSdkCore>(relaxed = true)
+        every { Datadog.getInstance() } returns featureCore
+        // The stand-in's context holds the rate DdRum.enableRum published, until Trace.enable
+        // replaces the stand-in with the real feature and an empty context.
+        var context = mutableMapOf<String, Any?>(DdRum.TRACE_SAMPLE_RATE_KEY to 20.0f)
+        every { featureCore.getFeatureContext(Feature.TRACING_FEATURE_NAME, any()) } answers { context }
+        every { Trace.enable(any(), any()) } answers { context = mutableMapOf() }
+        every {
+            featureCore.updateFeatureContext(Feature.TRACING_FEATURE_NAME, any(), any())
+        } answers {
+            thirdArg<(MutableMap<String, Any?>) -> Unit>().invoke(context)
+        }
+
+        DdTrace.enableTrace(customEndpoint = null)
+
+        verifyOrder {
+            featureCore.getFeatureContext(Feature.TRACING_FEATURE_NAME, any())
+            Trace.enable(any(), any())
+            featureCore.updateFeatureContext(Feature.TRACING_FEATURE_NAME, any(), any())
+        }
+        assertEquals(20.0f, context[DdRum.TRACE_SAMPLE_RATE_KEY])
+    }
+
+    @Test
+    fun `enableTrace without RUM published trace sample rate does not touch tracing context`() {
+        val featureCore = mockk<FeatureSdkCore>(relaxed = true)
+        every { Datadog.getInstance() } returns featureCore
+        every { featureCore.getFeatureContext(Feature.TRACING_FEATURE_NAME, any()) } returns emptyMap()
+
+        DdTrace.enableTrace(customEndpoint = null)
+
+        verify(exactly = 0) { featureCore.registerFeature(any()) }
+        verify(exactly = 0) { featureCore.updateFeatureContext(any(), any(), any()) }
     }
 
     @Test

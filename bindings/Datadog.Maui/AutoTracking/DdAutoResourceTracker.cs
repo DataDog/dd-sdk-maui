@@ -25,6 +25,8 @@ namespace Datadog.Maui.AutoTracking
         private readonly List<IDisposable> _subscriptions = new();
         private readonly FirstPartyHostMatcher _hostMatcher;
         internal double ResourceTraceSampleRate { get; private set; }
+        // RUM session sample rate the trace sampling decision is rebased on.
+        internal double SessionSampleRate { get; private set; }
 
         // Cache PropertyInfo per payload type for reflection on internal sealed types.
         // Each diagnostic event has a different payload type (ActivityStartData, ActivityStopData, etc.)
@@ -37,9 +39,10 @@ namespace Datadog.Maui.AutoTracking
         // Key for storing the distributed tracing context so OnRequestStop can emit the IDs.
         private static readonly HttpRequestOptionsKey<TracingContext?> TracingContextOption = new("dd-tracing-context");
 
-        internal DdAutoResourceTracker(double resourceTraceSampleRate)
+        internal DdAutoResourceTracker(double resourceTraceSampleRate, double sessionSampleRate = 100.0)
         {
             ResourceTraceSampleRate = Math.Clamp(resourceTraceSampleRate, 0.0, 100.0);
+            SessionSampleRate = Math.Clamp(sessionSampleRate, 0.0, 100.0);
             _hostMatcher = new FirstPartyHostMatcher(DdSdk.Configuration?.FirstPartyHosts);
         }
 
@@ -123,7 +126,7 @@ namespace Datadog.Maui.AutoTracking
                 var ctx = TracingContext.Generate();
                 var sessionId = DdRum.GetCurrentSessionId();
                 var isSampled = DistributedTracingSampler.ShouldSample(
-                    ResourceTraceSampleRate, sessionId, ctx.TraceIdLow);
+                    ResourceTraceSampleRate, sessionId, ctx.TraceIdLow, SessionSampleRate);
                 ctx = ctx.WithSampled(isSampled);
 
                 TracingHeaderWriter.Write(request, ctx, headerTypes);

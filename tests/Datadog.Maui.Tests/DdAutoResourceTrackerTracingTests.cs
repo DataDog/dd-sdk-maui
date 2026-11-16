@@ -89,4 +89,22 @@ public class DdAutoResourceTrackerTracingTests : IDisposable
         Assert.Equal(0.0, new DdAutoResourceTracker(-1.0).ResourceTraceSampleRate);
         Assert.Equal(100.0, new DdAutoResourceTracker(101.0).ResourceTraceSampleRate);
     }
+
+    // ── sessionSampleRate default and clamping ────────────────────────────────
+
+    [Fact]
+    public void Constructor_SessionSampleRate_DefaultsTo100()
+    {
+        Assert.Equal(100.0, new DdAutoResourceTracker(20.0).SessionSampleRate);
+    }
+
+    [Fact]
+    public void Constructor_SessionSampleRate_ClampsToValidRange()
+    {
+        Assert.Equal(0.0, new DdAutoResourceTracker(20.0, 0.0).SessionSampleRate);
+        Assert.Equal(100.0, new DdAutoResourceTracker(20.0, 100.0).SessionSampleRate);
+        Assert.Equal(33.3, new DdAutoResourceTracker(20.0, 33.3).SessionSampleRate);
+        Assert.Equal(0.0, new DdAutoResourceTracker(20.0, -1.0).SessionSampleRate);
+        Assert.Equal(100.0, new DdAutoResourceTracker(20.0, 101.0).SessionSampleRate);
+    }
 }
