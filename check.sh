@@ -126,15 +126,20 @@ if [ "$RUN_MAUI" = true ]; then
         log_error "C# tests failed"
     fi
 
-    # DebugIdManifestGenerator targets net9.0 only (it runs via `dotnet exec` at consuming-app
-    # build time, independent of the app's own TFM), so it isn't part of the net9/net10 matrix
-    # above and needs its own dotnet test invocation.
-    log_info "Running dotnet test (DebugIdManifestGenerator.Tests)..."
+    # tests/DebugIdManifestGenerator.Tests holds two kinds of tests:
+    # - tests of the DebugIdManifestGenerator tool, which Datadog.Maui.targets runs with
+    #   `dotnet exec` while the customer's app is being built;
+    # - SymbolUploadTargetTests, which run the symbol upload targets of Datadog.Maui.targets
+    #   (dSYM, mapping and Portable PDB uploads) against a fake datadog-ci.
+    # The tool targets net9.0 only, since it must run whatever the app's own TFM is, and so
+    # does this test project. It isn't part of the net9/net10 matrix above and needs its own
+    # dotnet test invocation.
+    log_info "Running dotnet test (DebugIdManifestGenerator.Tests: generator and symbol upload targets)..."
     if dotnet test "$SCRIPT_DIR/tests/DebugIdManifestGenerator.Tests/"; then
-        log_info "DebugIdManifestGenerator tests passed"
+        log_info "DebugIdManifestGenerator and symbol upload target tests passed"
     else
         MAUI_RESULT=1
-        log_error "DebugIdManifestGenerator tests failed"
+        log_error "DebugIdManifestGenerator and symbol upload target tests failed"
     fi
 fi
 
