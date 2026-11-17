@@ -417,12 +417,24 @@ DdRum.SucceedOperation("checkout", operationKey: "op-1");
 DdRum.FailOperation("checkout", OperationFailure.Error, operationKey: "op-1",
     new Dictionary<string, object> { { "error_code", 500 } });
 
-// Report errors
+// Report a handled exception (symbolicated to file and line, like crashes)
+try
+{
+    await checkout.PayAsync();
+}
+catch (Exception ex)
+{
+    DdRum.AddError(ex);
+}
+
+// Report an error that isn't an exception (not symbolicated)
 DdRum.AddError("Something went wrong", RumErrorSource.Source, "stacktrace here");
 
 // Stop session
 DdRum.StopSession();
 ```
+
+`DdRum.AddError(exception)` reports a handled exception with the same stack as an uncaught one, so Datadog shows its file and line numbers from the uploaded Portable PDBs (see [SYMBOLS.md](SYMBOLS.md)). It's reported as a handled error, not a crash. Its optional parameters are `message` (defaults to the exception's message), `source`, `context`, `timestampMs`, `fingerprint` and `stackTrace`. An exception that was created but never thrown has no stack of its own: pass `stackTrace: new System.Diagnostics.StackTrace(true)` captured where it was created, or the stack of the code calling `AddError` is reported. The overload that takes a stacktrace string can't be symbolicated; use it for errors that aren't .NET exceptions.
 
 When RUM is enabled, C# error tracking is automatically started. Unhandled exceptions (`AppDomain.UnhandledException`) and unobserved task exceptions (`TaskScheduler.UnobservedTaskException`) are captured and reported as RUM errors.
 
@@ -453,7 +465,9 @@ DdRum.Enable(new DdRumConfiguration
 });
 ```
 
-The mapper receives a `DdRumErrorEvent` with `Message`, `Source`, `Stacktrace`, `Context`, and `TimestampMs` properties. It applies to all C# errors — both automatic (crash tracking) and manual (`DdRum.AddError`).
+The mapper receives a `DdRumErrorEvent` with `Message`, `Source`, `Stacktrace`, `Context`, and `TimestampMs` properties. It applies to all C# errors — both automatic (crash tracking) and manual (both `DdRum.AddError` overloads).
+
+Don't add or remove lines in `Stacktrace`: for C# exceptions, the frames Datadog symbolicates refer to its lines by position, so changing the number of lines makes file and line numbers point at the wrong frames. Editing the text of a line is fine.
 
 ### Automatic Tracking
 

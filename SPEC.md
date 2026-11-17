@@ -1153,7 +1153,8 @@ The `operationKey` parameter is optional and allows distinguishing multiple conc
 - `StopSession()` — Stop the current RUM session
 
 **Errors:**
-- `AddError(string message, RumErrorSource source, string stacktrace, Dictionary<string, object>? context, long timestampMs)` — Report an error
+- `AddError(string message, RumErrorSource source, string stacktrace, Dictionary<string, object>? context, long timestampMs, string? fingerprint)` — Report an error from a stacktrace string (not symbolicated)
+- `AddError(Exception exception, string? message, RumErrorSource source, Dictionary<string, object>? context, long timestampMs, string? fingerprint, StackTrace? stackTrace)` — Report a handled exception with the same stack text and `_dd.error.sdk_frames` as crash tracking, as a non-crash (`_dd.error.handler: "DdRum.AddError"`). `message` defaults to the exception's message and `source` to `Source`. `stackTrace` replaces the outer exception's frames; when it's not set and the exception was never thrown, the caller's stack is used
 
 `RumErrorSource` enum: `Network`, `Source`, `Console`, `Webview`, `Custom`
 
@@ -1249,7 +1250,8 @@ The SDK automatically tracks MAUI page navigations and user interactions when en
 - ✅ Native crash reporting (iOS: CrashReporting, Android: JVM crash handler + NdkCrashReports) via `DdSdkConfiguration.NativeCrashReportEnabled`
 - ✅ C# error tracking: `AppDomain.UnhandledException` and `TaskScheduler.UnobservedTaskException` handlers, plus a Java uncaught exception handler on Android, installed in front of the JVM crash handler, so uncaught C# crashes reach RUM before the JVM crash handler's copy (which RUM then drops as a duplicate)
 - ✅ With `NativeCrashReportEnabled` off, Android Java crashes that never passed through managed code are skipped (`DdRumErrorTracking.IsSkippedPlatformCrash`)
-- ✅ Manual error reporting via `DdRum.AddError(message, source, stacktrace, context, timestampMs)`
+- ✅ Manual error reporting via `DdRum.AddError(message, source, stacktrace, context, timestampMs, fingerprint)`
+- ✅ Handled exceptions via `DdRum.AddError(exception, …)`, symbolicated like crashes (dd-sdk-maui#98)
 - ✅ Error context includes `_dd.error.source_type: "maui"`, `_dd.error.is_crash`, and `_dd.error.handler`
 - ✅ `ErrorEventMapper` for modifying or dropping error events before they are sent
 - ✅ On Android, `JavaProxyThrowable` unwrapping to extract original C# exception details
