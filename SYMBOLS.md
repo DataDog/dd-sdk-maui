@@ -88,10 +88,24 @@ Setting `DatadogSite` pins the site explicitly and overrides both environment va
 
 By default a failed upload produces an MSBuild warning and the build still succeeds, so a
 symbol upload problem never blocks shipping the app. The upload summary printed after
-publish shows the per-artifact outcome (`uploaded`, `FAILED (exit N)`, or `not run`).
+publish shows the per-artifact outcome:
+
+- `uploaded`: `datadog-ci` confirmed the upload. For dSYMs and Portable PDBs it also shows how
+  many files were uploaded, for example `uploaded (1 of 1)`; a Portable PDB upload counts
+  only when every staged PDB was uploaded.
+- `FAILED (…)`: the upload did not happen or was incomplete. The reason is in parentheses:
+  a non-zero `datadog-ci` exit code (`exit N`), or what `datadog-ci` reported while still
+  exiting 0, such as uploads that failed after retries, skipped files, or no file found.
+- `upload not verified`: `datadog-ci` exited 0 but its summary wasn't recognized, so the
+  upload can't be confirmed. This produces its own warning, but is never treated as a
+  failure.
+- `skipped (…)` or `not run`: there was nothing to upload, or the upload was disabled.
+
+Build with `-v:n` to see the `datadog-ci` output behind each outcome.
 
 Pass `-p:DatadogFailOnSymbolUploadError=true` to turn those failures into build errors,
-which is usually what you want in CI.
+which is usually what you want in CI. An `upload not verified` outcome stays a warning
+even then.
 
 ## API key
 
