@@ -1,0 +1,41 @@
+<Project>
+  <!-- Generate before Android resolves and copies its assets, independently of upload
+       credentials. Like the Gradle plugin, each build gets a new ID. A no-build publish
+       keeps the ID and mapping exported by the build that produced the package. -->
+  <Target Name="_DdGenerateAndroidBuildId"
+          BeforeTargets="_ComputeAndroidAssetsPaths"
+          Condition="'$(AndroidApplication)' == 'true' And '$(DesignTimeBuild)' != 'true' And $([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">
+    <PropertyGroup>
+      <_DdAndroidBuildIdPath>$(IntermediateOutputPath)datadog.buildId</_DdAndroidBuildIdPath>
+      <_DdAndroidSymbolsDirectory>$(OutputPath)datadog-android-symbols</_DdAndroidSymbolsDirectory>
+      <_DdAndroidBuildId>$([System.Guid]::NewGuid().ToString())</_DdAndroidBuildId>
+    </PropertyGroup>
+    <MakeDir Directories="$(IntermediateOutputPath)" />
+    <WriteLinesToFile File="$(_DdAndroidBuildIdPath)" Lines="$(_DdAndroidBuildId)" Overwrite="true" />
+    <ItemGroup>
+      <AndroidAsset Include="$(_DdAndroidBuildIdPath)" LogicalName="datadog.buildId" Link="Assets/datadog.buildId" />
+      <FileWrites Include="$(_DdAndroidBuildIdPath)" />
+    </ItemGroup>
+    <!-- Prevent a previous R8 build's mapping from surviving a switch to D8 or a
+         failed build. The pair is exported again only after dex compilation. -->
+    <Delete Files="$(_DdAndroidSymbolsDirectory)/mapping.txt;$(_DdAndroidSymbolsDirectory)/datadog.buildId" />
+  </Target>
+
+  <Target Name="_DdStageAndroidSymbols"
+          AfterTargets="_CompileToDalvik"
+          Condition="'$(AndroidApplication)' == 'true' And '$(DesignTimeBuild)' != 'true' And '$(AndroidLinkTool)' == 'r8' And '$(AndroidCreateProguardMappingFile)' != 'false' And $([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">
+    <PropertyGroup>
+      <_DdAndroidBuildIdPath>$(IntermediateOutputPath)datadog.buildId</_DdAndroidBuildIdPath>
+      <_DdAndroidSymbolsDirectory>$(OutputPath)datadog-android-symbols</_DdAndroidSymbolsDirectory>
+      <_DdMappingSource>$(AndroidProguardMappingFile)</_DdMappingSource>
+      <_DdMappingSource Condition="'$(_DdMappingSource)' == ''">$(OutputPath)mapping.txt</_DdMappingSource>
+    </PropertyGroup>
+    <MakeDir Directories="$(_DdAndroidSymbolsDirectory)" Condition="Exists('$(_DdAndroidBuildIdPath)') And Exists('$(_DdMappingSource)')" />
+    <Copy SourceFiles="$(_DdMappingSource);$(_DdAndroidBuildIdPath)"
+          DestinationFiles="$(_DdAndroidSymbolsDirectory)/mapping.txt;$(_DdAndroidSymbolsDirectory)/datadog.buildId"
+          Condition="Exists('$(_DdAndroidBuildIdPath)') And Exists('$(_DdMappingSource)')" />
+    <ItemGroup>
+      <FileWrites Include="$(_DdAndroidSymbolsDirectory)/mapping.txt;$(_DdAndroidSymbolsDirectory)/datadog.buildId" />
+    </ItemGroup>
+  </Target>
+</Project>

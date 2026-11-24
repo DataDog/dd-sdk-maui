@@ -56,7 +56,7 @@ public sealed class SymbolUploadTargetTests : IDisposable
     private const string FoundCount = "__FOUND_COUNT__";
 
     private const string AllUploaded = "✅ Uploaded symbol 1 file in 0.629 seconds.";
-    private const string MappingUploaded = "Mapping upload finished\n✅ Uploaded symbol 1 file in 0.5 seconds.";
+    private const string MappingUploaded = "Uploaded Android mapping for build ID 93866010-ac2e-476a-a571-5f010b852d30";
     private const string DsymUploaded = "✅ Uploaded 1 dSYM in 0.7 seconds.";
 
     // What the real datadog-ci prints when the build doesn't run inside a git repository.
@@ -85,7 +85,7 @@ public sealed class SymbolUploadTargetTests : IDisposable
         throw new FileNotFoundException("Datadog.Maui.targets not found above " + AppContext.BaseDirectory);
     }
 
-    private sealed record Result(int ExitCode, string Output, string[] PpdbCliArgs);
+    private sealed record Result(int ExitCode, string Output, string[] PpdbCliArgs, string[] MappingCliArgs);
 
     // Lays out a minimal Android publish (mapping.txt and a PDB in bin/, the matching PDB in
     // obj/ and its debug-id manifest) — or, with `ios`, an iOS one (the .app.dSYM next to the
@@ -100,7 +100,8 @@ public sealed class SymbolUploadTargetTests : IDisposable
         int dsymExitCode = 0,
         bool ios = false,
         bool failOnError = false,
-        Action<string>? beforeBuild = null)
+        Action<string>? beforeBuild = null,
+        bool r8 = true)
     {
         var root = _workDir.FullName;
         var bin = Directory.CreateDirectory(Path.Combine(root, "bin")).FullName;
@@ -112,7 +113,9 @@ public sealed class SymbolUploadTargetTests : IDisposable
         }
         else
         {
-            File.WriteAllText(Path.Combine(bin, "mapping.txt"), "# R8 mapping\n");
+            var symbols = Directory.CreateDirectory(Path.Combine(bin, "datadog-android-symbols")).FullName;
+            File.WriteAllText(Path.Combine(symbols, "mapping.txt"), "# R8 mapping\n");
+            File.WriteAllText(Path.Combine(symbols, "datadog.buildId"), "93866010-ac2e-476a-a571-5f010b852d30");
         }
         File.Copy(SelfPdb, Path.Combine(obj, SelfName + ".pdb"), overwrite: true);
         File.WriteAllText(Path.Combine(obj, "dd_debug_ids.json"),
@@ -121,6 +124,7 @@ public sealed class SymbolUploadTargetTests : IDisposable
 
         var fakeBin = Directory.CreateDirectory(Path.Combine(root, "fakebin")).FullName;
         var argsFile = Path.Combine(root, "ppdb-args.txt");
+        var mappingArgsFile = Path.Combine(root, "mapping-args.txt");
         var ppdbOutputFile = Path.Combine(root, "ppdb-output.txt");
         var mappingOutputFile = Path.Combine(root, "mapping-output.txt");
         var dsymOutputFile = Path.Combine(root, "dsym-output.txt");
@@ -140,6 +144,7 @@ public sealed class SymbolUploadTargetTests : IDisposable
             $"  cat '{dsymOutputFile}'\n" +
             $"  exit {dsymExitCode}\n" +
             "fi\n" +
+            $"printf '%s\\n' \"$@\" > '{mappingArgsFile}'\n" +
             $"cat '{mappingOutputFile}'\n" +
             $"exit {mappingExitCode}\n");
         if (!OperatingSystem.IsWindows())
@@ -154,6 +159,8 @@ public sealed class SymbolUploadTargetTests : IDisposable
               <PropertyGroup>
                 <TargetFramework>{(ios ? "net10.0-ios" : "net10.0-android")}</TargetFramework>
                 <AssemblyName>App</AssemblyName>
+                <AndroidApplication>true</AndroidApplication>
+                <AndroidLinkTool>{(r8 ? "r8" : "")}</AndroidLinkTool>
                 <OutputPath>bin\</OutputPath>
                 <PublishDir>publish\App\</PublishDir>
                 <IntermediateOutputPath>obj\</IntermediateOutputPath>
@@ -197,7 +204,8 @@ public sealed class SymbolUploadTargetTests : IDisposable
         }
         process.WaitForExit();
         var cliArgs = File.Exists(argsFile) ? File.ReadAllLines(argsFile) : Array.Empty<string>();
-        return new Result(process.ExitCode, stdOut.Result + stdErr.Result, cliArgs);
+        var mappingArgs = File.Exists(mappingArgsFile) ? File.ReadAllLines(mappingArgsFile) : Array.Empty<string>();
+        return new Result(process.ExitCode, stdOut.Result + stdErr.Result, cliArgs, mappingArgs);
     }
 
     // Only pins the shape of the command: on macOS and Linux, Exec already turns backslashes
@@ -310,15 +318,12 @@ public sealed class SymbolUploadTargetTests : IDisposable
         Assert.DoesNotContain("symbol uploads FAILED", result.Output);
     }
 
-    // What `flutter-symbols upload` prints, exiting 0, when the mapping upload failed after retries.
     [UnixFact]
-    public void WarnsWhenTheMappingUploadFailedButDatadogCiExitedZero()
+    public void PassesTheExportedMappingAndBuildIdToTheStandaloneUploader()
     {
-        var result = Publish(AllUploaded, mappingOutput: "❌ Failed upload for [mapping.txt]: Request failed with status code 500\nMapping upload failed\n❌ Some symbol files may not been uploaded correctly.");
+        var result = Publish(AllUploaded);
 
-        Assert.Equal(0, result.ExitCode);
-        Assert.Contains("Android mapping: FAILED (the mapping upload failed)", result.Output);
-        Assert.Contains("warning : Datadog: one or more symbol uploads FAILED", result.Output);
+        Assert.Equal(new[] { "android-symbols", "upload", "bin/datadog-android-symbols/mapping.txt", "--build-id-file", "bin/datadog-android-symbols/datadog.buildId", "--service", "App", "--version", "1.0.0" }, result.MappingCliArgs);
     }
 
     [UnixFact]
@@ -380,28 +385,37 @@ public sealed class SymbolUploadTargetTests : IDisposable
         Assert.Contains("iOS dSYM: FAILED (exit 1)", result.Output);
     }
 
-    // The `flutter-symbols upload` outcomes other than a failed upload: nothing taken, skipped,
-    // and an output that has only the per-file failure line.
     [UnixTheory]
-    [InlineData("⚠️ No actions were taken. Did you specify the correct path?", "FAILED (datadog-ci uploaded nothing)")]
-    [InlineData("⚠️  Some symbol files have been skipped.", "FAILED (datadog-ci skipped the mapping)")]
-    [InlineData("Mapping upload failed", "FAILED (the mapping upload failed)")]
-    public void WarnsWhenTheMappingWasNotUploadedButDatadogCiExitedZero(string mappingSummary, string expectedStatus)
+    [InlineData("mapping.txt")]
+    [InlineData("datadog.buildId")]
+    public void RefusesToUploadWhenTheBuildArtifactsAreMissing(string file)
     {
-        var result = Publish(AllUploaded, mappingOutput: mappingSummary);
+        var result = Publish(AllUploaded, failOnError: true,
+            beforeBuild: root => File.Delete(Path.Combine(root, "bin", "datadog-android-symbols", file)));
 
-        Assert.Contains("Android mapping: " + expectedStatus, result.Output);
-        Assert.Contains("warning : Datadog: one or more symbol uploads FAILED", result.Output);
+        Assert.NotEqual(0, result.ExitCode);
+        Assert.Empty(result.MappingCliArgs);
+        Assert.Contains("mapping or build ID missing", result.Output);
     }
 
     [UnixFact]
-    public void ReportsTheMappingAsUnverifiedWhenTheSummaryIsNotRecognized()
+    public void DoesNotUploadAStaleMappingWhenR8IsDisabled()
     {
-        var result = Publish(AllUploaded, mappingOutput: "Some future summary wording.", failOnError: true);
+        var result = Publish(AllUploaded, r8: false);
 
         Assert.Equal(0, result.ExitCode);
-        Assert.Contains("Android mapping: upload not verified", result.Output);
-        Assert.Contains("warning : Datadog: could not confirm these symbol uploads: Android mapping.", result.Output);
+        Assert.Empty(result.MappingCliArgs);
+        Assert.Contains("R8 mapping generation is disabled", result.Output);
+    }
+
+    [UnixFact]
+    public void MappingSuccessDoesNotDependOnHumanReadableSummaryWording()
+    {
+        var result = Publish(AllUploaded, mappingOutput: "A future success message.", failOnError: true);
+
+        Assert.Equal(0, result.ExitCode);
+        Assert.Contains("Android mapping: uploaded", result.Output);
+        Assert.DoesNotContain("could not confirm these symbol uploads: Android mapping", result.Output);
     }
 
     [UnixFact]

@@ -137,7 +137,32 @@ By default, .NET MAUI Android Release builds do not run R8, so no `mapping.txt` 
 </PropertyGroup>
 ```
 
-The mapping file will be generated at `bin/Release/net10.0-android/mapping.txt`.
+The Android build resolves its mapping through `AndroidProguardMappingFile`. After R8 runs,
+the SDK exports the mapping and the app's build ID together under
+`$(OutputPath)datadog-android-symbols/`, including when symbol upload is disabled.
+
+Every Android application build packages a UUID in `assets/datadog.buildId`, using the
+same format as the Datadog Gradle plugin. No Gradle plugin is needed for a MAUI app.
+The native Android SDK reads this asset and attaches `build_id` to events. Mapping
+uploads require that same ID; service/version are included as metadata rather than
+used as the mapping lookup key. This ID is separate from Portable PDB assembly debug IDs.
+
+Automatic Android mapping upload requires a `datadog-ci` release containing
+`android-symbols upload`; verify availability with `datadog-ci android-symbols upload --help`.
+To upload in a separate CI job, archive the complete exported directory from the
+build you distribute and run:
+
+```bash
+datadog-ci android-symbols upload bin/Release/net10.0-android/datadog-android-symbols/mapping.txt \
+  --build-id-file bin/Release/net10.0-android/datadog-android-symbols/datadog.buildId \
+  --service my-app --version 1.0.0
+```
+
+A normal build generates a new ID, following the Gradle plugin's behavior. Publishing
+with `--no-build` reuses the existing exported pair and never generates an upload-only
+ID. If either file is missing, rebuild the app with this SDK. Missing artifacts and
+upload failures use the existing `DatadogFailOnSymbolUploadError` policy. When R8 or
+mapping generation is disabled, mapping upload is skipped.
 
 ## SDK framework symbols (DatadogWrapper)
 
@@ -161,7 +186,7 @@ The targets file defines four MSBuild targets that run after `dotnet publish`:
 
 2. **`DatadogUploadDsym`** (iOS) — Locates the app's `.dSYM` bundle next to the `.app` in the publish output and uploads it via `datadog-ci dsyms upload`. Note: this uploads only the app's dSYM. The `DatadogWrapper.framework` dSYM is uploaded separately during SDK release (see above).
 
-3. **`DatadogUploadMapping`** (Android) — Locates `mapping.txt` in the build output and uploads it via `datadog-ci flutter-symbols upload --android-mapping`.
+3. **`DatadogUploadMapping`** (Android) — Uploads the exported mapping/build-ID pair via `datadog-ci android-symbols upload --build-id-file …`. A missing build ID is an upload failure; it never falls back to service/version matching.
 
 4. **`DatadogUploadPortablePdb`** (iOS + Android) — Uploads first-party Portable PDBs via `datadog-ci ppdb-symbols upload`, correlated by the build-time debug ID manifest (`dd_debug_ids.json`) generated alongside the build. For each first-party assembly (the ones whose PDB lands in the build output directory), it uploads the PDB that matches the assembly the app actually ships, staged in `obj/…/dd_ppdb_upload/`. On iOS device builds the linker rewrites the app's assembly and writes a new matching PDB under `obj/…/linked/`; the copy in the build output directory describes the pre-link assembly and would resolve frames to the wrong lines, so it is not uploaded there.
 
@@ -193,7 +218,10 @@ bin/Release/net10.0-ios/ios-arm64/
 ### Android
 ```
 bin/Release/net10.0-android/
-  mapping.txt                 <-- R8 mapping (uploaded to Datadog, requires AndroidLinkTool=r8)
+  mapping.txt                 <-- original R8 mapping
+  datadog-android-symbols/
+    mapping.txt               <-- exported mapping uploaded to Datadog
+    datadog.buildId           <-- the ID packaged in assets/datadog.buildId
   example.pdb                  <-- portable PDB (uploaded to Datadog)
   publish/
     com.datadog.maui.test.apk <-- distributable package
@@ -212,8 +240,11 @@ Export the key in your shell: `export DATADOG_API_KEY=your-key`. Verify with `ec
 **"Skipping dSYM upload — file not found"**
 dSYMs are only generated for device builds (`-r ios-arm64`). Simulator builds (`iossimulator-arm64`) do not produce dSYMs.
 
-**"Skipping mapping upload — mapping.txt not found"**
-Ensure R8 is enabled in your `.csproj` with `<AndroidLinkTool>r8</AndroidLinkTool>` and `<AndroidCreateProguardMappingFile>true</AndroidCreateProguardMappingFile>`.
+**"Skipping Android mapping upload — R8 mapping generation is disabled"**
+Enable R8 with `<AndroidLinkTool>r8</AndroidLinkTool>` and `<AndroidCreateProguardMappingFile>true</AndroidCreateProguardMappingFile>` if Java/Kotlin mapping upload is needed.
+
+**"mapping or build ID missing"**
+Build the app with this SDK before using `--no-build`. For a separate upload job, preserve the complete `datadog-android-symbols/` directory produced by that build.
 
 **"Skipping Portable PDB upload — no debug-id manifest found"**
 The debug ID manifest (`dd_debug_ids.json`) is generated during `Build`, which `Publish` depends on. If it's missing, check that `DebugSymbols` and `DebugType` are set (`<DebugType>portable</DebugType>`) and that the build itself succeeded.
