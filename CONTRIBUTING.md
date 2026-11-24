@@ -35,17 +35,20 @@ This guide will help you set up your development environment, understand the bui
 **macOS Development Machine** (required for iOS development):
 - macOS 13.0+ (Ventura or later)
 - Xcode 15.0+ with Command Line Tools
-- .NET 9 SDK or .NET 10 SDK
+- .NET 10 SDK (10.0.100 or later)
 - Android SDK (for Android development)
 
 **Tools and SDKs**:
 
-1. **.NET 9 or .NET 10 SDK**
+1. **.NET 10 SDK** (10.0.100 or later)
    ```bash
    # Download from https://dotnet.microsoft.com/download
-   # Verify installation:
-   dotnet --version  # Should show 9.0.x or 10.0.x
+   # Verify installation (run from the repository root):
+   dotnet --version  # Should show 10.0.x
    ```
+   The repository's `global.json` pins the SDK to 10.0.x, so `dotnet` commands inside the repo
+   won't use a .NET 9 or .NET 11 SDK even if one is installed. The .NET 10 SDK still builds the
+   `net9.0-*` target frameworks, so you don't need the .NET 9 SDK.
 
 2. **Xcode** (for iOS)
    ```bash
