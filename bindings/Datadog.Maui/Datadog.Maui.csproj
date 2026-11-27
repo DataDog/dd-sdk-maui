@@ -42,6 +42,9 @@
     <None Include="build\Datadog.Maui.DebugId.targets"
           Pack="true"
           PackagePath="buildTransitive\Datadog.Maui.DebugId.targets" />
+    <None Include="build\Datadog.Maui.AndroidBuildId.targets"
+          Pack="true"
+          PackagePath="buildTransitive\Datadog.Maui.AndroidBuildId.targets" />
   </ItemGroup>
 
   <!-- Build the debug-id manifest generator tool (see tools/DebugIdManifestGenerator) once per

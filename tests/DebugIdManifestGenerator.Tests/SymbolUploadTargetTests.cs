@@ -130,6 +130,8 @@ public sealed class SymbolUploadTargetTests : IDisposable
         var fakeCli = Path.Combine(fakeBin, "datadog-ci");
         File.WriteAllText(fakeCli,
             "#!/bin/sh\n" +
+            // The targets check that datadog-ci is installed by running `datadog-ci version`.
+            "if [ \"$1\" = version ]; then echo v0.0.0; exit 0; fi\n" +
             "if [ \"$1\" = ppdb-symbols ]; then\n" +
             $"  printf '%s\\n' \"$@\" > '{argsFile}'\n" +
             "  found=$(find \"$3\" -name '*.pdb' 2>/dev/null | wc -l | tr -d ' ')\n" +
@@ -306,7 +308,7 @@ public sealed class SymbolUploadTargetTests : IDisposable
     {
         var result = Publish(AllUploaded);
 
-        Assert.Contains("Android mapping: uploaded —", result.Output);
+        Assert.Contains("Android mapping: uploaded, keyed by service and version —", result.Output);
         Assert.DoesNotContain("symbol uploads FAILED", result.Output);
     }
 

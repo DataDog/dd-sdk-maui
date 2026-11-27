@@ -1,0 +1,196 @@
+<!--
+  Datadog.Maui.AndroidBuildId.targets
+  Imported by Datadog.Maui.targets.
+
+  Ships a build ID in Android apps, as the asset `datadog.buildId`, so that their R8/ProGuard
+  mapping file can be uploaded keyed by it (RUM-20515). The Datadog Android SDK reads that asset
+  and sends the ID with every event; when an event has one, the backend finds the mapping file
+  by that ID only. So an ID is only shipped when the mapping upload with that same ID will run:
+
+    - symbol uploads are on (DatadogUploadSymbols=true), and this is a `dotnet publish` of an
+      app that embeds its assemblies (a distributable build, not an IDE deploy);
+    - the app uses the Mono runtime (with CoreCLR or NativeAOT, a plain build can't be told
+      from a publish);
+    - R8 produces a mapping file (AndroidLinkTool=r8, AndroidCreateProguardMappingFile not false);
+    - an API key is set, and the installed datadog-ci has the `jvm-mapping-symbols` command
+      (checked by running it, not by its version, so local and pre-release builds work too).
+
+  Otherwise no ID ships, and the mapping is uploaded as before, by service and version.
+
+  The ID is random, generated once per publish in the outer build's BeforeBuild (the per-ABI
+  inner build doesn't run it). The mapping is uploaded with it, and after packaging the ID is
+  read back from the published app: a package without it is reported as a failed upload.
+-->
+<Project>
+
+  <Target Name="_DdAndroidBuildIdPaths">
+    <PropertyGroup>
+      <_DdAndroidBuildIdFile>$(IntermediateOutputPath)datadog.buildId</_DdAndroidBuildIdFile>
+      <_DdPublishedBuildIdFile>$(PublishDir)datadog.buildId</_DdPublishedBuildIdFile>
+    </PropertyGroup>
+  </Target>
+
+  <Target Name="_DdDecideAndroidBuildId"
+          BeforeTargets="BeforeBuild"
+          DependsOnTargets="_DdAndroidBuildIdPaths"
+          Condition="$(TargetFramework.Contains('-android')) AND '$(AndroidApplication)' == 'true' AND '$(DesignTimeBuild)' != 'true' AND '$(_ComputeFilesToPublishForRuntimeIdentifiers)' != 'true'">
+
+    <!-- The first reason that applies, if any, keeps the build from shipping an ID.
+         With CoreCLR or NativeAOT, the Android SDK marks plain builds as publishing too, so
+         a publish can't be told from a build: those apps keep the upload by service and version. -->
+    <PropertyGroup>
+      <_DdBuildIdSkipReason Condition="'$(DatadogUploadSymbols)' != 'true'">symbol uploads are off</_DdBuildIdSkipReason>
+      <_DdBuildIdSkipReason Condition="'$(_DdBuildIdSkipReason)' == '' AND '$(_IsPublishing)' != 'true'">not a dotnet publish</_DdBuildIdSkipReason>
+      <_DdBuildIdSkipReason Condition="'$(_DdBuildIdSkipReason)' == '' AND ('$(UseMonoRuntime)' == 'false' OR '$(PublishAot)' == 'true')">the app doesn't use the Mono runtime</_DdBuildIdSkipReason>
+      <_DdBuildIdSkipReason Condition="'$(_DdBuildIdSkipReason)' == '' AND '$(EmbedAssembliesIntoApk)' != 'true'">the app doesn't embed its assemblies (not a distributable build)</_DdBuildIdSkipReason>
+      <_DdBuildIdSkipReason Condition="'$(_DdBuildIdSkipReason)' == '' AND ('$(AndroidLinkTool)' != 'r8' OR '$(AndroidCreateProguardMappingFile)' == 'false')">R8 doesn't produce a mapping file</_DdBuildIdSkipReason>
+      <_DdBuildIdSkipReason Condition="'$(_DdBuildIdSkipReason)' == '' AND '$(DatadogApiKey)' == '' AND '$(DATADOG_API_KEY)' == ''">DATADOG_API_KEY is not set</_DdBuildIdSkipReason>
+    </PropertyGroup>
+
+    <!-- The installed datadog-ci must have the command the mapping upload uses. -->
+    <Exec Command="datadog-ci jvm-mapping-symbols upload --help"
+          Condition="'$(_DdBuildIdSkipReason)' == ''"
+          IgnoreExitCode="true"
+          IgnoreStandardErrorWarningFormat="true"
+          StandardOutputImportance="low"
+          StandardErrorImportance="low">
+      <Output TaskParameter="ExitCode" PropertyName="_DdMappingCommandExitCode" />
+    </Exec>
+    <Exec Command="datadog-ci version"
+          Condition="'$(_DdBuildIdSkipReason)' == '' AND '$(_DdMappingCommandExitCode)' != '0'"
+          IgnoreExitCode="true"
+          IgnoreStandardErrorWarningFormat="true"
+          StandardOutputImportance="low"
+          StandardErrorImportance="low">
+      <Output TaskParameter="ExitCode" PropertyName="_DdCliVersionExitCode" />
+    </Exec>
+    <PropertyGroup Condition="'$(_DdBuildIdSkipReason)' == '' AND '$(_DdMappingCommandExitCode)' != '0'">
+      <_DdBuildIdSkipReason Condition="'$(_DdCliVersionExitCode)' == '0'">the installed datadog-ci has no jvm-mapping-symbols command; upgrade it</_DdBuildIdSkipReason>
+      <_DdBuildIdSkipReason Condition="'$(_DdCliVersionExitCode)' != '0'">datadog-ci is not installed</_DdBuildIdSkipReason>
+    </PropertyGroup>
+
+    <PropertyGroup Condition="'$(_DdBuildIdSkipReason)' == ''">
+      <_DdAndroidBuildIdShipped>true</_DdAndroidBuildIdShipped>
+      <!-- Lowercase canonical form: the backend compares mapping build IDs as text. -->
+      <_DdAndroidBuildId>$([System.Guid]::NewGuid().ToString('D'))</_DdAndroidBuildId>
+    </PropertyGroup>
+
+    <WriteLinesToFile File="$(_DdAndroidBuildIdFile)"
+                      Lines="$(_DdAndroidBuildId)"
+                      Overwrite="true"
+                      Condition="'$(_DdAndroidBuildIdShipped)' == 'true'" />
+    <ItemGroup Condition="'$(_DdAndroidBuildIdShipped)' == 'true'">
+      <AndroidAsset Include="$(_DdAndroidBuildIdFile)" Link="datadog.buildId" />
+      <FileWrites Include="$(_DdAndroidBuildIdFile)" />
+    </ItemGroup>
+
+    <!-- Without an ID this time, no ID from an earlier build may be packaged: an ID with no
+         mapping behind it would stop the backend from finding the mapping by service and
+         version. The asset is only packaged while it's listed, and the app's assets are
+         regenerated on each build (the debug ID manifest is rewritten every time); a publish
+         also checks its package carries no ID (_DdCheckPackagedAndroidBuildId). A publish also
+         removes the copy kept next to the published app, so it can't be mistaken for this
+         build's; other builds leave the publish folder alone. -->
+    <Delete Files="$(_DdAndroidBuildIdFile)" Condition="'$(_DdAndroidBuildIdShipped)' != 'true'" ContinueOnError="true" />
+    <Delete Files="$(_DdPublishedBuildIdFile)" Condition="'$(_DdAndroidBuildIdShipped)' != 'true' AND '$(_IsPublishing)' == 'true'" ContinueOnError="true" />
+
+    <PropertyGroup>
+      <_DdNoBuildIdMappingNote Condition="$(_DdBuildIdSkipReason.StartsWith('R8'))">there's no mapping file to upload</_DdNoBuildIdMappingNote>
+      <_DdNoBuildIdMappingNote Condition="'$(_DdBuildIdSkipReason)' == 'DATADOG_API_KEY is not set' OR '$(_DdBuildIdSkipReason)' == 'datadog-ci is not installed'">no symbols are uploaded</_DdNoBuildIdMappingNote>
+      <!-- With CoreCLR or NativeAOT this also shows in plain builds, which upload nothing. -->
+      <_DdNoBuildIdMappingNote Condition="$(_DdBuildIdSkipReason.Contains('Mono runtime'))">a publish uploads the mapping file by service and version</_DdNoBuildIdMappingNote>
+      <_DdNoBuildIdMappingNote Condition="'$(_DdNoBuildIdMappingNote)' == ''">the mapping file is uploaded by service and version</_DdNoBuildIdMappingNote>
+    </PropertyGroup>
+    <Message Importance="high"
+             Text="Datadog: shipping Android build ID $(_DdAndroidBuildId); the mapping file will be uploaded keyed by it."
+             Condition="'$(_DdAndroidBuildIdShipped)' == 'true'" />
+    <Message Importance="high"
+             Text="Datadog: not shipping an Android build ID ($(_DdBuildIdSkipReason)); $(_DdNoBuildIdMappingNote)."
+             Condition="'$(_DdAndroidBuildIdShipped)' != 'true' AND '$(DatadogUploadSymbols)' == 'true' AND '$(_IsPublishing)' == 'true'" />
+  </Target>
+
+  <!-- R8 is skipped when its outputs in obj/ are up to date, even if the mapping file it wrote
+       to the build output is gone (bin/ deleted, or a new OutputPath): the app would then ship a
+       build ID with no mapping to upload. Removing R8's stamp makes it run again and write the
+       mapping. These are private Android SDK names (.NET 9 and 10); if they change, R8 stays
+       skipped and the missing mapping is reported as a failed upload. -->
+  <Target Name="_DdRewriteMissingMapping"
+          BeforeTargets="_CompileToDalvik"
+          Condition="'$(_DdAndroidBuildIdShipped)' == 'true' AND '$(AndroidProguardMappingFile)' != '' AND !Exists('$(AndroidProguardMappingFile)') AND '$(_AndroidStampDirectory)' != '' AND Exists('$(_AndroidStampDirectory)_CompileToDalvik.stamp')">
+    <Message Importance="high" Text="Datadog: $(AndroidProguardMappingFile) is missing; running R8 again to write it." />
+    <Delete Files="$(_AndroidStampDirectory)_CompileToDalvik.stamp" />
+  </Target>
+
+  <!-- Checks the build ID of the published app (APK, else AAB), which is what the app's events
+       carry. When this build shipped one, the package must carry it: the mapping is always
+       uploaded with the generated ID, so a package that doesn't carry it isn't this build's.
+       When it shipped none, the package must carry none: an ID left from an earlier build
+       would keep the backend from finding the mapping uploaded by service and version.
+       A copy of a shipped ID is kept next to the published app, so that a failed upload can be
+       redone later with `datadog-ci jvm-mapping-symbols upload`, passing it as the build ID file. -->
+  <Target Name="_DdCheckPackagedAndroidBuildId"
+          DependsOnTargets="_DdAndroidBuildIdPaths"
+          Condition="'$(_DdAndroidBuildIdShipped)' == 'true' OR ('$(_DdBuildIdSkipReason)' != '' AND '$(DatadogUploadSymbols)' == 'true' AND '$(_IsPublishing)' == 'true')">
+    <PropertyGroup>
+      <_DdPackagedBuildIdDir>$(IntermediateOutputPath)dd_packaged_build_id</_DdPackagedBuildIdDir>
+    </PropertyGroup>
+
+    <WriteLinesToFile File="$(_DdPublishedBuildIdFile)" Lines="$(_DdAndroidBuildId)" Overwrite="true" Condition="'$(_DdAndroidBuildIdShipped)' == 'true'" />
+
+    <!-- Publishing copies the packages from the build output only when their size or timestamp
+         changed. Android gives packages a fixed timestamp, and an app whose only change is its
+         new build ID keeps the same size, so the package from an earlier publish, with an earlier
+         ID, would be left in place (next to a fresh AAB). Copy them again so every published
+         package carries this build's ID. -->
+    <ItemGroup>
+      <_DdPublishedPackage Include="$(PublishDir)*.apk;$(PublishDir)*.aab" />
+      <_DdBuiltPackage Include="@(_DdPublishedPackage->'$(OutputPath)%(Filename)%(Extension)')" Condition="Exists('$(OutputPath)%(Filename)%(Extension)')" />
+    </ItemGroup>
+    <Copy SourceFiles="@(_DdBuiltPackage)" DestinationFolder="$(PublishDir)" SkipUnchangedFiles="false" ContinueOnError="true" />
+
+    <!-- The app's own package, named like the Android SDK names it (_AndroidPackage: the
+         ApplicationId, or the manifest's package): other apps' packages may sit in the same
+         folder. Per-ABI APKs (AndroidCreatePackagePerAbi) all carry the same assets. -->
+    <PropertyGroup>
+      <_DdPackageName>$(_AndroidPackage)</_DdPackageName>
+      <_DdPackageName Condition="'$(_DdPackageName)' == ''">$(ApplicationId)</_DdPackageName>
+      <_DdPackagedApp Condition="'$(_DdPackageName)' != '' AND Exists('$(PublishDir)$(_DdPackageName)-Signed.apk')">$(PublishDir)$(_DdPackageName)-Signed.apk</_DdPackagedApp>
+      <_DdPackagedApp Condition="'$(_DdPackagedApp)' == '' AND '$(_DdPackageName)' != '' AND Exists('$(PublishDir)$(_DdPackageName)-Signed.aab')">$(PublishDir)$(_DdPackageName)-Signed.aab</_DdPackagedApp>
+    </PropertyGroup>
+    <ItemGroup Condition="'$(_DdPackagedApp)' == '' AND '$(_DdPackageName)' != ''">
+      <_DdPerAbiPackage Include="$(PublishDir)$(_DdPackageName)-*-Signed.apk" />
+    </ItemGroup>
+    <PropertyGroup Condition="'$(_DdPackagedApp)' == '' AND '@(_DdPerAbiPackage)' != ''">
+      <_DdPerAbiPackages>@(_DdPerAbiPackage)</_DdPerAbiPackages>
+      <_DdPackagedApp>$([System.Text.RegularExpressions.Regex]::Match('$(_DdPerAbiPackages)', '^[^;]+').Value)</_DdPackagedApp>
+    </PropertyGroup>
+    <!-- Unzip matches entries against Include with the OS path separator. -->
+    <PropertyGroup>
+      <_DdPackagedBuildIdEntry Condition="$(_DdPackagedApp.EndsWith('.apk'))">$([System.IO.Path]::Combine('assets', 'datadog.buildId'))</_DdPackagedBuildIdEntry>
+      <_DdPackagedBuildIdEntry Condition="$(_DdPackagedApp.EndsWith('.aab'))">$([System.IO.Path]::Combine('base', 'assets', 'datadog.buildId'))</_DdPackagedBuildIdEntry>
+      <_DdPackagedBuildIdPath>$([System.IO.Path]::Combine('$(_DdPackagedBuildIdDir)', '$(_DdPackagedBuildIdEntry)'))</_DdPackagedBuildIdPath>
+    </PropertyGroup>
+
+    <RemoveDir Directories="$(_DdPackagedBuildIdDir)" ContinueOnError="true" />
+    <Unzip SourceFiles="$(_DdPackagedApp)"
+           DestinationFolder="$(_DdPackagedBuildIdDir)"
+           Include="$(_DdPackagedBuildIdEntry)"
+           Condition="'$(_DdPackagedApp)' != ''"
+           ContinueOnError="true" />
+    <ReadLinesFromFile File="$(_DdPackagedBuildIdPath)"
+                       Condition="'$(_DdPackagedApp)' != '' AND Exists('$(_DdPackagedBuildIdPath)')">
+      <Output TaskParameter="Lines" PropertyName="_DdPackagedBuildId" />
+    </ReadLinesFromFile>
+
+    <PropertyGroup Condition="'$(_DdAndroidBuildIdShipped)' == 'true'">
+      <_DdBuildIdProblem Condition="'$(_DdPackagedApp)' == ''">the app's package wasn't found in $(PublishDir)</_DdBuildIdProblem>
+      <_DdBuildIdProblem Condition="'$(_DdBuildIdProblem)' == '' AND '$(_DdPackagedBuildId)' == ''">the package $(_DdPackagedApp) has no build ID</_DdBuildIdProblem>
+      <_DdBuildIdProblem Condition="'$(_DdBuildIdProblem)' == '' AND '$(_DdPackagedBuildId)' != '$(_DdAndroidBuildId)'">the package $(_DdPackagedApp) has build ID $(_DdPackagedBuildId), not this build's</_DdBuildIdProblem>
+    </PropertyGroup>
+    <!-- Without a package to look into, there's nothing to report: no ID was meant to ship. -->
+    <PropertyGroup Condition="'$(_DdAndroidBuildIdShipped)' != 'true' AND '$(_DdPackagedBuildId)' != ''">
+      <_DdBuildIdProblem>the package $(_DdPackagedApp) carries build ID $(_DdPackagedBuildId) from an earlier build, which no mapping uploaded by this one matches; delete the obj folder and publish again</_DdBuildIdProblem>
+    </PropertyGroup>
+  </Target>
+
+</Project>

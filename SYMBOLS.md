@@ -139,6 +139,27 @@ By default, .NET MAUI Android Release builds do not run R8, so no `mapping.txt` 
 
 The mapping file will be generated at `bin/Release/net10.0-android/mapping.txt`.
 
+## Android: build ID
+
+When R8 produces a mapping file, `dotnet publish` with symbol uploads on also ships a **build ID** in the app (the asset `datadog.buildId`, a new random UUID on each publish) and uploads the mapping file keyed by it. The Datadog Android SDK sends that ID with every event, and Datadog uses it to find the exact mapping file of the build that produced the event.
+
+The build ID is only shipped when the mapping upload with that same ID will run:
+
+- it's a `dotnet publish` (not a `dotnet build` or an IDE deploy) of a build that embeds its assemblies in the package, as Release builds do, with `DatadogUploadSymbols=true` and an API key set;
+- the app uses the Mono runtime, the default (with CoreCLR or NativeAOT, no build ID ships);
+- R8 produces a mapping file (see above);
+- the installed `datadog-ci` has the `jvm-mapping-symbols upload` command. Upgrade `datadog-ci` to a version that has it; with an older one, the build says so, ships no build ID, and uploads the mapping file by service and version as before.
+
+The build summary shows the build ID (`Android build ID: …`). A copy is kept next to the published app, as `datadog.buildId` in the publish folder. If a mapping upload failed, upload it again with that copy and the mapping file published next to it (later builds rewrite the one in `bin/Release/net10.0-android/`), from the project folder:
+
+```bash
+datadog-ci jvm-mapping-symbols upload bin/Release/net10.0-android/publish/mapping.txt \
+  --build-id-file bin/Release/net10.0-android/publish/datadog.buildId \
+  --service-name <service> --version <version>
+```
+
+Upload the mapping file before releasing the app: errors received before it's available are grouped with their obfuscated frames.
+
 ## SDK framework symbols (DatadogWrapper)
 
 The `DatadogWrapper` native framework (Swift/Kotlin) has its own debug symbols that are shared across all apps using the same SDK version. These are uploaded separately from app symbols:
@@ -161,7 +182,7 @@ The targets file defines four MSBuild targets that run after `dotnet publish`:
 
 2. **`DatadogUploadDsym`** (iOS) — Locates the app's `.dSYM` bundle next to the `.app` in the publish output and uploads it via `datadog-ci dsyms upload`. Note: this uploads only the app's dSYM. The `DatadogWrapper.framework` dSYM is uploaded separately during SDK release (see above).
 
-3. **`DatadogUploadMapping`** (Android) — Locates `mapping.txt` in the build output and uploads it via `datadog-ci flutter-symbols upload --android-mapping`.
+3. **`DatadogUploadMapping`** (Android) — Locates `mapping.txt` in the build output and uploads it. When the app ships a build ID (see [Android: build ID](#android-build-id)), it uploads the mapping keyed by it via `datadog-ci jvm-mapping-symbols upload`, and checks that the published APK (or AAB) carries that ID. Otherwise it uploads it by service and version via `datadog-ci flutter-symbols upload --android-mapping`. Both send an empty variant, as MAUI apps don't set one.
 
 4. **`DatadogUploadPortablePdb`** (iOS + Android) — Uploads first-party Portable PDBs via `datadog-ci ppdb-symbols upload`, correlated by the build-time debug ID manifest (`dd_debug_ids.json`) generated alongside the build. For each first-party assembly (the ones whose PDB lands in the build output directory), it uploads the PDB that matches the assembly the app actually ships, staged in `obj/…/dd_ppdb_upload/`. On iOS device builds the linker rewrites the app's assembly and writes a new matching PDB under `obj/…/linked/`; the copy in the build output directory describes the pre-link assembly and would resolve frames to the wrong lines, so it is not uploaded there.
 
@@ -197,6 +218,7 @@ bin/Release/net10.0-android/
   example.pdb                  <-- portable PDB (uploaded to Datadog)
   publish/
     com.datadog.maui.test.apk <-- distributable package
+    datadog.buildId           <-- copy of the build ID the package ships, when it ships one
 ```
 
 Both Portable PDB uploads are correlated against `obj/<Configuration>/<TargetFramework>/dd_debug_ids.json`, a debug ID manifest generated at build time (see `Datadog.Maui.DebugId.targets`).
@@ -214,6 +236,9 @@ dSYMs are only generated for device builds (`-r ios-arm64`). Simulator builds (`
 
 **"Skipping mapping upload — mapping.txt not found"**
 Ensure R8 is enabled in your `.csproj` with `<AndroidLinkTool>r8</AndroidLinkTool>` and `<AndroidCreateProguardMappingFile>true</AndroidCreateProguardMappingFile>`.
+
+**"not shipping an Android build ID (the installed datadog-ci has no jvm-mapping-symbols command; upgrade it)"**
+Upgrade `datadog-ci` (`npm install -g @datadog/datadog-ci`). Until then, the mapping file is uploaded by service and version.
 
 **"Skipping Portable PDB upload — no debug-id manifest found"**
 The debug ID manifest (`dd_debug_ids.json`) is generated during `Build`, which `Publish` depends on. If it's missing, check that `DebugSymbols` and `DebugType` are set (`<DebugType>portable</DebugType>`) and that the build itself succeeded.
